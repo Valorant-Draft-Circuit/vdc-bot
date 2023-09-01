@@ -1,6 +1,6 @@
 const fs = require(`fs`);
 
-const { Client, Collection, MessageEmbed } = require("discord.js");
+const { Client, Collection, EmbedBuilder } = require("discord.js");
 
 const {
     Guilds, GuildMessages, 
@@ -100,12 +100,12 @@ module.exports = class BotClient extends Client {
 
         /** @depricated as global application commands are registered and available immediately */
         // const serverID = this.environment === `DEV` ? this.config.SERVER_ID.DEVELOPMENT : this.config.SERVER_ID.ONLINE_COLLEGE;
-        const serverID = this.config.SERVER_ID.ONLINE_COLLEGE;
+        const serverID = `1027754353207033966`;
         readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
 
         // globally register all application commands
+        readyClient.application.commands.set([]);
         // readyClient.application.commands.set(commandStructures);
-        // readyClient.application.commands.set([]);
 
         this.logger.console({
             level: `DEBUG`,
@@ -241,7 +241,7 @@ module.exports = class BotClient extends Client {
         // blank array for missing data
         let missingFields = [];
 
-        const embed = new MessageEmbed();
+        const embed = new EmbedBuilder()
         if (title) { embed.setTitle(title); };
         if (url) { embed.setURL(url); };
         if (author) { embed.setAuthor(author); };
@@ -252,13 +252,13 @@ module.exports = class BotClient extends Client {
         if (footer) { embed.setFooter(footer); };
         if (timestamp) { embed.setTimestamp(); };
 
-        if (missingFields.length !== 0) {
-            this.logger.console({
-                level: `WARNING`,
-                title: `Missing embed fields`,
-                message: missingFields,
-            });
-        }
+        // if (missingFields.length !== 0) {
+        //     this.logger.console({
+        //         level: `WARNING`,
+        //         title: `Missing embed fields`,
+        //         message: missingFields,
+        //     });
+        // }
 
         return embed;
 

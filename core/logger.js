@@ -23,10 +23,10 @@ module.exports = class Logger {
      * @param {String} guildID ID of the guild
      * @param {Object} channels IDs of the channel stored in config.js
      */
-    async init(guildID = this.config.SERVER_ID.DEVELOPMENT, channels = this.config.CHANNELS) {
-        this.guild = await this.client.guilds.fetch(guildID);
-        this.consoleChannel = await this.guild.channels.fetch(channels.TEST_CONSOLE);
-        this.dmChannel = await this.guild.channels.fetch(channels.TEST_DIRMSGS);
+    async init(/* guildID = this.config.SERVER_ID.DEVELOPMENT, channels = this.config.CHANNELS*/) {
+        // this.guild = await this.client.guilds.fetch(guildID);
+        // this.consoleChannel = await this.guild.channels.fetch(channels.TEST_CONSOLE);
+        // this.dmChannel = await this.guild.channels.fetch(channels.TEST_DIRMSGS);
 
         this.console({
             level: `DEBUG`,
