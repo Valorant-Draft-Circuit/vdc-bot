@@ -2,7 +2,7 @@ module.exports = {
 
     name: `ping`,
 
-    execute(client, interaction) {
+    execute(interaction) {
         interaction.reply({content: `Pong!`});
     }
 };
