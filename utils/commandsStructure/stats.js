@@ -14,6 +14,14 @@
 const { ApplicationCommandOptionType } = require(`discord.js`);
 
 module.exports = {
-    name : "ping",
-    description : "Ping the bot!"
+    name: "stats",
+    description: "Get a player's stats",
+    options: [
+        {
+            name: "user",
+            description: "The player to get stats for",
+            type: ApplicationCommandOptionType.User,
+            required: true
+        }
+    ]
 }

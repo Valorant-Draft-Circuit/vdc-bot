@@ -14,6 +14,6 @@
 const { ApplicationCommandOptionType } = require(`discord.js`);
 
 module.exports = {
-    name : "ping",
-    description : "Ping the bot!"
+    name : "test",
+    description : "The bot's command playground!"
 }
