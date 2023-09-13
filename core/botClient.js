@@ -3,9 +3,9 @@ const fs = require(`fs`);
 const { Client, Collection, EmbedBuilder } = require("discord.js");
 
 const {
-    Guilds, GuildMessages, 
-    GuildVoiceStates, GuildMembers, 
-    GuildPresences, DirectMessages 
+    Guilds, GuildMessages,
+    GuildVoiceStates, GuildMembers,
+    GuildPresences, DirectMessages
 } = require("discord.js").GatewayIntentBits;
 const { Channel } = require("discord.js").Partials;
 
@@ -98,13 +98,15 @@ module.exports = class BotClient extends Client {
             success++;
         });
 
-        /** @depricated as global application commands are registered and available immediately */
-        // const serverID = this.environment === `DEV` ? this.config.SERVER_ID.DEVELOPMENT : this.config.SERVER_ID.ONLINE_COLLEGE;
+        // console.log(commandStructures.options)
+
+       
+        /** @todo create filters to register VDC servers, franchise servers and other */
         const serverID = `1027754353207033966`;
         readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
 
         // globally register all application commands
-        readyClient.application.commands.set([]);
+        // readyClient.application.commands.set([]);
         // readyClient.application.commands.set(commandStructures);
 
         this.logger.console({
