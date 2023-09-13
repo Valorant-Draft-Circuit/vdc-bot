@@ -103,7 +103,7 @@ module.exports = class Logger {
         // console.log(out.message)
         if (stack) {
             out.message.push(red(`----------------------------------- STACK -----------------------------------`));
-            const stackArr = stack.replaceAll(__dirname.replace(`core`, ``), `.\\`).split("\n", 10);
+            const stackArr = stack.replaceAll(__dirname.replace(`core`, ``), `./`).split("\n", 10);
             stackArr.forEach(line => {
                 out.message.push(line);
             })
