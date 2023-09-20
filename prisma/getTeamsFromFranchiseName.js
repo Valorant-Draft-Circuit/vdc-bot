@@ -1,16 +1,16 @@
 const { prisma } = require(`./prismadb`);
 
-module.exports = async function handler() {
-    return await prisma.Franchise.findMany({
+module.exports = async function handler(franchiseName) {
+    return await prisma.Team.findMany({
         where: {
-            isActive: true,
+            Franchise: {
+                name: franchiseName
+            },
         },
         include: {
-            Team: {
+            Franchise: {
                 select: {
-                    id: true,
                     name: true,
-                    tier: true,
                 }
             }
         }
