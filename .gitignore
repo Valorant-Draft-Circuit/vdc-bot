@@ -17,3 +17,8 @@ project
 interactions/commands/stash
 utils/commandsStructure/stash
 ################################################################
+
+# Ignored Files ################################################
+utils/commandsStructure/test.js
+interactions/commands/test.js
+################################################################
