@@ -14,6 +14,9 @@ module.exports = {
       const type = _hoistedOptions[1].value;
       const url = _hoistedOptions[2].value;
 
+      // restrict preseason & playoff submission
+      if (type == `Preseason` || type == `Playoffs`) return interaction.reply({ content: `You can't submit this type of match yet!`, ephemeral: true });
+
       // check URL integrity - if it doesn't look like a valid URL, send an error message
       if (!validMatchRegex.test(url)) return interaction.reply({ content: `That doesn't look like a valid match URL! Please try again or reach out to Travestey!`, ephemeral: true });
 
@@ -43,7 +46,8 @@ module.exports = {
                value: `${tier}\n${type}\n[${matchID}](${url})`,
                inline: true
             }
-         ]
+         ],
+         footer: { text: `Valorant Draft Circuit — Match Result Submissions` }
       });
 
       return interaction.reply({ embeds: [embed] });
