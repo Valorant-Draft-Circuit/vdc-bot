@@ -7,10 +7,11 @@
     "start": "node bot.js",
 
     "dev": "nodemon --no-warnings bot.js",
-    "compile": "sh ./utils/enums/compile.sh",
+    "compile":"tsc utils/enums/index && tsc prisma/index",
     "cache" : "node ./cache/cache.js",
 
     "generate": "prisma db pull && prisma generate",
+    "pull": "prisma db pull --force",
     "studio": "prisma studio"
   },
   "repository": {
