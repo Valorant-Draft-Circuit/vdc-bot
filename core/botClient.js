@@ -113,7 +113,7 @@ module.exports = class BotClient extends Client {
 
         // globally register all application commands
         readyClient.application.commands.set([]);
-        // readyClient.application.commands.set(commandStructures);
+        readyClient.application.commands.set(commandStructures);
 
         this.logger.console({
             level: `DEBUG`,
