@@ -2,7 +2,8 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder }
 
 const { ButtonStyle } = require(`discord.js`)
 
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions } = require(`../../utils/enums/transactions`);
+const { Franchise, Games, Player, Team } = require("../../prisma");
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, Channel } = require(`../../utils/enums/`);
 const { FranchiseEmote } = require(`../../utils/enums/franchiseEmotes`);
 const franchises = require(`../../cache/franchises.json`);
 
@@ -87,14 +88,33 @@ function sub(interaction) {
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
-function cut(interaction, player) {
-    // interaction.reply({ content: `Are you sure you want to cut ${player.user} from {team}\n@TODO THIS SHOULD BE AN EMBED` });
+async function cut(interaction, player) {
+    const playerData = await Player.getBy({discordID: player.value});
+    
+    // checks
+    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.team == null) return interaction.reply({ content: `This player is not on a team!`, ephemeral: false });
+
+    const franchise = await Franchise.getBy({teamID: playerData.team});
+    const team = await Team.getBy({id: playerData.team});
 
     // create the base embed
     const embed = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
-        description: `Are you sure you want to cut ${player.user} from <FRANCHISE>`,
+        description: `Are you sure you perform the following action?`,
         color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                inline: true
+             },
+             {
+                name: `\u200B`,
+                value: `CUT\n${player.user}\n\`${player.value}\`\n${team.name}\n${franchise.name}`,
+                inline: true
+             }
+        ],
         footer: { text: `Transactions — Cut` }
     });
 

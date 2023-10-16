@@ -22,14 +22,12 @@ module.exports = {
             case TransactionsSignOptions.CONFIRM:
                 confirmSign(interaction);
                 break;
-            // case TransactionsCutOptions.CONFIRM:
+            case TransactionsCutOptions.CONFIRM:
                 confirmCut(interaction);
                 break;
 
         //  CANCEL BUTTONS  ####################################
             case TransactionsSignOptions.CANCEL:
-                cancel(interaction);
-                break
             case TransactionsCutOptions.CANCEL:
                 cancel(interaction);
                 break
@@ -45,7 +43,14 @@ module.exports = {
 
 async function confirmSign(interaction) {
 
-    interaction.reply({ content: `confirm` });
+    interaction.reply({ content: `confirm sign` });
+}
+
+async function confirmCut(interaction) {
+    const playerID = interaction.message.embeds[0].fields[1].value.replace(`\``, ``).split(`\n`)[2];
+
+    
+    interaction.reply({ content: `confirm cut` });
 }
 
 async function cancel(interaction) {
