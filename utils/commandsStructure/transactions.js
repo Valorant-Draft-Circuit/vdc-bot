@@ -86,6 +86,11 @@ module.exports = {
                     required: true
                 }
             ]
+        },
+        {
+            name: "trade",
+            description: "Initiate a trade with a franchise",
+            type: ApplicationCommandOptionType.Subcommand,
         }
     ]
 }
