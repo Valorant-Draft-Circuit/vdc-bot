@@ -6,6 +6,7 @@
  * @option tsc ./utils/enums/playerStatusCodes.ts
  */
 
+export { Channel } from "./channels"
 export { FranchiseEmote } from "./franchiseEmotes"
 export { ContenderTeams, AdvancedTeams, MasterTeams, EliteTeams } from "./franchiseTeams"
 export { PlayerStatusCode } from "./playerStatusCodes"
