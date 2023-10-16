@@ -88,7 +88,7 @@ module.exports = class BotClient extends Client {
      */
     registerSlashCommands(readyClient, directory) {
         // register slash commands (rewrite deploy.js)
-        const slashCommandFiles = fs.readdirSync(directory);
+        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
         const commandStructures = [];
         let success = 0;
 
@@ -130,7 +130,7 @@ module.exports = class BotClient extends Client {
             - Offload file validation to getFilePath(dir, ext)?
         */
         // register all slash commands
-        const slashCommandFiles = fs.readdirSync(directory);
+        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));;
         let success = 0;
 
         slashCommandFiles.forEach(slashCommandFile => {
