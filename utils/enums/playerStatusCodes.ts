@@ -20,9 +20,9 @@
 export enum PlayerStatusCode {
     UNREGISTERED = 0,
     PENDING = 1,
-    DRAFT = 2,
-    FREE = 3,
-    RESTRICTED = 4,
+    DRAFT_ELIGIBLE = 2,
+    FREE_AGENT = 3,
+    RESTRICTED_FREE_AGENT = 4,
     SUSPENDED = 5,
     SIGNED = 6
-}
+};

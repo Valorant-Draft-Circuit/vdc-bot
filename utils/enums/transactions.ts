@@ -16,6 +16,8 @@ export enum TransactionsSubTypes {
     TEAM = 102,
     /** @param {Number} PLAYER - Player enumeration */
     PLAYER = 103,
+    /** @param {Number} SUB - Substitute enumeration */
+    SUB = 104,
 }
 
 /**
@@ -29,11 +31,21 @@ export enum TransactionsCutOptions {
 }
 
 /**
- * @enum {TransactionsIROptions} - Enumerations for the ir commands
+ * @enum {TransactionsSignOptions} - Enumerations for the cut commands
  */
-export enum TransactionsIROptions {
+export enum TransactionsSignOptions {
     /** @param {enum} CONFIRM - Confirm cut enumeration */
     CONFIRM = 301,
     /** @param {enum} CANCEL - Cancel cut enumeration */
     CANCEL = 302,
+}
+
+/**
+ * @enum {TransactionsIROptions} - Enumerations for the ir commands
+ */
+export enum TransactionsIROptions {
+    /** @param {enum} CONFIRM - Confirm cut enumeration */
+    CONFIRM = 401,
+    /** @param {enum} CANCEL - Cancel cut enumeration */
+    CANCEL = 402,
 }
