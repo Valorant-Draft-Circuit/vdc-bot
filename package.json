@@ -5,7 +5,7 @@
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
-    "deploy": "npm run compile && npm run cache && npm run start",
+    "deploy": "npm run cache && npm run start",
 
     "dev": "nodemon --no-warnings bot.js",
     "compile":"tsc utils/enums/index && tsc prisma/index",
