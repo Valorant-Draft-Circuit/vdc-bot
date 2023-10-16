@@ -69,7 +69,6 @@ export class Player {
         })
     };
 
-
     /** Get a player's stats by a specific option (Must include at least one)
      * @param {Object} option
      * @param {?Number} option.name
