@@ -1,3 +1,24 @@
-node_modules
+# Repository files #############################################
 .vscode
 .env
+################################################################
+
+# Ignore all compiled & generated files. #######################
+utils/enums/*.js
+prisma/*.js
+cache/*.json
+# These will be compiled/generated locally & on deployment #####
+################################################################
+
+# Ignored Folders ##############################################
+node_modules
+bin
+project
+interactions/commands/stash
+utils/commandsStructure/stash
+################################################################
+
+# Ignored Files ################################################
+utils/commandsStructure/test.js
+interactions/commands/test.js
+################################################################

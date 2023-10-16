@@ -1,13 +1,16 @@
 const fs = require(`fs`);
 
-const { Client, Collection, MessageEmbed } = require("discord.js");
+const { Client, Collection, EmbedBuilder } = require("discord.js");
 
 const {
-    Guilds, GuildMessages, 
-    GuildVoiceStates, GuildMembers, 
-    GuildPresences, DirectMessages 
+    Guilds, GuildMessages,
+    GuildVoiceStates, GuildMembers,
+    GuildPresences, DirectMessages
 } = require("discord.js").GatewayIntentBits;
 const { Channel } = require("discord.js").Partials;
+
+/** @NOTE - THIS IS TEMPORARY. WILL BE CHANGED ASAP */
+const cmdWhitelist = [`ping`, `submit`, `topic`];
 
 
 module.exports = class BotClient extends Client {
@@ -88,24 +91,29 @@ module.exports = class BotClient extends Client {
      */
     registerSlashCommands(readyClient, directory) {
         // register slash commands (rewrite deploy.js)
-        const slashCommandFiles = fs.readdirSync(directory);
+        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
         const commandStructures = [];
         let success = 0;
 
         slashCommandFiles.forEach(slashCommandFile => {
             const command = require(`.${directory}/${slashCommandFile}`);
+
+            if (!cmdWhitelist.includes(command.name)) return;
+
             commandStructures.push(command);
             success++;
         });
 
-        /** @depricated as global application commands are registered and available immediately */
-        // const serverID = this.environment === `DEV` ? this.config.SERVER_ID.DEVELOPMENT : this.config.SERVER_ID.ONLINE_COLLEGE;
-        const serverID = this.config.SERVER_ID.ONLINE_COLLEGE;
-        readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
+        // console.log(commandStructures.options)
+
+       
+        /** @todo create filters to register VDC servers, franchise servers and other */
+        // const serverID = `1027754353207033966`;
+        // readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
 
         // globally register all application commands
+        readyClient.application.commands.set([]);
         // readyClient.application.commands.set(commandStructures);
-        // readyClient.application.commands.set([]);
 
         this.logger.console({
             level: `DEBUG`,
@@ -128,11 +136,12 @@ module.exports = class BotClient extends Client {
             - Offload file validation to getFilePath(dir, ext)?
         */
         // register all slash commands
-        const slashCommandFiles = fs.readdirSync(directory);
+        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));;
         let success = 0;
 
         slashCommandFiles.forEach(slashCommandFile => {
             const slashCommand = require(`.${directory}/${slashCommandFile}`);
+            if (!cmdWhitelist.includes(slashCommand.name)) return;
             this.slashCommands.set(slashCommand.name, slashCommand);
             success++;
         });
@@ -203,64 +212,5 @@ module.exports = class BotClient extends Client {
                 `- ${success} menu(s) loaded`
             ],
         });
-    };
-
-    /**
-     * Log transcript based messages in correct channel
-     * @param {String} type of transcript (support || modapp)
-     * @param {Object} member subject of transcript
-     * @param {Array} transcript transcript array
-     */
-    toTranscript(type, member, transcript) {
-
-    };
-
-    /** 
-     * Generate emebed object
-     * @param {Object} embedFields 
-     * @returns {Object} 
-     */
-    embedCreate(embedFields) {
-        // destructure embedFields object
-        const { title, url, author, thumbnail, description, fields, color, footer, timestamp } = embedFields;
-        /* embedFields object format
-        {
-            title : ``,
-            author : { name : ``, url : ``, iconURL : `` },
-            thumbnail : ``,
-            description: ``,
-            fields: [
-                { name: ``, value: `` },
-            ],
-            color : ``,
-            footer : { text: ``, iconURL: `` },
-            timestamp : true,
-        }
-         */
-
-        // blank array for missing data
-        let missingFields = [];
-
-        const embed = new MessageEmbed();
-        if (title) { embed.setTitle(title); };
-        if (url) { embed.setURL(url); };
-        if (author) { embed.setAuthor(author); };
-        if (thumbnail) { embed.setThumbnail(thumbnail); };
-        description ? embed.setDescription(description) : missingFields.push(`Missing description field`);
-        if (fields) { embed.addFields(...fields) }
-        color ? embed.setColor(color) : missingFields.push(`Missing embed color`);
-        if (footer) { embed.setFooter(footer); };
-        if (timestamp) { embed.setTimestamp(); };
-
-        if (missingFields.length !== 0) {
-            this.logger.console({
-                level: `WARNING`,
-                title: `Missing embed fields`,
-                message: missingFields,
-            });
-        }
-
-        return embed;
-
     };
 };

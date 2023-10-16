@@ -46,7 +46,7 @@ async function executeCommand(client, interaction) {
             title: `Event - interactionCreate`,
             message: `${interaction.user.tag} ran the ${interaction.commandName} command`,
         });
-        await command.execute(client, interaction);
+        await command.execute(interaction);
 
     } else throw new ReferenceError(`Cannot find the application command file!`, { cause: `File is either missing or does not exist.` });
 }
@@ -64,13 +64,13 @@ async function executeButton(client, interaction) {
         case 1: // button is not part of a managed set
             buttonID = buttonIDComponent;
             button = client.buttons.get(buttonID);
-            args = [client, interaction];
+            args = [interaction];
             break;
 
         case 2: // button is part of a managed set (second arg is function)
             buttonID = `${buttonIDComponent[0]}Manager`;
             button = client.buttons.get(buttonID);
-            args = [client, interaction, buttonIDComponent[1]];
+            args = [interaction, buttonIDComponent[1]];
             break;
     }
 
@@ -91,14 +91,29 @@ async function executeButton(client, interaction) {
  * @param {Object} interaction The interaction object passed to the interactionCreate event
  */
 async function executeSelectMenu(client, interaction) {
-    const selectMenuInteraction = client.selectMenus.get(interaction.customId);
+    const selectMenuIDComponent = interaction.customId.split(`_`);
+    let selectMenuID, selectMenu, args;
 
-    if (selectMenuInteraction) {
+    switch (selectMenuIDComponent.length) {
+        case 1: // select menu is not part of a managed set
+            selectMenuID = selectMenuID;
+            selectMenu = client.selectMenus.get(selectMenuID);
+            args = [interaction];
+            break;
+
+        case 2: // select menu is part of a managed set (second arg is enum)
+            selectMenuID = `${selectMenuIDComponent[0]}Manager`;
+            selectMenu = client.selectMenus.get(selectMenuID);
+            args = [interaction, selectMenuIDComponent[1]];
+            break;
+    }
+
+    if (selectMenu) {
         client.logger.console({
             level: `INFO`,
             title: `Event - interactionCreate`,
             message: `${interaction.user.tag} interacted with the "${interaction.customId}" select menu!`,
         });
-        await selectMenuInteraction.execute(client, interaction);
+        await selectMenu.execute(...args);
     } else throw new ReferenceError(`Cannot find the select menu file!`, { cause: `File is either missing or does not exist.` });
 }

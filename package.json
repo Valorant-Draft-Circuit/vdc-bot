@@ -4,8 +4,16 @@
   "description": "Valorant Draft Circuit's Discord Bot",
   "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "deploy": "npm run compile && npm run cache && npm run start",
+
+    "dev": "nodemon --no-warnings bot.js",
+    "compile":"tsc utils/enums/index && tsc prisma/index",
+    "cache" : "node ./cache/cache.js",
+
+    "generate": "prisma db pull && prisma generate",
+    "pull": "prisma db pull --force",
+    "studio": "prisma studio"
   },
   "repository": {
     "type": "git",
@@ -18,8 +26,13 @@
   },
   "homepage": "https://github.com/Unieveth/vdc-bot#readme",
   "dependencies": {
-    "discord.js": "^14.11.0",
+    "@prisma/client": "^5.2.0",
     "chalk": "^4.1.2",
+    "discord.js": "^14.13.0",
     "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20",
+    "prisma": "^5.2.0"
   }
 }

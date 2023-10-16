@@ -38,10 +38,10 @@ client.logger.console({
     message: `Initalized BotClient & attached Logger to the BotClient instance`,
 });
 
-// client.loadSlashCommands(`./interactions/commands`);
-// client.loadButtons(`./interactions/buttons`);
-// client.loadSelectMenus(`./interactions/selectMenus`);
-// client.loadEvents(`./events`);
+client.loadSlashCommands(`./interactions/commands`);
+client.loadButtons(`./interactions/buttons`);
+client.loadSelectMenus(`./interactions/selectMenus`);
+client.loadEvents(`./events`);
 
 client.login(process.env.TOKEN);
 client.logger.console({
