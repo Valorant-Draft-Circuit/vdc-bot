@@ -10,7 +10,7 @@ cache/*.json
 # These will be compiled/generated locally & on deployment #####
 ################################################################
 
-# Ignored Folders
+# Ignored Folders ##############################################
 node_modules
 bin
 project
