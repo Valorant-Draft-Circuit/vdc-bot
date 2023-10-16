@@ -18,6 +18,30 @@ module.exports = {
     description: 'Submit a match for a specific level',
     options: [
         {
+            name: 'tier',
+            description: 'The tier of the match',
+            type: ApplicationCommandOptionType.String,
+            required: true,
+            choices: [
+                {
+                    name: 'Prospect',
+                    value: 'Prospect'
+                },
+                {
+                    name: 'Apprentice',
+                    value: 'Apprentice'
+                },
+                {
+                    name: 'Expert',
+                    value: 'Expert'
+                },
+                {
+                    name: 'Mythic',
+                    value: 'Mythic'
+                }
+            ]
+        },
+        {
             name: 'type',
             description: 'The type of match played',
             type: ApplicationCommandOptionType.String,
@@ -43,29 +67,5 @@ module.exports = {
             type: ApplicationCommandOptionType.String,
             required: true,
         },
-        {
-            name: 'tier',
-            description: 'The tier of the match',
-            type: ApplicationCommandOptionType.String,
-            required: true,
-            choices: [
-                {
-                    name: 'Prospect',
-                    value: 'Prospect'
-                },
-                {
-                    name: 'Apprentice',
-                    value: 'Apprentice'
-                },
-                {
-                    name: 'Expert',
-                    value: 'Expert'
-                },
-                {
-                    name: 'Mythic',
-                    value: 'Mythic'
-                }
-            ]
-        }
     ]
 }
