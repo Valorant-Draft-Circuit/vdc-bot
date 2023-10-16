@@ -14,7 +14,7 @@
 const { ApplicationCommandOptionType } = require(`discord.js`);
 
 module.exports = {
-    name: 'match',
+    name: 'submit',
     description: 'Submit a match for a specific level',
     options: [
         {
