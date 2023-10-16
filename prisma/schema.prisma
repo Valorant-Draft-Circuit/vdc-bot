@@ -87,9 +87,9 @@ model Games {
   Team_Games_winnerToTeam Team?         @relation("Games_winnerToTeam", fields: [winner], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "winner_fk")
   PlayerStats             PlayerStats[]
 
-  @@index([team1], map: "team1_fk")
-  @@index([team2], map: "team2_fk")
-  @@index([winner], map: "winner_fk")
+  @@index([team1], map: "Games_Team_id_fk")
+  @@index([team2], map: "Games_Team_id_fk2")
+  @@index([winner], map: "Games_Team_id_fk3")
 }
 
 model MCWhitelist {
@@ -102,19 +102,31 @@ model ModLogs {
 }
 
 model Player {
-  id            String        @unique(map: "Player_pk2")
-  userID        String        @unique(map: "Player_pk")
-  team          Int?
-  primaryRiotID String?       @unique(map: "Player_pk3")
-  isRegistered  Boolean       @default(false)
-  isReturning   Boolean       @default(false)
-  MMR           Int?
-  Account       Account?      @relation(fields: [primaryRiotID], references: [providerAccountId], map: "Player_Account_providerAccountId_fk")
-  Team          Team?         @relation(fields: [team], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Player_Team_id_fk")
-  User          User          @relation(fields: [userID], references: [id], onDelete: Cascade, map: "Player_User_id_fk")
-  PlayerStats   PlayerStats[]
+  id                  String        @id
+  userID              String        @unique(map: "Player_pk")
+  team                Int?
+  primaryRiotID       String?       @unique(map: "Player_pk3")
+  isRegistered        Boolean       @default(false)
+  isReturning         Boolean       @default(false)
+  MMR                 Int?
+  Account             Account?      @relation(fields: [primaryRiotID], references: [providerAccountId], map: "Player_Account_providerAccountId_fk")
+  MMR_Player_MMRToMMR MMR?          @relation("Player_MMRToMMR", fields: [MMR], references: [id], onDelete: Restrict, map: "Player_MMR_id_fk")
+  Team                Team?         @relation(fields: [team], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Player_Team_id_fk")
+  User                User          @relation(fields: [userID], references: [id], onDelete: Cascade, map: "Player_User_id_fk")
+  PlayerStats         PlayerStats[]
 
   @@index([team], map: "Player_Team_id_fk")
+  @@index([MMR], map: "Player_MMR_id_fk")
+}
+
+model PlayerReplica {
+  id           String  @id
+  team         Int?
+  isRegistered Boolean @default(false)
+  MMR          Int?
+  Team         Team?   @relation(fields: [team], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "PlayerReplica_Team_id_fk")
+
+  @@index([team], map: "PlayerReplica_Team_id_fk")
 }
 
 model PlayerStats {
@@ -216,15 +228,17 @@ model Stream {
 }
 
 model Team {
-  id                       Int       @id @default(autoincrement())
+  id                       Int             @id @unique(map: "id") @default(autoincrement())
   franchise                Int
-  name                     String?   @unique(map: "Team_pk2")
+  name                     String?         @unique(map: "Team_pk2")
   tier                     String?
-  Games_Games_team1ToTeam  Games[]   @relation("Games_team1ToTeam")
-  Games_Games_team2ToTeam  Games[]   @relation("Games_team2ToTeam")
-  Games_Games_winnerToTeam Games[]   @relation("Games_winnerToTeam")
+  isActive                 Boolean?        @default(true)
+  Games_Games_team1ToTeam  Games[]         @relation("Games_team1ToTeam")
+  Games_Games_team2ToTeam  Games[]         @relation("Games_team2ToTeam")
+  Games_Games_winnerToTeam Games[]         @relation("Games_winnerToTeam")
   Player                   Player[]
-  Franchise                Franchise @relation(fields: [franchise], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Team_Franchise_slug_fk")
+  PlayerReplica            PlayerReplica[]
+  Franchise                Franchise       @relation(fields: [franchise], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Team_Franchise_slug_fk")
 
   @@index([franchise], map: "Team_Franchise_slug_fk")
 }
@@ -259,4 +273,18 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MMR {
+  id                     Int      @id @default(autoincrement())
+  riotId                 String?  @unique(map: "MMR_pk") @db.VarChar(255)
+  num_ranked             Int?
+  mmr_ranked             Int?
+  num_combines           Int?
+  mmr_combines           Int?
+  num_prev_season        Int?
+  mmr_prev_season        Int?
+  mmr_overall            Int?
+  Player_Player_MMRToMMR Player[] @relation("Player_MMRToMMR")
 }
