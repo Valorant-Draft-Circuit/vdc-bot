@@ -20,11 +20,22 @@ process.on(`uncaughtException`, (err) => {
         message: err.cause,
         stack: err.stack,
     });
+    client.consoleQueue.push({
+        level: `ERROR`,
+        title: err.name,
+        message: err.cause,
+        stack: err.stack,
+    })
 });
 
 // catch warnings and log them to the console
 process.on(`warning`, (warning) => {
     client.logger.console({
+        level: `WARNING`,
+        title: warning.name,
+        stack: warning.stack,
+    });
+    client.consoleQueue.push({
         level: `WARNING`,
         title: warning.name,
         stack: warning.stack,
@@ -37,6 +48,11 @@ client.logger.console({
     title: `Starting...`,
     message: `Initalized BotClient & attached Logger to the BotClient instance`,
 });
+client.consoleQueue.push({
+    level: `DEBUG`,
+    title: `Starting...`,
+    message: `Initalized BotClient & attached Logger to the BotClient instance`,
+})
 
 client.loadSlashCommands(`./interactions/commands`);
 client.loadButtons(`./interactions/buttons`);
@@ -48,3 +64,7 @@ client.logger.console({
     level: `DEBUG`,
     title: `Logging in with bot token...`,
 });
+client.consoleQueue.push({
+    level: `DEBUG`,
+    title: `Logging in with bot token...`,
+})

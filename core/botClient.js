@@ -1,6 +1,7 @@
 const fs = require(`fs`);
 
 const { Client, Collection } = require("discord.js");
+const { setInterval } = require("timers/promises");
 
 const {
     Guilds, GuildMessages,
@@ -14,6 +15,9 @@ const cmdWhitelist = [`ping`, `submit`, `topic`];
 
 
 module.exports = class BotClient extends Client {
+
+    consoleQueue = [];
+
     constructor() {
         super({
             intents: [
@@ -45,7 +49,6 @@ module.exports = class BotClient extends Client {
      * @param {String} directory
      */
     loadEvents(directory) {
-
         // get event files & filter by .js files
         const eventFiles = fs.readdirSync(directory);
         let success = 0;
@@ -92,12 +95,13 @@ module.exports = class BotClient extends Client {
         // register slash commands (rewrite deploy.js)
         const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
         const commandStructures = [];
+        const commandStructuresDev = [];
         let success = 0;
 
         slashCommandFiles.forEach(slashCommandFile => {
             const command = require(`.${directory}/${slashCommandFile}`);
 
-            if (!cmdWhitelist.includes(command.name)) return;
+            if (!cmdWhitelist.includes(command.name)) commandStructuresDev.push(command);
 
             commandStructures.push(command);
             success++;
@@ -105,14 +109,18 @@ module.exports = class BotClient extends Client {
 
         // console.log(commandStructures.options)
 
-       
-        /** @todo create filters to register VDC servers, franchise servers and other */
-        // const serverID = `1027754353207033966`;
-        // readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
-
-        // globally register all application commands
         readyClient.application.commands.set([]);
-        readyClient.application.commands.set(commandStructures);
+        if (process.env.ENVIRONMENT === 'DEV') {
+            /** @todo create filters to register VDC servers, franchise servers and other */
+            const serverID = `1027754353207033966`;
+            readyClient.guilds.cache.get(serverID).commands.set(commandStructuresDev);
+        } else {
+            // globally register all application commands
+            // 
+            readyClient.application.commands.set(commandStructures);
+        }
+
+
 
         this.logger.console({
             level: `DEBUG`,
@@ -140,7 +148,7 @@ module.exports = class BotClient extends Client {
 
         slashCommandFiles.forEach(slashCommandFile => {
             const slashCommand = require(`.${directory}/${slashCommandFile}`);
-            if (!cmdWhitelist.includes(slashCommand.name)) return;
+            // if (!cmdWhitelist.includes(slashCommand.name)) return;
             this.slashCommands.set(slashCommand.name, slashCommand);
             success++;
         });
@@ -212,4 +220,25 @@ module.exports = class BotClient extends Client {
             ],
         });
     };
+
+    /**
+     * 
+     * @param {String} options.channelID
+     * @param {message} options.message
+     */
+    sendMessage() {
+        const interval = 250;
+        const processQueue = () => {
+            /**
+             * CODE GOES HERE TO EXECUTE EVERY @param {Milleseconds} interval milleseconds
+             */
+        }
+
+        // Create the looping function to continually process the queue(s)
+        const loopQueue = () => {
+            processQueue();
+            setTimeout(loopQueue, interval);
+        };
+        loopQueue();
+    }
 };

@@ -27,5 +27,7 @@ module.exports = {
 		// pass active BotClient to logger & then initialize the logger class
 		client.logger.client = client;
 		client.logger.init();
+
+		client.sendMessage();
 	},
 };
