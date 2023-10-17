@@ -1,6 +1,6 @@
 const fs = require(`fs`);
 
-const { Client, Collection, EmbedBuilder } = require("discord.js");
+const { Client, Collection } = require("discord.js");
 
 const {
     Guilds, GuildMessages,
@@ -14,7 +14,7 @@ const cmdWhitelist = [`ping`, `submit`, `topic`];
 
 
 module.exports = class BotClient extends Client {
-    constructor(environment) {
+    constructor() {
         super({
             intents: [
                 Guilds, GuildMessages,
@@ -26,7 +26,6 @@ module.exports = class BotClient extends Client {
 
         this.config = require(`./config.js`); // load the config file
         // this.emotes = require(`../utils/resources/emotes.js`); // load the emote refrences
-        this.environment = environment; // environment bot is in (dev || live)
 
         /** @type {Collection} - slash commands collection */
         this.slashCommands = new Collection();
