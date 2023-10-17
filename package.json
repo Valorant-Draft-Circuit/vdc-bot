@@ -6,10 +6,11 @@
   "scripts": {
     "start": "node bot.js",
     "deploy": "npm run cache && npm run start",
-
     "dev": "nodemon --no-warnings bot.js",
+
     "compile":"tsc utils/enums/index && tsc prisma/index",
     "cache" : "node ./cache/cache.js",
+    "clean" : "find ./prisma -name '_*.js' -delete -o -name 'index.js' -delete && find ./utils/enums -name '*.js' -delete",
 
     "generate": "prisma db pull && prisma generate",
     "pull": "prisma db pull --force",
