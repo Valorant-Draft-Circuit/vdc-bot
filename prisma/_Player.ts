@@ -69,6 +69,31 @@ export class Player {
         })
     };
 
+    static async getInfoBy(option: { name?: string; discordID?: string; riotID?: string; } | undefined) {
+        const player = await this.getBy(option);
+        if (player == null) return undefined;
+
+        const unflattenedData = await prisma.player.findUnique({
+            where: { id: player.id },
+            include: {
+                Team: {
+                    include: {
+                        Franchise: true
+                    }
+                }
+            }
+        });
+
+        const flattenedData: { team?: any | { Franchise?: any }, franchise: any } = {
+            ...player,
+            team: unflattenedData?.Team,
+            franchise: unflattenedData?.Team?.Franchise
+        };
+        delete flattenedData.team?.Franchise;
+
+        return flattenedData;
+    }
+
     /** Get a player's stats by a specific option (Must include at least one)
      * @param {Object} option
      * @param {?Number} option.name
