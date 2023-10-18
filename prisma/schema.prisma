@@ -62,6 +62,8 @@ model Franchise {
   slug                               String     @unique(map: "teams_unique")
   logoFileName                       String?    @default("404.png")
   isActive                           Boolean    @default(true)
+  roleID                             String
+  emoteID                            String
   Schedule_Schedule_team1ToFranchise Schedule[] @relation("Schedule_team1ToFranchise")
   Schedule_Schedule_team2ToFranchise Schedule[] @relation("Schedule_team2ToFranchise")
   Team                               Team[]
@@ -82,9 +84,9 @@ model Games {
   rounds_won_t2           Int?
   winner                  Int?
   avgRank                 Int?
-  Team_Games_team1ToTeam  Team?         @relation("Games_team1ToTeam", fields: [team1], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "team1_fk")
-  Team_Games_team2ToTeam  Team?         @relation("Games_team2ToTeam", fields: [team2], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "team2_fk")
-  Team_Games_winnerToTeam Team?         @relation("Games_winnerToTeam", fields: [winner], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "winner_fk")
+  Team_Games_team1ToTeam  Team?         @relation("Games_team1ToTeam", fields: [team1], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Games_Team_id_fk")
+  Team_Games_team2ToTeam  Team?         @relation("Games_team2ToTeam", fields: [team2], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Games_Team_id_fk2")
+  Team_Games_winnerToTeam Team?         @relation("Games_winnerToTeam", fields: [winner], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Games_Team_id_fk3")
   PlayerStats             PlayerStats[]
 
   @@index([team1], map: "Games_Team_id_fk")
@@ -95,6 +97,20 @@ model Games {
 model MCWhitelist {
   uuid String @id @unique(map: "MCWhitelist_pk")
   name String
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MMR {
+  id                     Int      @id @default(autoincrement())
+  riotId                 String?  @unique(map: "MMR_pk") @db.VarChar(255)
+  num_ranked             Int?
+  mmr_ranked             Int?
+  num_combines           Int?
+  mmr_combines           Int?
+  num_prev_season        Int?
+  mmr_prev_season        Int?
+  mmr_overall            Int?
+  Player_Player_MMRToMMR Player[] @relation("Player_MMRToMMR")
 }
 
 model ModLogs {
@@ -115,8 +131,8 @@ model Player {
   User                User          @relation(fields: [userID], references: [id], onDelete: Cascade, map: "Player_User_id_fk")
   PlayerStats         PlayerStats[]
 
-  @@index([team], map: "Player_Team_id_fk")
   @@index([MMR], map: "Player_MMR_id_fk")
+  @@index([team], map: "Player_Team_id_fk")
 }
 
 model PlayerReplica {
@@ -273,18 +289,4 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model MMR {
-  id                     Int      @id @default(autoincrement())
-  riotId                 String?  @unique(map: "MMR_pk") @db.VarChar(255)
-  num_ranked             Int?
-  mmr_ranked             Int?
-  num_combines           Int?
-  mmr_combines           Int?
-  num_prev_season        Int?
-  mmr_prev_season        Int?
-  mmr_overall            Int?
-  Player_Player_MMRToMMR Player[] @relation("Player_MMRToMMR")
 }
