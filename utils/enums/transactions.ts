@@ -49,3 +49,13 @@ export enum TransactionsIROptions {
     /** @param {enum} CANCEL - Cancel cut enumeration */
     CANCEL = 402,
 }
+
+/**
+ * @enum {TransactionsDraftSignOptions} - Enumerations for the ir commands
+ */
+export enum TransactionsDraftSignOptions {
+    /** @param {enum} CONFIRM - Confirm cut enumeration */
+    CONFIRM = 501,
+    /** @param {enum} CANCEL - Cancel cut enumeration */
+    CANCEL = 502,
+}
