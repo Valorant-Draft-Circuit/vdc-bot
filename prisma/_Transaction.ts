@@ -1,7 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
-
-import { Franchise, Player, Team } from './index'
+import { prisma } from "./prismadb"
 
 export class Transaction {
     static async cut() {

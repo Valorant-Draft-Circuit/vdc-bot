@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from "./prismadb"
 
 const { PlayerStatusCode } = require(`../utils/enums`)
 
@@ -82,6 +81,25 @@ export class Player {
 
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
     };
+
+    static async getIGNby (option: { ign?: string; discordID?: string; riotID?: string; }) {
+        if (option == undefined) throw new Error(`Must specify exactly 1 option!`);
+        if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
+        const player = await this.getBy(option);
+
+        if (player == null) return undefined;
+
+        const account = await prisma.player.findUnique({
+            where: {id: player.id},
+            include: {
+                Account : true
+            }
+        });
+
+        if (account == null) return undefined;
+        if (account.Account == null) return undefined;
+        return account.Account.riotID
+    }
 
     /** Get a user by a specific option
      * @param {Object} option
