@@ -36,6 +36,6 @@ module.exports = {
                 throw new Error(`INVALID STATUS VALUE. EXPECTED DE or RFA & instead got ${status}`);
         }
 
-        interaction.reply({ content: `message sent` })
+        interaction.reply({ content: `Success!`, ephemeral : true })
     }
 };
