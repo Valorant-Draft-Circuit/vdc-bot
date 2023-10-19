@@ -1,5 +1,5 @@
-const { Player } = require("../../prisma");
-const { CHANNELS, ROLES } = require(`../../utils/enums`);
+const { Player, Transaction } = require("../../prisma");
+const { CHANNELS, ROLES, PlayerStatusCode } = require(`../../utils/enums`);
 
 module.exports = {
 
@@ -22,20 +22,23 @@ module.exports = {
         const ign = (await Player.getIGNby({ discordID: player.value })).split(`#`)[0];
         guildMember.setNickname(`${status} | ${ign}`);
 
+
         // assign the proper roles & send the correct message
         switch (status) {
             case `DE`:
                 await guildMember.roles.add(ROLES.LEAGUE.DRAFT_ELIGIBLE);
+                await Transaction.updateStatus({ playerID: player.value, status: PlayerStatusCode.DRAFT_ELIGIBLE });
                 acceptedChannel.send({ content: `Welcome ${player.user} to the league as a DE!` });
                 break;
             case `RFA`:
                 await guildMember.roles.add(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
+                await Transaction.updateStatus({ playerID: player.value, status: PlayerStatusCode.RESTRICTED_FREE_AGENT });
                 acceptedChannel.send({ content: `Welcome ${player.user} to the league as an RFA!` });
                 break;
             default:
                 throw new Error(`INVALID STATUS VALUE. EXPECTED DE or RFA & instead got ${status}`);
         }
 
-        interaction.reply({ content: `Success!`, ephemeral : true })
+        interaction.reply({ content: `Success!`, ephemeral: true })
     }
 };
