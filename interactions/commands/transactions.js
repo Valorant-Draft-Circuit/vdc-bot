@@ -45,6 +45,9 @@ module.exports = {
                 // player = _hoistedOptions[0];
                 trade(interaction, _hoistedOptions);
                 break;
+            case `renew`:
+                renew(interaction, _hoistedOptions);
+                break;
             default:
                 interaction.reply({ content: `That's not a valid subcommand!` });
                 break;
@@ -340,4 +343,44 @@ function trade(interaction) {
 
     // interaction.reply({ embeds: [embed], components: [subrow] });
     interaction.reply({ embeds: [embed] });
+}
+
+async function renew(interaction, player, franchise) {
+    const playerData = await Player.getBy({ discordID: player.value });
+
+    // checks
+    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
+    
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you want to sign ${player.user} to ${franchise}`,
+        color: 0xE92929,
+        thumbnail: { url: `https://cdn.discordapp.com/banners/963274331251671071/57044c6a68be1065a21963ee7e697f80.webp?size=480` },
+        footer: { text: `Transactions — Sign` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsSignOptions.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+        // emoji: `❌`,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsSignOptions.CONFIRM}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
+        // emoji: `✔`,
+    })
+
+    // create the action row, add the component to it & then reply with all the data
+    const subrow = new ActionRowBuilder();
+    // console.log(subrow)
+    subrow.addComponents(cancel, confirm);
+
+    // interaction.message.edit({ embeds: [embedEdits] });
+    // console.log(subrow)
+    interaction.reply({ embeds: [embed], components: [subrow] });
 }
