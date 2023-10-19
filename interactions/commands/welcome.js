@@ -1,5 +1,5 @@
 const { Player } = require("../../prisma");
-const { Channel } = require(`../../utils/enums`);
+const { Channel, Roles } = require(`../../utils/enums`);
 
 module.exports = {
 
@@ -15,8 +15,8 @@ module.exports = {
         const acceptedChannel = await interaction.guild.channels.fetch(Channel.ACCEPTED_MEMBERS);
 
         // renove the viewer role & add the league role
-        if (guildMember._roles.includes(Roles.VIEWER)) await guildMember.roles.remove(Roles.VIEWER);
-        await guildMember.roles.add(Roles.LEAGUE);
+        if (guildMember._roles.includes(Roles.LEAGUE.VIEWER)) await guildMember.roles.remove(Roles.LEAGUE.VIEWER);
+        await guildMember.roles.add(Roles.LEAGUE.LEAGUE);
 
         // update the name to match convention
         const ign = (await Player.getIGNby({ discordID: player.value })).split(`#`)[0];
@@ -25,11 +25,11 @@ module.exports = {
         // assign the proper roles & send the correct message
         switch (status) {
             case `DE`:
-                await guildMember.roles.add(Roles.DRAFT_ELIGIBLE);
+                await guildMember.roles.add(Roles.LEAGUE.DRAFT_ELIGIBLE);
                 acceptedChannel.send({ content: `Welcome ${player.user} to the league as a DE!` });
                 break;
             case `RFA`:
-                await guildMember.roles.add(Roles.RESTRICTED_FREE_AGENT);
+                await guildMember.roles.add(Roles.LEAGUE.RESTRICTED_FREE_AGENT);
                 acceptedChannel.send({ content: `Welcome ${player.user} to the league as an RFA!` });
                 break;
             default:
