@@ -155,16 +155,16 @@ module.exports = {
 }
 
 function franchiseChoices() {
-    const franchiseData = require(`../../cache/franchises.json`);
+    const franchiseCache = require(`../../cache/franchises.json`);
 
-    const signOptions = [];
+    const franchiseOptions = [];
 
-    franchiseData.forEach(franchise => {
-        signOptions.push({
+    franchiseCache.forEach(franchise => {
+        franchiseOptions.push({
             name: `${franchise.slug} — ${franchise.name}`,
             value: franchise.name,
         })
     });
 
-    return signOptions;
+    return franchiseOptions;
 }
