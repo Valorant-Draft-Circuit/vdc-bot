@@ -32,15 +32,7 @@ async function clearCache() {
 async function generateCache() {
     const franchiseCache = await Franchise.getAllActive();
     const fc = franchiseCache.map((f) => { return { name: f.name, slug: f.slug } });
-    const tc = franchiseCache.map((f) => {
-        const obj = {}
-        obj[f.name]={};
-        f.Team.forEach((t) => {
-            obj[f.name][t.tier] = t.name
-        })
-        return obj;
-    });
-
+    const tc = franchiseCache.map((f) => f.Team.map((t) => { return { slug: f.slug, name: t.name } })).flat();
     fs.writeFileSync(`./cache/franchises.json`, JSON.stringify(fc));
     fs.writeFileSync(`./cache/teams.json`, JSON.stringify(tc));
 }
