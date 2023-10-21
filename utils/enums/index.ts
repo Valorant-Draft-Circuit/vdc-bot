@@ -11,7 +11,7 @@ export { ROLES } from "./roles"
 
 
 export { PlayerStatusCode } from "./playerStatusCodes"
-export { TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions } from "./transactions"
+export { TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions } from "./transactions"
 
 // export { Channel } from "./channels"
 // export { FranchiseEmote } from "./franchiseEmotes"
