@@ -41,6 +41,7 @@ client.logger.console({
 client.loadSlashCommands(`./interactions/commands`);
 client.loadButtons(`./interactions/buttons`);
 client.loadSelectMenus(`./interactions/selectMenus`);
+client.loadAutocomplete(`./interactions/autocomplete`);
 client.loadEvents(`./events`);
 
 client.login(process.env.TOKEN);

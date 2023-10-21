@@ -37,6 +37,9 @@ module.exports = class BotClient extends Client {
         /** @type {Collection} - button manager collection */
         this.buttons = new Collection();
 
+        /** @type {Collection} - button manager collection */
+        this.autocompletes = new Collection();
+
         /** @member {Class} logger instanciated by ready.js  */
         this.logger;
     };
@@ -213,4 +216,34 @@ module.exports = class BotClient extends Client {
             ],
         });
     };
+
+        /**
+     * Load autocomplete from specified directory
+     * @param {String} directory
+     */
+        loadAutocomplete(directory) {
+            /* TODO: autocomplete
+                - Log function start
+                - Track successful & unsuccessful select menu loads
+                - Offload file validation to getFilePath(dir, ext)?
+            */
+            const autocompleteFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));;
+            let success = 0;
+    
+            autocompleteFiles.forEach(autocompleteFile => {
+                console.log(autocompleteFile)
+                const autocomplete = require(`.${directory}/${autocompleteFile}`);
+                this.autocompletes.set(autocomplete.name, autocomplete);
+                success++;
+            });
+
+            this.logger.console({
+                level: `DEBUG`,
+                title: `Loaded Autocomplete Queries`,
+                message: [
+                    `From (${directory}/)...`,
+                    `- ${success} querie(s) loaded`
+                ],
+            });
+        };
 };
