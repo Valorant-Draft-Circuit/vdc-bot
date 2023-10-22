@@ -109,7 +109,7 @@ module.exports = class BotClient extends Client {
 
         // console.log(commandStructures.options)
 
-       
+
         /** @todo create filters to register VDC servers, franchise servers and other */
         // const serverID = `1027754353207033966`;
         // readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
@@ -139,7 +139,7 @@ module.exports = class BotClient extends Client {
             - Offload file validation to getFilePath(dir, ext)?
         */
         // register all slash commands
-        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));;
+        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
         let success = 0;
 
         slashCommandFiles.forEach(slashCommandFile => {
@@ -217,33 +217,32 @@ module.exports = class BotClient extends Client {
         });
     };
 
-        /**
+    /**
      * Load autocomplete from specified directory
      * @param {String} directory
      */
-        loadAutocomplete(directory) {
-            /* TODO: autocomplete
-                - Log function start
-                - Track successful & unsuccessful select menu loads
-                - Offload file validation to getFilePath(dir, ext)?
-            */
-            const autocompleteFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));;
-            let success = 0;
-    
-            autocompleteFiles.forEach(autocompleteFile => {
-                console.log(autocompleteFile)
-                const autocomplete = require(`.${directory}/${autocompleteFile}`);
-                this.autocompletes.set(autocomplete.name, autocomplete);
-                success++;
-            });
+    loadAutocomplete(directory) {
+        /* TODO: autocomplete
+            - Log function start
+            - Track successful & unsuccessful select menu loads
+            - Offload file validation to getFilePath(dir, ext)?
+        */
+        const autocompleteFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
+        let success = 0;
 
-            this.logger.console({
-                level: `DEBUG`,
-                title: `Loaded Autocomplete Queries`,
-                message: [
-                    `From (${directory}/)...`,
-                    `- ${success} querie(s) loaded`
-                ],
-            });
-        };
+        autocompleteFiles.forEach(autocompleteFile => {
+            const autocomplete = require(`.${directory}/${autocompleteFile}`);
+            this.autocompletes.set(autocomplete.name, autocomplete);
+            success++;
+        });
+
+        this.logger.console({
+            level: `DEBUG`,
+            title: `Loaded Autocomplete Queries`,
+            message: [
+                `From (${directory}/)...`,
+                `- ${success} querie(s) loaded`
+            ],
+        });
+    };
 };
