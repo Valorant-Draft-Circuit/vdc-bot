@@ -11,8 +11,11 @@ module.exports = {
         const player = _hoistedOptions[0];
         const status = _hoistedOptions[1].value;
 
+        const playerData = await Player.getBy({discordID: player.value});
         const guildMember = await interaction.guild.members.fetch(player.value);
         const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
+
+        if (playerData.status !== PlayerStatusCode.PENDING) return interaction.reply({ content: `This player doesn't have a player status of Pending and cannot become Draft Eligible!`, ephemeral: false });
 
         // renove the viewer role & add the league role
         if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
@@ -28,7 +31,7 @@ module.exports = {
             case `DE`:
                 await guildMember.roles.add(ROLES.LEAGUE.DRAFT_ELIGIBLE);
                 await Transaction.updateStatus({ playerID: player.value, status: PlayerStatusCode.DRAFT_ELIGIBLE });
-                acceptedChannel.send({ content: `Welcome ${player.user} to the league as a DE!` });
+                acceptedChannel.send({ content: `Welcome ${player.user} to the league!!` });
                 break;
             case `RFA`:
                 await guildMember.roles.add(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
@@ -39,6 +42,6 @@ module.exports = {
                 throw new Error(`INVALID STATUS VALUE. EXPECTED DE or RFA & instead got ${status}`);
         }
 
-        interaction.reply({ content: `Success!`, ephemeral: true })
+        return interaction.reply({ content: `Success!`, ephemeral: false });
     }
 };
