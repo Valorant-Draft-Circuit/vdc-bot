@@ -15,7 +15,8 @@ module.exports = {
         const guildMember = await interaction.guild.members.fetch(player.value);
         const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
 
-        if (playerData.status !== PlayerStatusCode.PENDING) return interaction.reply({ content: `This player doesn't have a player status of Pending and cannot become Draft Eligible!`, ephemeral: false });
+        const validStatusesToDE = [PlayerStatusCode.PENDING, PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT];
+        if (!validStatusesToDE.includes(playerData.status)) return interaction.reply({ content: `This player doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!`, ephemeral: false });
 
         // renove the viewer role & add the league role
         if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
