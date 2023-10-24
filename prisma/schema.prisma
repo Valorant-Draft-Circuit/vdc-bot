@@ -46,7 +46,8 @@ model AgentStats {
 }
 
 model ControlPanel {
-  id Int @id @default(autoincrement())
+  id    Int  @id @default(autoincrement())
+  value Int?
 }
 
 model Faq {
@@ -102,16 +103,17 @@ model MCWhitelist {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model MMR {
-  id                     Int      @id @default(autoincrement())
-  riotId                 String?  @unique(map: "MMR_pk") @db.VarChar(255)
-  num_ranked             Int      @default(0)
-  mmr_ranked             Int      @default(0)
-  num_combines           Int      @default(0)
-  mmr_combines           Int      @default(0)
-  num_prev_season        Int      @default(0)
-  mmr_prev_season        Int      @default(0)
-  mmr_overall            Int      @default(0)
-  Player_Player_MMRToMMR Player[] @relation("Player_MMRToMMR")
+  id                     Int       @id @default(autoincrement())
+  riotId                 String?   @unique(map: "MMR_pk") @db.VarChar(255)
+  num_ranked             Int       @default(0)
+  mmr_ranked             Int       @default(0)
+  num_combines           Int       @default(0)
+  mmr_combines           Int       @default(0)
+  num_prev_season        Int       @default(0)
+  mmr_prev_season        Int       @default(0)
+  mmr_overall            Int       @default(0)
+  lastPulled             DateTime? @db.Date
+  Player_Player_MMRToMMR Player[]  @relation("Player_MMRToMMR")
 }
 
 model ModLogs {
@@ -124,6 +126,7 @@ model Player {
   team                Int?
   primaryRiotID       String?       @unique(map: "Player_pk3")
   status              Int           @default(0)
+  contractStatus      Int?          @default(3)
   isReturning         Boolean       @default(false)
   MMR                 Int?
   Account             Account?      @relation(fields: [primaryRiotID], references: [providerAccountId], map: "Player_Account_providerAccountId_fk")
@@ -250,4 +253,10 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model TempContract {
+  discID          String @id @default("0") @db.VarChar(255)
+  contractcurrent Int?
+  team            Int?
 }
