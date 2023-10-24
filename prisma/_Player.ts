@@ -1,19 +1,18 @@
+import { PlayerStatusCode } from '../utils/enums';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-
-const { PlayerStatusCode } = require(`../utils/enums`)
 
 export class Player {
 
     /** Get all active players in the league */
     static async getAllActive() {
-        return await prisma.playerReplica.findMany({
+        return await prisma.player.findMany({
             where: {
                 OR: [
-                    { isRegistered: PlayerStatusCode.DRAFT_ELIGIBLE },
-                    { isRegistered: PlayerStatusCode.FREE_AGENT },
-                    { isRegistered: PlayerStatusCode.RESTRICTED_FREE_AGENT },
-                    { isRegistered: PlayerStatusCode.SIGNED },
+                    { status: PlayerStatusCode.DRAFT_ELIGIBLE },
+                    { status: PlayerStatusCode.FREE_AGENT },
+                    { status: PlayerStatusCode.RESTRICTED_FREE_AGENT },
+                    { status: PlayerStatusCode.SIGNED },
                 ]
             }
         })
@@ -23,10 +22,10 @@ export class Player {
         return await prisma.player.findMany({
             where: {
                 OR: [
-                    { isRegistered: PlayerStatusCode.DRAFT_ELIGIBLE },
-                    { isRegistered: PlayerStatusCode.FREE_AGENT },
-                    { isRegistered: PlayerStatusCode.RESTRICTED_FREE_AGENT },
-                    { isRegistered: PlayerStatusCode.SIGNED },
+                    { status: PlayerStatusCode.DRAFT_ELIGIBLE },
+                    { status: PlayerStatusCode.FREE_AGENT },
+                    { status: PlayerStatusCode.RESTRICTED_FREE_AGENT },
+                    { status: PlayerStatusCode.SIGNED },
                 ],
                 Team: {
                     tier: tier
@@ -40,8 +39,8 @@ export class Player {
         return await prisma.player.findMany({
             where: {
                 OR: [
-                    { isRegistered: PlayerStatusCode.FREE_AGENT },
-                    { isRegistered: PlayerStatusCode.RESTRICTED_FREE_AGENT }
+                    { status: PlayerStatusCode.FREE_AGENT },
+                    { status: PlayerStatusCode.RESTRICTED_FREE_AGENT }
                 ]
             }
         })
@@ -53,13 +52,13 @@ export class Player {
                 OR: [
                     {
                         AND: {
-                            isRegistered: PlayerStatusCode.FREE_AGENT,
+                            status: PlayerStatusCode.FREE_AGENT,
                             Team: { tier: tier }
                         }
                     },
                     {
                         AND: {
-                            isRegistered: PlayerStatusCode.FREE_AGENT,
+                            status: PlayerStatusCode.FREE_AGENT,
                             Team: { tier: tier }
                         }
                     }
