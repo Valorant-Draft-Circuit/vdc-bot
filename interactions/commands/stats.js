@@ -3,7 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, 
 const { ButtonStyle } = require(`discord.js`)
 
 const { TransactionsSubTypes, TransactionsCutOptions } = require(`../../utils/enums/transactions`);
-const { FranchiseEmote } = require(`../../utils/enums/franchiseEmotes`);
+// const { FranchiseEmote } = require(`../../utils/enums/franchiseEmotes`);
 // const { getPlayerStatsByDiscordId } = require(`../../prisma`)
 const franchises = require(`../../cache/franchises.json`);
 const DiscordAssets = require(`../../utils/functions/discordAssets`);

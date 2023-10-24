@@ -3,7 +3,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder }
 const { ButtonStyle } = require(`discord.js`)
 
 const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions } = require(`../../utils/enums/transactions`);
-const { FranchiseEmote } = require(`../../utils/enums/franchiseEmotes`);
+// const { FranchiseEmote } = require(`../../utils/enums/franchiseEmotes`);
 const franchises = require(`../../cache/franchises.json`);
 const { Franchise } = require("../../prisma");
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;

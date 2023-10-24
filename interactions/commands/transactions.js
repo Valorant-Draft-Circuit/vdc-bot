@@ -4,7 +4,6 @@ const { ButtonStyle } = require(`discord.js`)
 
 const { Franchise, Games, Player, Team } = require("../../prisma");
 const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, Channel, PlayerStatusCode } = require(`../../utils/enums/`);
-const { FranchiseEmote } = require(`../../utils/enums/franchiseEmotes`);
 const franchises = require(`../../cache/franchises.json`);
 
 let chan
@@ -54,44 +53,44 @@ module.exports = {
 
 function sub(interaction) {
 
-    // create the base embed
-    const embed = new EmbedBuilder({
-        author: { name: `VDC Transactions Manager` },
-        description: `Welcome to the Transactions Substitute UI. Please use the select menus below to temporarily sign a substitute to your franchise & team.`,
-        thumbnail: { url: `https://cdn.discordapp.com/banners/963274331251671071/57044c6a68be1065a21963ee7e697f80.webp?size=480` },
-        color: 0xE92929,
-        fields: [
-            {
-                name: `\u200B`,
-                value: `**Franchise**\nPlease select a franchise....`,
-                inline: true
-            }
-        ],
-        footer: { text: `Transactions — Sub` }
-    });
+    // // create the base embed
+    // const embed = new EmbedBuilder({
+    //     author: { name: `VDC Transactions Manager` },
+    //     description: `Welcome to the Transactions Substitute UI. Please use the select menus below to temporarily sign a substitute to your franchise & team.`,
+    //     thumbnail: { url: `https://cdn.discordapp.com/banners/963274331251671071/57044c6a68be1065a21963ee7e697f80.webp?size=480` },
+    //     color: 0xE92929,
+    //     fields: [
+    //         {
+    //             name: `\u200B`,
+    //             value: `**Franchise**\nPlease select a franchise....`,
+    //             inline: true
+    //         }
+    //     ],
+    //     footer: { text: `Transactions — Sub` }
+    // });
 
-    // create the string select menu for a user to select a franchise & then add the franchises
-    const selectMenu = new StringSelectMenuBuilder({
-        customId: `transactions_${TransactionsSubTypes.FRANCHISE}`,
-        placeholder: 'Select a franchise...',
-        maxValues: 1,
-    });
+    // // create the string select menu for a user to select a franchise & then add the franchises
+    // const selectMenu = new StringSelectMenuBuilder({
+    //     customId: `transactions_${TransactionsSubTypes.FRANCHISE}`,
+    //     placeholder: 'Select a franchise...',
+    //     maxValues: 1,
+    // });
 
 
-    franchises.forEach((franchise) => {
-        selectMenu.addOptions({
-            label: franchise.name,
-            value: franchise.slug,
-            description: `${franchise.slug} — ${franchise.name}`,
-            emoji: FranchiseEmote[franchise.slug]
-        });
-    });
+    // franchises.forEach((franchise) => {
+    //     selectMenu.addOptions({
+    //         label: franchise.name,
+    //         value: franchise.slug,
+    //         description: `${franchise.slug} — ${franchise.name}`,
+    //         emoji: FranchiseEmote[franchise.slug]
+    //     });
+    // });
 
-    // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    subrow.addComponents(selectMenu);
+    // // create the action row, add the component to it & then reply with all the data
+    // const subrow = new ActionRowBuilder();
+    // subrow.addComponents(selectMenu);
 
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    // interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
 async function cut(interaction, player) {
