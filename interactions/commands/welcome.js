@@ -7,14 +7,17 @@ module.exports = {
 
     async execute(interaction) {
 
+        // destrcture options & store relevant information
         const { _hoistedOptions } = interaction.options;
         const player = _hoistedOptions[0];
         const status = _hoistedOptions[1].value;
 
+        // get player information from DB and guild info (guildMember & channel)
         const playerData = await Player.getBy({discordID: player.value});
         const guildMember = await interaction.guild.members.fetch(player.value);
         const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
 
+        // status checks
         const validStatusesToDE = [PlayerStatusCode.PENDING, PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT];
         if (!validStatusesToDE.includes(playerData.status)) return interaction.reply({ content: `This player doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!`, ephemeral: false });
 
@@ -25,7 +28,6 @@ module.exports = {
         // update the name to match convention
         const ign = (await Player.getIGNby({ discordID: player.value })).split(`#`)[0];
         guildMember.setNickname(`${status} | ${ign}`);
-
 
         // assign the proper roles & send the correct message
         switch (status) {
