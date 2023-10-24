@@ -107,6 +107,15 @@ export class Player {
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
     };
 
+    static async getIGNby(option: {discordID: string;}) {
+        const playerAccount = await prisma.player.findFirst({
+            where:{id: option.discordID},
+            include : {Account: true}
+        })
+
+        return playerAccount?.Account?.riotID;
+    }
+
     /** Get a user by a specific option
      * @param {Object} option
      * @param {?Number} option.ign
