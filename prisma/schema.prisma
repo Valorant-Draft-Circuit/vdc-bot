@@ -46,7 +46,8 @@ model AgentStats {
 }
 
 model ControlPanel {
-  id Int @id @default(autoincrement())
+  id    Int  @id @default(autoincrement())
+  value Int?
 }
 
 model Faq {
@@ -62,6 +63,9 @@ model Franchise {
   slug                               String     @unique(map: "teams_unique")
   logoFileName                       String?    @default("404.png")
   isActive                           Boolean    @default(true)
+  roleID                             String
+  emoteID                            String
+  gmID                               String
   Schedule_Schedule_team1ToFranchise Schedule[] @relation("Schedule_team1ToFranchise")
   Schedule_Schedule_team2ToFranchise Schedule[] @relation("Schedule_team2ToFranchise")
   Team                               Team[]
@@ -82,9 +86,9 @@ model Games {
   rounds_won_t2           Int?
   winner                  Int?
   avgRank                 Int?
-  Team_Games_team1ToTeam  Team?         @relation("Games_team1ToTeam", fields: [team1], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "team1_fk")
-  Team_Games_team2ToTeam  Team?         @relation("Games_team2ToTeam", fields: [team2], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "team2_fk")
-  Team_Games_winnerToTeam Team?         @relation("Games_winnerToTeam", fields: [winner], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "winner_fk")
+  Team_Games_team1ToTeam  Team?         @relation("Games_team1ToTeam", fields: [team1], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Games_Team_id_fk")
+  Team_Games_team2ToTeam  Team?         @relation("Games_team2ToTeam", fields: [team2], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Games_Team_id_fk2")
+  Team_Games_winnerToTeam Team?         @relation("Games_winnerToTeam", fields: [winner], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Games_Team_id_fk3")
   PlayerStats             PlayerStats[]
 
   @@index([team1], map: "Games_Team_id_fk")
@@ -97,6 +101,21 @@ model MCWhitelist {
   name String
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MMR {
+  id                     Int       @id @default(autoincrement())
+  riotId                 String?   @unique(map: "MMR_pk") @db.VarChar(255)
+  num_ranked             Int       @default(0)
+  mmr_ranked             Int       @default(0)
+  num_combines           Int       @default(0)
+  mmr_combines           Int       @default(0)
+  num_prev_season        Int       @default(0)
+  mmr_prev_season        Int       @default(0)
+  mmr_overall            Int       @default(0)
+  lastPulled             DateTime? @db.Date
+  Player_Player_MMRToMMR Player[]  @relation("Player_MMRToMMR")
+}
+
 model ModLogs {
   id Int @id @default(autoincrement())
 }
@@ -106,7 +125,8 @@ model Player {
   userID              String        @unique(map: "Player_pk")
   team                Int?
   primaryRiotID       String?       @unique(map: "Player_pk3")
-  isRegistered        Boolean       @default(false)
+  status              Int           @default(0)
+  contractStatus      Int?          @default(3)
   isReturning         Boolean       @default(false)
   MMR                 Int?
   Account             Account?      @relation(fields: [primaryRiotID], references: [providerAccountId], map: "Player_Account_providerAccountId_fk")
@@ -115,18 +135,8 @@ model Player {
   User                User          @relation(fields: [userID], references: [id], onDelete: Cascade, map: "Player_User_id_fk")
   PlayerStats         PlayerStats[]
 
-  @@index([team], map: "Player_Team_id_fk")
   @@index([MMR], map: "Player_MMR_id_fk")
-}
-
-model PlayerReplica {
-  id           String  @id
-  team         Int?
-  isRegistered Boolean @default(false)
-  MMR          Int?
-  Team         Team?   @relation(fields: [team], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "PlayerReplica_Team_id_fk")
-
-  @@index([team], map: "PlayerReplica_Team_id_fk")
+  @@index([team], map: "Player_Team_id_fk")
 }
 
 model PlayerStats {
@@ -157,43 +167,13 @@ model PlayerStats {
   pr_first_kills      Float?
   pr_first_deaths     Float?
   pr_damage           Float?
+  total_exit_kills    Int?
   Games               Games?  @relation(fields: [gameID], references: [id], onDelete: Cascade, map: "PlayerStats_PastGames_id_fk")
   Player              Player? @relation(fields: [riotId], references: [primaryRiotID], map: "PlayerStats_Player_primaryRiotID_fk")
 
   @@index([agent], map: "PlayerStats_AgentStats_agent_fk")
   @@index([gameID], map: "PlayerStats_PastGames_id_fk")
   @@index([riotId], map: "PlayerStats_Player_primaryRiotID_fk")
-}
-
-model PlayerStatsReplica {
-  id                  Int     @id @default(autoincrement())
-  acs                 Int?
-  agent               String? @db.VarChar(255)
-  gameID              String? @db.VarChar(255)
-  hs_percent          Float?
-  kast                Float?
-  pr_assists          Float?
-  pr_damage           Float?
-  pr_deaths           Float?
-  pr_first_deaths     Float?
-  pr_first_kills      Float?
-  pr_kills            Float?
-  rating_atk          Float?
-  rating_def          Float?
-  riotId              String? @db.VarChar(255)
-  total_antieco_kills Int?
-  total_assists       Int?
-  total_clutches      Int?
-  total_deaths        Int?
-  total_defuses       Int?
-  total_eco_kills     Int?
-  total_exit_kills    Int?
-  total_first_deaths  Int?
-  total_first_kills   Int?
-  total_kills         Int?
-  total_plants        Int?
-  total_trade_deaths  Int?
-  total_trade_kills   Int?
 }
 
 model Schedule {
@@ -228,17 +208,16 @@ model Stream {
 }
 
 model Team {
-  id                       Int             @id @unique(map: "id") @default(autoincrement())
+  id                       Int       @id @unique(map: "id") @default(autoincrement())
   franchise                Int
-  name                     String?         @unique(map: "Team_pk2")
+  name                     String?   @unique(map: "Team_pk2")
   tier                     String?
-  isActive                 Boolean?        @default(true)
-  Games_Games_team1ToTeam  Games[]         @relation("Games_team1ToTeam")
-  Games_Games_team2ToTeam  Games[]         @relation("Games_team2ToTeam")
-  Games_Games_winnerToTeam Games[]         @relation("Games_winnerToTeam")
+  isActive                 Boolean?  @default(true)
+  Games_Games_team1ToTeam  Games[]   @relation("Games_team1ToTeam")
+  Games_Games_team2ToTeam  Games[]   @relation("Games_team2ToTeam")
+  Games_Games_winnerToTeam Games[]   @relation("Games_winnerToTeam")
   Player                   Player[]
-  PlayerReplica            PlayerReplica[]
-  Franchise                Franchise       @relation(fields: [franchise], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Team_Franchise_slug_fk")
+  Franchise                Franchise @relation(fields: [franchise], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Team_Franchise_slug_fk")
 
   @@index([franchise], map: "Team_Franchise_slug_fk")
 }
@@ -262,6 +241,7 @@ model User {
   emailVerified DateTime?
   image         String?
   isStaff       Boolean   @default(false)
+  userLevel     Int       @default(0)
   Account       Account[]
   Player        Player?
   Session       Session[]
@@ -275,16 +255,8 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model MMR {
-  id                     Int      @id @default(autoincrement())
-  riotId                 String?  @unique(map: "MMR_pk") @db.VarChar(255)
-  num_ranked             Int?
-  mmr_ranked             Int?
-  num_combines           Int?
-  mmr_combines           Int?
-  num_prev_season        Int?
-  mmr_prev_season        Int?
-  mmr_overall            Int?
-  Player_Player_MMRToMMR Player[] @relation("Player_MMRToMMR")
+model TempContract {
+  discID          String @id @default("0") @db.VarChar(255)
+  contractcurrent Int?
+  team            Int?
 }
