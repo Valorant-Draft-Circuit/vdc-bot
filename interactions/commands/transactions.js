@@ -3,8 +3,9 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder }
 const { ButtonStyle } = require(`discord.js`)
 
 const { Franchise, Games, Player, Team } = require("../../prisma");
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, Channel, PlayerStatusCode } = require(`../../utils/enums/`);
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode } = require(`../../utils/enums/`);
 const franchises = require(`../../cache/franchises.json`);
+const { TransactionsRenewOptions } = require("../../utils/enums/transactions");
 
 let chan
 
@@ -13,7 +14,7 @@ module.exports = {
     name: `transactions`,
 
     async execute(interaction) {
-        chan = await interaction.guild.channels.fetch(Channel.TRANSACTIONS);
+        chan = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 
         const { _subcommand, _hoistedOptions } = interaction.options;
 
@@ -43,6 +44,9 @@ module.exports = {
             case `trade`:
                 // player = _hoistedOptions[0];
                 trade(interaction, _hoistedOptions);
+                break;
+            case `renew`:
+                renew(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
             default:
                 interaction.reply({ content: `That's not a valid subcommand!` });
@@ -339,4 +343,62 @@ function trade(interaction) {
 
     // interaction.reply({ embeds: [embed], components: [subrow] });
     interaction.reply({ embeds: [embed] });
+}
+
+async function renew(interaction, player, teamName) {
+    console.log(teamName)
+    const playerData = await Player.getBy({ discordID: player.value });
+    const teamData = await Team.getBy({name: teamName});
+    const franchiseData = await Franchise.getBy({id: teamData.franchise});
+    console.log(playerData)
+    console.log(teamData)
+    console.log(franchiseData)
+
+    // checks
+    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
+    // if (playerData.isRegistered !== PlayerStatusCode.SIGNED) return interaction.reply({ content: `This player is not signed and cannot have their contract renewed!`, ephemeral: false });
+    // if (playerData.team !== teamData.id) return interaction.reply({ content: `This player is not on ${franchiseData.name}'s ${teamData.tier} team (${franchiseData.slug} | ${teamName}) and cannot have their contract renewed!`, ephemeral: false });
+    
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you perform the following action?`,
+        color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                inline: true
+            },
+            {
+                name: `\u200B`,
+                value: `RENEW\n${player.user}\n\`${player.value}\`\n${teamData.name}\n${franchiseData.name}`,
+                inline: true
+            }
+        ],
+        footer: { text: `Transactions — Draft Sign` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsRenewOptions.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+        // emoji: `❌`,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsRenewOptions.CONFIRM}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
+        // emoji: `✔`,
+    })
+
+    // create the action row, add the component to it & then reply with all the data
+    const subrow = new ActionRowBuilder();
+    // console.log(subrow)
+    subrow.addComponents(cancel, confirm);
+
+    // interaction.message.edit({ embeds: [embedEdits] });
+    // console.log(subrow)
+    interaction.reply({ embeds: [embed], components: [subrow] });
 }

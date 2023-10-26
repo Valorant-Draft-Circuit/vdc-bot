@@ -56,8 +56,28 @@ module.exports = {
             ]
         },
         {
-            name: "swap",
-            description: "Swap two players",
+            name: "draft-sign",
+            description: "Sign a player to a franchise from the draft",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "user",
+                    description: "The player to sign",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+                {
+                    name: `franchise`,
+                    description: "The franchise to sign the player to",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: franchiseChoices()
+                }
+            ]
+        },
+        {
+            name: "trade",
+            description: "Trade players between teams",
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
@@ -71,6 +91,30 @@ module.exports = {
                     description: "The player to sign to the team",
                     type: ApplicationCommandOptionType.User,
                     required: true
+                },
+                {
+                    name: "optional-cut-1",
+                    description: "The player to cut from the team",
+                    type: ApplicationCommandOptionType.User,
+                    required: false
+                },
+                {
+                    name: "optional-cut-2",
+                    description: "The player to cut from the team",
+                    type: ApplicationCommandOptionType.User,
+                    required: false
+                },
+                {
+                    name: "optional-sign-1",
+                    description: "The player to sign to the team",
+                    type: ApplicationCommandOptionType.User,
+                    required: false
+                },
+                {
+                    name: "optional-sign-2",
+                    description: "The player to sign to the team",
+                    type: ApplicationCommandOptionType.User,
+                    required: false
                 }
             ]
         },
@@ -88,24 +132,39 @@ module.exports = {
             ]
         },
         {
-            name: "trade",
-            description: "Initiate a trade with a franchise",
+            name: "renew",
+            description: "Renew a player's contract",
             type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "user",
+                    description: "The player to renew a contract for",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+                {
+                    name: `team`,
+                    description: "The team to sign the renew to",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    autocomplete: true
+                }
+            ]
         }
     ]
 }
 
 function franchiseChoices() {
-    const franchiseData = require(`../../cache/franchises.json`);
+    const franchiseCache = require(`../../cache/franchises.json`);
 
-    const signOptions = [];
+    const franchiseOptions = [];
 
-    franchiseData.forEach(franchise => {
-        signOptions.push({
+    franchiseCache.forEach(franchise => {
+        franchiseOptions.push({
             name: `${franchise.slug} — ${franchise.name}`,
             value: franchise.name,
         })
     });
 
-    return signOptions;
+    return franchiseOptions;
 }
