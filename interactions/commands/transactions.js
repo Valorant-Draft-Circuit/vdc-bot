@@ -149,56 +149,18 @@ async function cut(interaction, player) {
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
-async function sign(interaction, player, franchise) {
+async function sign(interaction, player, teamName) {
     const playerData = await Player.getBy({ discordID: player.value });
-
-    // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
-    // create the base embed
-    const embed = new EmbedBuilder({
-        author: { name: `VDC Transactions Manager` },
-        description: `Are you sure you want to sign ${player.user} to ${franchise}`,
-        color: 0xE92929,
-        thumbnail: { url: `https://cdn.discordapp.com/banners/963274331251671071/57044c6a68be1065a21963ee7e697f80.webp?size=480` },
-        footer: { text: `Transactions — Sign` }
-    });
-
-    const cancel = new ButtonBuilder({
-        customId: `transactions_${TransactionsSignOptions.CANCEL}`,
-        label: `Cancel`,
-        style: ButtonStyle.Danger,
-        // emoji: `❌`,
-    })
-
-    const confirm = new ButtonBuilder({
-        customId: `transactions_${TransactionsSignOptions.CONFIRM}`,
-        label: `Confirm`,
-        style: ButtonStyle.Success,
-        // emoji: `✔`,
-    })
-
-    // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
-    interaction.reply({ embeds: [embed], components: [subrow] });
-}
-
-async function draftSign(interaction, player, franchiseName) {
-
-    const playerData = await Player.getBy({ discordID: player.value });
+    const teamData = await Team.getBy({name: teamName});
+    const franchiseData = await Franchise.getBy({id: teamData.franchise});
 
 
     // checks
     if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
+    // if (playerData.isRegistered !== PlayerStatusCode.FREE_AGENT) return interaction.reply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
 
-    const franchise = await Franchise.getBy({ name: franchiseName });
-    // const team = await Team.getBy({ id: playerData.team });
+    // const franchise = await Franchise.getBy({ name: franchiseName });
+    // // const team = await Team.getBy({ id: playerData.team });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -213,7 +175,63 @@ async function draftSign(interaction, player, franchiseName) {
             },
             {
                 name: `\u200B`,
-                value: `SIGN\n${player.user}\n\`${player.value}\`\n\${team.name}\n\${franchise.name}`,
+                value: `SIGN\n${player.user}\n\`${player.value}\`\n${teamData.name}\n${franchiseData.name}`,
+                inline: true
+            }
+        ],
+        footer: { text: `Transactions — Sign` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsSignOptions.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsSignOptions.CONFIRM}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
+    })
+
+    // create the action row, add the component to it & then reply with all the data
+    const subrow = new ActionRowBuilder();
+    // console.log(subrow)
+    subrow.addComponents(cancel, confirm);
+
+    // interaction.message.edit({ embeds: [embedEdits] });
+    // console.log(subrow)
+    interaction.reply({ embeds: [embed], components: [subrow] });
+}
+
+async function draftSign(interaction, player, teamName) {
+
+    const playerData = await Player.getBy({ discordID: player.value });
+    const teamData = await Team.getBy({name: teamName});
+    const franchiseData = await Franchise.getBy({id: teamData.franchise});
+
+
+    // checks
+    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
+    // if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
+
+    // const franchise = await Franchise.getBy({ name: franchiseName });
+    // // const team = await Team.getBy({ id: playerData.team });
+
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you perform the following action?`,
+        color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                inline: true
+            },
+            {
+                name: `\u200B`,
+                value: `DRAFT SIGN\n${player.user}\n\`${player.value}\`\n${teamData.name}\n${franchiseData.name}`,
                 inline: true
             }
         ],
