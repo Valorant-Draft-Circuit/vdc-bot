@@ -47,11 +47,11 @@ module.exports = {
                     required: true
                 },
                 {
-                    name: `franchise`,
-                    description: "The franchise to sign the player to",
+                    name: `team`,
+                    description: "The team to sign the player to",
                     type: ApplicationCommandOptionType.String,
                     required: true,
-                    choices: franchiseChoices()
+                    autocomplete: true
                 }
             ]
         },
@@ -67,11 +67,11 @@ module.exports = {
                     required: true
                 },
                 {
-                    name: `franchise`,
-                    description: "The franchise to sign the player to",
+                    name: `team`,
+                    description: "The team to sign the player to",
                     type: ApplicationCommandOptionType.String,
                     required: true,
-                    choices: franchiseChoices()
+                    autocomplete: true
                 }
             ]
         },
