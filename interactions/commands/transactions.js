@@ -9,8 +9,6 @@ const { TransactionsRenewOptions } = require("../../utils/enums/transactions");
 
 let chan
 
-let chan
-
 module.exports = {
 
     name: `transactions`,
