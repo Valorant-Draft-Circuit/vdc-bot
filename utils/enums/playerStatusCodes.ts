@@ -16,7 +16,6 @@
  * @param {Number} SUSPENDED Player is suspended from the league
  * @param {Number} SIGNED Player is signed to a franchise
  */
-
 export enum PlayerStatusCode {
     UNREGISTERED = 0,
     PENDING = 1,
@@ -26,3 +25,26 @@ export enum PlayerStatusCode {
     SUSPENDED = 5,
     SIGNED = 6
 };
+
+/**
+ * @enum {ContractStatus} Enumerations for the player contract status
+ * @param {Number} SIGNED Player is signed
+ * @param {Number} MID_CONTRACT Player is mid contract (1 season left)
+ * @param {Number} DRAFT_ELIGIBLE Player is eligible to be drafted (DE)
+ * @param {Number} FREE_AGENT Player is a free agent (FA)
+ * @param {Number} RESTRICTED_FREE_AGENT Player is a restricted free agent (RFA)
+ * @param {Number} GM_SIGNED GM is signed to a team within the franchise
+ * @param {Number} GM_UNSIGNED GM is NOT signed to a team within the franchise
+ * @param {Number} RENEWED Player's contract was renewed (1 season left)
+ */
+export enum ContractStatus {
+    SIGNED = 0,
+    MID_CONTRACT = 1,
+    EXPIRING = 2,
+    DRAFT_ELIGIBLE = 3,
+    FREE_AGENT = 4,
+    RESTRICTED_FREE_AGENT = 5,
+    GM_SIGNED = 6,
+    GM_UNSIGNED = 7,
+    RENEWED = 8,
+}

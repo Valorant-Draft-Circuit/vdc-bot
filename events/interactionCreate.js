@@ -21,6 +21,7 @@ module.exports = {
             if (interaction.isCommand()) return await executeCommand(client, interaction);
             if (interaction.isButton()) return await executeButton(client, interaction);
             if (interaction.isSelectMenu()) return await executeSelectMenu(client, interaction);
+            if (interaction.isAutocomplete()) return await executeAutocomplete(client, interaction);
         } catch (err) {
             client.logger.console({
                 level: `ERROR`,
@@ -116,4 +117,27 @@ async function executeSelectMenu(client, interaction) {
         });
         await selectMenu.execute(...args);
     } else throw new ReferenceError(`Cannot find the select menu file!`, { cause: `File is either missing or does not exist.` });
+}
+
+async function executeAutocomplete(client, interaction) {
+    const autocompleteCommandQuery = client.autocompletes.get(interaction.commandNam);
+    const autocompleteSubcommandsQuery = client.autocompletes.get(interaction.options._subcommand);
+
+    if (autocompleteCommandQuery) {
+        client.logger.console({
+            level: `INFO`,
+            title: `Event - autocomplete`,
+            message: `${interaction.user.tag} ran an autocomplete query`,
+        });
+        return await autocompleteCommandQuery.execute(interaction);
+
+    } else if (autocompleteSubcommandsQuery) {
+        client.logger.console({
+            level: `INFO`,
+            title: `Event - autocomplete`,
+            message: `${interaction.user.tag} ran an autocomplete query`,
+        });
+        return await autocompleteSubcommandsQuery.execute(interaction);
+
+    } else throw new ReferenceError(`Cannot find the autocomplete file!`, { cause: `File is either missing or does not exist.` });
 }

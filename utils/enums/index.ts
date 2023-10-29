@@ -10,9 +10,8 @@ export { CHANNELS } from "./channels"
 export { ROLES } from "./roles"
 
 
-export { PlayerStatusCode } from "./playerStatusCodes"
-export { TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions } from "./transactions"
-
+export { PlayerStatusCode, ContractStatus } from "./playerStatusCodes"
+export { TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions } from "./transactions"
 // export { Channel } from "./channels"
 // export { FranchiseEmote } from "./franchiseEmotes"
 // export { ContenderTeams, AdvancedTeams, MasterTeams, EliteTeams } from "./franchiseTeams"

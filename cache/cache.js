@@ -31,6 +31,8 @@ async function clearCache() {
 /** Query the database to generate the cache files */
 async function generateCache() {
     const franchiseCache = await Franchise.getAllActive();
-    const ffc = franchiseCache.map((f) => { return { name: f.name, slug: f.slug } });
-    fs.writeFileSync(`./cache/franchises.json`, JSON.stringify(ffc));
+    const fc = franchiseCache.map((f) => { return { name: f.name, slug: f.slug } });
+    const tc = franchiseCache.map((f) => f.Team.map((t) => { return { slug: f.slug, name: t.name } })).flat();
+    fs.writeFileSync(`./cache/franchises.json`, JSON.stringify(fc));
+    fs.writeFileSync(`./cache/teams.json`, JSON.stringify(tc));
 }
