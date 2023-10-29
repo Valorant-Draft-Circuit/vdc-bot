@@ -22,9 +22,9 @@ module.exports = {
         let player, franchise;
 
         switch (_subcommand) {
-            case `sub`:
-                sub(interaction)
-                break;
+            // case `sub`:
+            //     sub(interaction)
+            //     break;
             case `cut`:
                 cut(interaction, _hoistedOptions[0]);
                 break;
@@ -34,22 +34,22 @@ module.exports = {
             case `draft-sign`:
                 draftSign(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
-            case `swap`:
-                swap(interaction, _hoistedOptions[0], _hoistedOptions[1]);
-                break;
-            case `ir`:
-                // player = _hoistedOptions[0];
-                ir(interaction, _hoistedOptions[0]);
-                break;
-            case `trade`:
-                // player = _hoistedOptions[0];
-                trade(interaction, _hoistedOptions);
-                break;
+            // case `swap`:
+            //     swap(interaction, _hoistedOptions[0], _hoistedOptions[1]);
+            //     break;
+            // case `ir`:
+            //     // player = _hoistedOptions[0];
+            //     ir(interaction, _hoistedOptions[0]);
+            //     break;
+            // case `trade`:
+            //     // player = _hoistedOptions[0];
+            //     trade(interaction, _hoistedOptions);
+            //     break;
             case `renew`:
                 renew(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
             default:
-                interaction.reply({ content: `That's not a valid subcommand!` });
+                interaction.reply({ content: `That's not a valid subcommand or this command is a work in progress!` });
                 break;
         }
     }
@@ -140,27 +140,19 @@ async function cut(interaction, player) {
     })
 
     // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
 async function sign(interaction, player, teamName) {
     const playerData = await Player.getBy({ discordID: player.value });
-    const teamData = await Team.getBy({name: teamName});
-    const franchiseData = await Franchise.getBy({id: teamData.franchise});
+    const teamData = await Team.getBy({ name: teamName });
+    const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
 
     // checks
     if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.isRegistered !== PlayerStatusCode.FREE_AGENT) return interaction.reply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
-
-    // const franchise = await Franchise.getBy({ name: franchiseName });
-    // // const team = await Team.getBy({ id: playerData.team });
+    if (playerData.status !== PlayerStatusCode.FREE_AGENT) return interaction.reply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -195,28 +187,19 @@ async function sign(interaction, player, teamName) {
     })
 
     // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
 async function draftSign(interaction, player, teamName) {
 
     const playerData = await Player.getBy({ discordID: player.value });
-    const teamData = await Team.getBy({name: teamName});
-    const franchiseData = await Franchise.getBy({id: teamData.franchise});
-
+    const teamData = await Team.getBy({ name: teamName });
+    const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
     // checks
     if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
-
-    // const franchise = await Franchise.getBy({ name: franchiseName });
-    // // const team = await Team.getBy({ id: playerData.team });
+    if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -251,12 +234,7 @@ async function draftSign(interaction, player, teamName) {
     })
 
     // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
@@ -364,19 +342,16 @@ function trade(interaction) {
 }
 
 async function renew(interaction, player, teamName) {
-    console.log(teamName)
+    // get all info
     const playerData = await Player.getBy({ discordID: player.value });
-    const teamData = await Team.getBy({name: teamName});
-    const franchiseData = await Franchise.getBy({id: teamData.franchise});
-    console.log(playerData)
-    console.log(teamData)
-    console.log(franchiseData)
+    const teamData = await Team.getBy({ name: teamName });
+    const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
     // checks
     if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.isRegistered !== PlayerStatusCode.SIGNED) return interaction.reply({ content: `This player is not signed and cannot have their contract renewed!`, ephemeral: false });
-    // if (playerData.team !== teamData.id) return interaction.reply({ content: `This player is not on ${franchiseData.name}'s ${teamData.tier} team (${franchiseData.slug} | ${teamName}) and cannot have their contract renewed!`, ephemeral: false });
-    
+    if (playerData.status !== PlayerStatusCode.SIGNED) return interaction.reply({ content: `This player is not signed and cannot have their contract renewed!`, ephemeral: false });
+    if (playerData.team !== teamData.id) return interaction.reply({ content: `This player is not on ${franchiseData.name}'s ${teamData.tier} team (${franchiseData.slug} | ${teamName}) and cannot have their contract renewed!`, ephemeral: false });
+
     // create the base embed
     const embed = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
@@ -394,7 +369,7 @@ async function renew(interaction, player, teamName) {
                 inline: true
             }
         ],
-        footer: { text: `Transactions — Draft Sign` }
+        footer: { text: `Transactions — Renew` }
     });
 
     const cancel = new ButtonBuilder({
@@ -412,11 +387,6 @@ async function renew(interaction, player, teamName) {
     })
 
     // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
