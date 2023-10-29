@@ -39,12 +39,12 @@ module.exports = {
             case `RFA`:
                 await guildMember.roles.add(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
                 await Transaction.updateStatus({ playerID: player.value, status: PlayerStatusCode.RESTRICTED_FREE_AGENT });
-                acceptedChannel.send({ content: `Welcome ${player.user} to the league as a DE!` });
+                acceptedChannel.send({ content: `Welcome ${player.user} to the league as an RFA!` });
                 break;
             default:
                 throw new Error(`INVALID STATUS VALUE. EXPECTED DE or RFA & instead got ${status}`);
         }
 
-return interaction.reply({ content: `Success!`, ephemeral: false });
+        return interaction.reply({ content: `Success!`, ephemeral: false });
     }
 };

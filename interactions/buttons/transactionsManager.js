@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
 
+
 const { CHANNELS, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus } = require(`../../utils/enums`);
 
 
@@ -174,6 +175,11 @@ async function confirmDraftSign(interaction) {
     interaction.deferUpdate();
 }
 
+async function confirmDraftSign(interaction) {
+
+    interaction.reply({ content: `confirm sign` });
+}
+
 async function confirmCut(interaction) {
     interaction.deferUpdate();
 
@@ -197,7 +203,6 @@ async function confirmCut(interaction) {
     embedEdits.setFields([]);
 
     interaction.message.edit({ embeds: [embedEdits], components: [] });
-
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
