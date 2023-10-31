@@ -11,7 +11,7 @@ const {
 const { Channel } = require("discord.js").Partials;
 
 /** @NOTE - THIS IS TEMPORARY. WILL BE CHANGED ASAP */
-const cmdWhitelist = [`ping`, `submit`, `topic`];
+const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`];
 
 
 module.exports = class BotClient extends Client {
@@ -39,6 +39,9 @@ module.exports = class BotClient extends Client {
 
         /** @type {Collection} - button manager collection */
         this.buttons = new Collection();
+
+        /** @type {Collection} - button manager collection */
+        this.autocompletes = new Collection();
 
         /** @member {Class} logger instanciated by ready.js  */
         this.logger;
@@ -109,6 +112,12 @@ module.exports = class BotClient extends Client {
 
         // console.log(commandStructures.options)
 
+
+        /** @todo create filters to register VDC servers, franchise servers and other */
+        // const serverID = `1027754353207033966`;
+        // readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
+
+        // globally register all application commands
         readyClient.application.commands.set([]);
         if (process.env.ENVIRONMENT === 'DEV') {
             /** @todo create filters to register VDC servers, franchise servers and other */
@@ -143,7 +152,7 @@ module.exports = class BotClient extends Client {
             - Offload file validation to getFilePath(dir, ext)?
         */
         // register all slash commands
-        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));;
+        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
         let success = 0;
 
         slashCommandFiles.forEach(slashCommandFile => {
@@ -221,6 +230,35 @@ module.exports = class BotClient extends Client {
         });
     };
 
+    /**
+     * Load autocomplete from specified directory
+     * @param {String} directory
+     */
+    loadAutocomplete(directory) {
+        /* TODO: autocomplete
+            - Log function start
+            - Track successful & unsuccessful select menu loads
+            - Offload file validation to getFilePath(dir, ext)?
+        */
+        const autocompleteFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
+        let success = 0;
+
+        autocompleteFiles.forEach(autocompleteFile => {
+            const autocomplete = require(`.${directory}/${autocompleteFile}`);
+            this.autocompletes.set(autocomplete.name, autocomplete);
+            success++;
+        });
+
+        this.logger.console({
+            level: `DEBUG`,
+            title: `Loaded Autocomplete Queries`,
+            message: [
+                `From (${directory}/)...`,
+                `- ${success} querie(s) loaded`
+            ],
+        });
+    };
+  
     /**
      * 
      * @param {String} options.channelID
