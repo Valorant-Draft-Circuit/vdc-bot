@@ -6,6 +6,8 @@ module.exports = {
     name: `welcome`,
 
     async execute(interaction) {
+        // defer replying to the interaction
+        interaction.deferReply();
 
         // destrcture options & store relevant information
         const { _hoistedOptions } = interaction.options;
@@ -13,7 +15,7 @@ module.exports = {
         const status = _hoistedOptions[1].value;
 
         // get player information from DB and guild info (guildMember & channel)
-        const playerData = await Player.getBy({discordID: player.value});
+        const playerData = await Player.getBy({ discordID: player.value });
         const guildMember = await interaction.guild.members.fetch(player.value);
         const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
 
@@ -45,6 +47,6 @@ module.exports = {
                 throw new Error(`INVALID STATUS VALUE. EXPECTED DE or RFA & instead got ${status}`);
         }
 
-        return interaction.reply({ content: `Success!`, ephemeral: false });
+        return interaction.editReply({ content: `${player.user} was welcomed to the league as ${status == `DE` ? `a` : `an`} ${status}!`, ephemeral: false });
     }
 };
