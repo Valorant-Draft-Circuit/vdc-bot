@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
 
 
-const { CHANNELS, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus } = require(`../../utils/enums`);
+const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus } = require(`../../utils/enums`);
 
 
 const { Franchise, Team, Transaction, Player } = require(`../../prisma`);
@@ -36,7 +36,7 @@ module.exports = {
             case TransactionsCutOptions.CANCEL:
             case TransactionsRenewOptions.CANCEL:
 
-                cancel(interaction);
+                await cancel(interaction);
                 break
 
             default:
@@ -49,6 +49,8 @@ module.exports = {
 };
 
 async function confirmSign(interaction) {
+    interaction.deferUpdate(); // defer as early as possible
+
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const playerID = data[2];
 
@@ -58,15 +60,12 @@ async function confirmSign(interaction) {
 
     const guildMember = await interaction.guild.members.fetch(playerID);
 
+    // add the franchise role, remove FA/RFA role
+    if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    if (guildMember._roles.includes(ROLES.LEAGUE.FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.FREE_AGENT);
+    if (guildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
 
-    console.log(data)
-    console.log(playerData)
-    console.log(teamData)
-    console.log(franchiseData)
-
-
-    // remove the franchise role and update their nickname
-    // if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    // update nickname
     guildMember.setNickname(`${franchiseData.slug} | ${guildMember.nickname.split(` `)[2]}`);
 
 
@@ -110,12 +109,12 @@ async function confirmSign(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] })
-
-    interaction.deferUpdate();
+    transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function confirmDraftSign(interaction) {
+    interaction.deferUpdate(); // defer as early as possible
+
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const playerID = data[2];
 
@@ -126,8 +125,11 @@ async function confirmDraftSign(interaction) {
     const guildMember = await interaction.guild.members.fetch(playerID);
 
 
-    // remove the franchise role and update their nickname
-    // if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    // add the franchise role, remove FA/RFA role
+    if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    if (guildMember._roles.includes(ROLES.LEAGUE.DRAFT_ELIGIBLE)) await guildMember.roles.remove(ROLES.LEAGUE.DRAFT_ELIGIBLE);
+    
+    // update nickname
     guildMember.setNickname(`${franchiseData.slug} | ${guildMember.nickname.split(` `)[2]}`);
 
 
@@ -171,17 +173,11 @@ async function confirmDraftSign(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] })
-    interaction.deferUpdate();
-}
-
-async function confirmDraftSign(interaction) {
-
-    interaction.reply({ content: `confirm sign` });
+    transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function confirmCut(interaction) {
-    interaction.deferUpdate();
+    interaction.deferUpdate(); // defer as early as possible
 
     const playerID = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`)[2];
 
@@ -190,6 +186,7 @@ async function confirmCut(interaction) {
 
     // remove the franchise role and update their nickname
     if (guildMember._roles.includes(playerData.franchise.roleID)) await guildMember.roles.remove(playerData.franchise.roleID);
+    await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
     guildMember.setNickname(`FA | ${guildMember.nickname.split(` `)[2]}`);
 
     // cut the player & ensure that the player's team property is now null
@@ -231,10 +228,11 @@ async function confirmCut(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] })
+    transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function confirmRenew(interaction) {
+    interaction.deferUpdate(); // defer as early as possible
 
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const playerID = data[2];
@@ -286,11 +284,12 @@ async function confirmRenew(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] })
-    interaction.deferUpdate();
+    transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function cancel(interaction) {
+    interaction.deferUpdate(); // defer as early as possible
+
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
 
@@ -298,6 +297,4 @@ async function cancel(interaction) {
     embedEdits.setFields([]);
 
     interaction.message.edit({ embeds: [embedEdits], components: [] });
-
-    interaction.deferUpdate();
 }
