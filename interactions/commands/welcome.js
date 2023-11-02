@@ -19,9 +19,12 @@ module.exports = {
         const guildMember = await interaction.guild.members.fetch(player.value);
         const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
 
+        // check to see if the bot can perform any actions on this user (i.e. if the bot isn't high enough in role hierarchy)
+        if (!guildMember.manageable) return interaction.editReply({ content: `I can't manage this player- their roles are higher than mine! You will need to perform this action manually!`, ephemeral: false });
+
         // status checks
         const validStatusesToDE = [PlayerStatusCode.PENDING, PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT];
-        if (!validStatusesToDE.includes(playerData.status)) return interaction.reply({ content: `This player doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!`, ephemeral: false });
+        if (!validStatusesToDE.includes(playerData.status)) return interaction.editReply({ content: `This player doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!`, ephemeral: false });
 
         // renove the viewer role & add the league role
         if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
