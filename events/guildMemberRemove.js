@@ -18,12 +18,9 @@ module.exports = {
         try {
        
             const guild = await client.guilds.fetch(GUILD);
-            console.log("Guild:", guild); // Debugging
             
             const farewellChannel = await guild.channels.fetch(CHANNELS.MEMBER_LOGS);
-            console.log("Farewell Channel:", farewellChannel); // Debugging
             const embed = new EmbedBuilder({
-                type: "rich",
                 title: `${member.displayName} has left the server`,
                 description: `${member} left the server, bringing the member count to ${guild.memberCount}`,
                 color: 0x7e383a,
