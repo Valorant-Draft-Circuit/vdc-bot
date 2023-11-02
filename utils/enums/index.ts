@@ -8,6 +8,7 @@
 
 export { CHANNELS } from "./channels"
 export { ROLES } from "./roles"
+export { GUILD } from "./guild"
 
 
 export { PlayerStatusCode, ContractStatus } from "./playerStatusCodes"
