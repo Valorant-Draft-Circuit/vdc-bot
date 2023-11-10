@@ -94,14 +94,14 @@ async function cancel(interaction) {
  * @param {Array} arr Array to iterate though and process
  * @param {Number} queueInterval Interval to process the queue at (in ms)
  * @param {Function} intervalCallback Callback function to execute every <queueInterval> ms with an index of <arr> as the argument
- * @param {Function} intervalCallback Callback function to execute once the queue is finished processing
+ * @param {Function} endIntervalQueueCallback Callback function to execute once the queue is finished processing
  */
-async function processQueue(arr, queueInterval, intervalCallback, intervalCallback) {
+async function processQueue(arr, queueInterval, intervalCallback, endIntervalQueueCallback) {
     let index = 0;
 
     const endQueueProcessing = async (intervalID) => {
         clearInterval(intervalID);
-        return await intervalCallback();
+        return await endIntervalQueueCallback();
     };
 
     const intervalID = setInterval(async () => {
