@@ -3,7 +3,7 @@ const { EmbedBuilder } = require("discord.js");
 const { Player } = require(`../../prisma`);
 const { ROLES, ButtonOptions } = require(`../../utils/enums`);
 
-const MS_PER_API_CALL = 1000; // PREDEFINED API REQUESTS RATE (MAX RATE IS 1 CALL EVERY 20 MS)
+const MS_PER_API_CALL = 50; // PREDEFINED API REQUESTS RATE (MAX RATE IS 1 CALL EVERY 20 MS)
 
 module.exports = {
 
