@@ -97,7 +97,7 @@ async function executeSelectMenu(client, interaction) {
 
     switch (selectMenuIDComponent.length) {
         case 1: // select menu is not part of a managed set
-            selectMenuID = selectMenuID;
+            selectMenuID = selectMenuIDComponent[0];
             selectMenu = client.selectMenus.get(selectMenuID);
             args = [interaction];
             break;
