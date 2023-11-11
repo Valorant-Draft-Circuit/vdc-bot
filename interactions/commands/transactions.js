@@ -3,11 +3,11 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder }
 const { ButtonStyle } = require(`discord.js`)
 
 const { Franchise, Games, Player, Team } = require("../../prisma");
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode } = require(`../../utils/enums/`);
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions } = require(`../../utils/enums/`);
 const franchises = require(`../../cache/franchises.json`);
 const { TransactionsRenewOptions } = require("../../utils/enums/transactions");
 
-let chan
+let chan;
 
 module.exports = {
 
@@ -17,10 +17,6 @@ module.exports = {
         chan = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 
         const { _subcommand, _hoistedOptions } = interaction.options;
-
-        const subcommmand = interaction.options._subcommand;
-        let player, franchise;
-
         switch (_subcommand) {
             // case `sub`:
             //     sub(interaction)
@@ -33,6 +29,9 @@ module.exports = {
                 break;
             case `draft-sign`:
                 draftSign(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
+                break;
+            case `update-tier`:
+                updateTier(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
             // case `swap`:
             //     swap(interaction, _hoistedOptions[0], _hoistedOptions[1]);
@@ -442,5 +441,59 @@ async function renew(interaction, player, teamName) {
 
     // create the action row, add the component to it & then reply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+    interaction.reply({ embeds: [embed], components: [subrow] });
+}
+
+async function updateTier(interaction, player, newTier) {
+
+    const playerData = await Player.getBy({ discordID: player.value });
+
+
+    // checks
+    // if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
+    // if (playerData.isRegistered !== PlayerStatusCode.SIGNED) return interaction.reply({ content: `This player is not signed to a franchise and therefore cannot be promoted/demoted!`, ephemeral: false });
+
+    // const franchise = await Franchise.getBy({ name: franchiseName });
+    // const team = await Team.getBy({ id: playerData.team });
+
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you perform the following action?`,
+        color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`    Old Tier: \`\n\`    New Tier: \``,
+                inline: true
+            },
+            {
+                name: `\u200B`,
+                value: `UPDATE TIER\n${player.user}\n\`${player.value}\`\n\${oldtier}\n\${newtier}`,
+                inline: true
+            }
+        ],
+        footer: { text: `Transactions — Update Tier` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsUpdateTierOptions.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsUpdateTierOptions.CONFIRM}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
+    })
+
+    // create the action row, add the component to it & then reply with all the data
+    const subrow = new ActionRowBuilder();
+    // console.log(subrow)
+    subrow.addComponents(cancel, confirm);
+
+    // interaction.message.edit({ embeds: [embedEdits] });
+    // console.log(subrow)
     interaction.reply({ embeds: [embed], components: [subrow] });
 }

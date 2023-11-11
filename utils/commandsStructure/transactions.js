@@ -150,21 +150,31 @@ module.exports = {
                     autocomplete: true
                 }
             ]
+        },
+        {
+            name: "update-tier",
+            description: "Update a player's tier",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "player",
+                    description: "The player whose tier you'd like to change",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+                {
+                    name: `tier`,
+                    description: "The tier you'd like to update them to",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        { name: `Prospect`, value: `prospect` },
+                        { name: `Apprentice`, value: `apprentice` },
+                        { name: `Expert`, value: `expert` },
+                        { name: `Mythic`, value: `mythic` },
+                    ]
+                }
+            ]
         }
     ]
-}
-
-function franchiseChoices() {
-    const franchiseCache = require(`../../cache/franchises.json`);
-
-    const franchiseOptions = [];
-
-    franchiseCache.forEach(franchise => {
-        franchiseOptions.push({
-            name: `${franchise.slug} — ${franchise.name}`,
-            value: franchise.name,
-        })
-    });
-
-    return franchiseOptions;
 }
