@@ -18,7 +18,7 @@ export class Player {
         })
     };
 
-    static async getAllActiveByTier(tier: "Contender" | "Advanced" | "Master" | "Elite") {
+    static async getAllActiveByTier(tier: "Prospect" | "Apprentice" | "Expert" | "Mythic") {
         return await prisma.player.findMany({
             where: {
                 OR: [
@@ -46,7 +46,7 @@ export class Player {
         })
     };
 
-    static async getAllSubsByTier(tier: "Contender" | "Advanced" | "Master" | "Elite") {
+    static async getAllSubsByTier(tier: "Prospect" | "Apprentice" | "Expert" | "Mythic") {
         return await prisma.player.findMany({
             where: {
                 OR: [
@@ -126,14 +126,10 @@ export class Player {
         if (option == undefined) throw new Error(`Must specify exactly 1 option!`);
         const { ign, discordID, riotID } = option;
 
-        // console.log(discordID)
-
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
 
-
+        if (discordID !== undefined) return await getPlayerByDiscordID(discordID);
         
-        if (discordID) return await this.getBy({riotID: (await getPlayerByDiscordID(discordID))?.primaryRiotID})
-
         return await prisma.player.findFirst({
             where: {
                 OR: [
@@ -143,11 +139,6 @@ export class Player {
             },
             include: { Account: true }
         });
-
-        // console.log(a)
-
-        // if (ign) return await getPlayerByIGN(ign);
-        // if (riotID) return await getPlayerByRiotID(riotID);
     };
 };
 
@@ -157,7 +148,8 @@ export class Player {
  */
 async function getPlayerByID(id: string) {
     const a =  await prisma.player.findUnique({
-        where: { id: id }
+        where: { id: id }, 
+        include: { Account: true }
     });
 
     if (a == null) return undefined
