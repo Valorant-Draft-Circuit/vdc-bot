@@ -21,8 +21,8 @@ module.exports = {
       const { _hoistedOptions } = interaction.options;
       // interaction.channel.send(`maybe it will be one day`)
 
-      console.log(await Player.getBy({ign: `Travestey#7227`}))
-      console.log(await Player.getBy({discordID: `382893405178691584`}))
+      // console.log(await Player.getBy({ign: `Travestey#7227`}))
+      // console.log(await Player.getBy({discordID: `382893405178691584`}))
       // Player.getBy();
       // Player.getBy({riotID: `Fx-eQHvJUP-r4DQDIhEqxIu3m40Q-OkjYBkiPqJwIwcynW3vOQv4qLDpvsw-OxDsD1hENoBfxl6Gtg`});
 
@@ -35,7 +35,7 @@ module.exports = {
 
       const a = await refinedRosterData(interaction, roster);
 
-      // console.log(a)
+      console.log(a)
 
       // console.log(sum(a.map(a => a.mmr)))
 
@@ -66,8 +66,8 @@ module.exports = {
          footer: { text: `Valorant Draft Circuit — ${franchise.name}` }
       });
 
-      // return await interaction.editReply({ embeds: [embed] });
-      await interaction.editReply({ content: `ok` , ephemeral: true})
+      return await interaction.editReply({ embeds: [embed] });
+      // await interaction.editReply({ content: `ok` , ephemeral: true})
    }
 };
 
@@ -78,7 +78,6 @@ module.exports = {
  */
 async function refinedRosterData(interaction, roster) {
    const players = [];
-   // console.log(roster)
 
    await roster.forEach(async (p) => {
       const guildMember = await interaction.guild.members.fetch(p.id).catch(e => e);
@@ -91,5 +90,5 @@ async function refinedRosterData(interaction, roster) {
       });
    });
 
-   return await players;
+   return players;
 }
