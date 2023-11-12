@@ -8,21 +8,21 @@ datasource db {
 }
 
 model Account {
-  id                String  @id @unique(map: "Account_pk2")
+  id                String         @id @unique(map: "Account_pk2")
   userId            String
   type              String
   provider          String
-  providerAccountId String  @unique(map: "Account_pk")
+  providerAccountId String         @unique(map: "Account_pk")
   refresh_token     String?
-  access_token      String? @db.Text
+  access_token      String?        @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
   id_token          String?
   session_state     String?
   riotID            String?
-  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Player            Player?
+  User              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  CorrectPlayer     CorrectPlayer?
 
   @@unique([provider, providerAccountId])
   @@index([userId], map: "Account_userId_fkey")
@@ -46,8 +46,27 @@ model AgentStats {
 }
 
 model ControlPanel {
-  id    Int  @id @default(autoincrement())
-  value Int?
+  id    Int     @id @default(autoincrement())
+  value String? @db.LongText
+}
+
+model CorrectPlayer {
+  id                         String        @id
+  userID                     String        @unique(map: "Player_pk")
+  team                       Int?
+  primaryRiotID              String?       @unique(map: "Player_pk3")
+  status                     Int           @default(0)
+  isReturning                Boolean?      @default(false)
+  MMR                        Int?
+  contractStatus             Int?          @default(3)
+  Account                    Account?      @relation(fields: [primaryRiotID], references: [providerAccountId], map: "Player_Account_providerAccountId_fk")
+  MMR_CorrectPlayer_MMRToMMR MMR?          @relation("CorrectPlayer_MMRToMMR", fields: [MMR], references: [id], onDelete: Restrict, map: "Player_MMR_id_fk")
+  Team                       Team?         @relation(fields: [team], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Player_Team_id_fk")
+  User                       User          @relation(fields: [userID], references: [id], onDelete: Cascade, map: "Player_User_id_fk")
+  PlayerStats                PlayerStats[]
+
+  @@index([MMR], map: "Player_MMR_id_fk")
+  @@index([team], map: "Player_Team_id_fk")
 }
 
 model Faq {
@@ -71,7 +90,6 @@ model Franchise {
   Team                               Team[]
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model Games {
   id                      String        @id @db.VarChar(255)
   type                    String?       @db.VarChar(255)
@@ -103,17 +121,17 @@ model MCWhitelist {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model MMR {
-  id                     Int       @id @default(autoincrement())
-  riotId                 String?   @unique(map: "MMR_pk") @db.VarChar(255)
-  num_ranked             Int       @default(0)
-  mmr_ranked             Int       @default(0)
-  num_combines           Int       @default(0)
-  mmr_combines           Int       @default(0)
-  num_prev_season        Int       @default(0)
-  mmr_prev_season        Int       @default(0)
-  mmr_overall            Int       @default(0)
-  lastPulled             DateTime? @db.Date
-  Player_Player_MMRToMMR Player[]  @relation("Player_MMRToMMR")
+  id                                   Int             @id @default(autoincrement())
+  riotId                               String?         @unique(map: "MMR_pk") @db.VarChar(255)
+  num_ranked                           Int             @default(0)
+  mmr_ranked                           Int             @default(0)
+  num_combines                         Int             @default(0)
+  mmr_combines                         Int             @default(0)
+  num_prev_season                      Int             @default(0)
+  mmr_prev_season                      Int             @default(0)
+  mmr_overall                          Int             @default(0)
+  lastPulled                           DateTime?       @default(dbgenerated("('2023-10-01')")) @db.Date
+  CorrectPlayer_CorrectPlayer_MMRToMMR CorrectPlayer[] @relation("CorrectPlayer_MMRToMMR")
 }
 
 model ModLogs {
@@ -121,29 +139,21 @@ model ModLogs {
 }
 
 model Player {
-  id                  String        @id
-  userID              String        @unique(map: "Player_pk")
-  team                Int?
-  primaryRiotID       String?       @unique(map: "Player_pk3")
-  status              Int           @default(0)
-  contractStatus      Int?          @default(3)
-  isReturning         Boolean       @default(false)
-  MMR                 Int?
-  Account             Account?      @relation(fields: [primaryRiotID], references: [providerAccountId], map: "Player_Account_providerAccountId_fk")
-  MMR_Player_MMRToMMR MMR?          @relation("Player_MMRToMMR", fields: [MMR], references: [id], onDelete: Restrict, map: "Player_MMR_id_fk")
-  Team                Team?         @relation(fields: [team], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Player_Team_id_fk")
-  User                User          @relation(fields: [userID], references: [id], onDelete: Cascade, map: "Player_User_id_fk")
-  PlayerStats         PlayerStats[]
-
-  @@index([MMR], map: "Player_MMR_id_fk")
-  @@index([team], map: "Player_Team_id_fk")
+  id             String  @id
+  userID         String
+  team           Int?
+  primaryRiotID  String?
+  status         Int?
+  isReturning    Int?    @db.TinyInt
+  MMR            Int?
+  contractStatus Int?
 }
 
 model PlayerStats {
-  id                  Int     @id @default(autoincrement())
-  riotId              String? @db.VarChar(255)
-  gameID              String? @db.VarChar(255)
-  agent               String? @db.VarChar(255)
+  id                  Int            @id @default(autoincrement())
+  riotId              String?        @db.VarChar(255)
+  gameID              String?        @db.VarChar(255)
+  agent               String?        @db.VarChar(255)
   rating_atk          Float?
   rating_def          Float?
   acs                 Int
@@ -168,8 +178,8 @@ model PlayerStats {
   pr_first_deaths     Float?
   pr_damage           Float?
   total_exit_kills    Int?
-  Games               Games?  @relation(fields: [gameID], references: [id], onDelete: Cascade, map: "PlayerStats_PastGames_id_fk")
-  Player              Player? @relation(fields: [riotId], references: [primaryRiotID], map: "PlayerStats_Player_primaryRiotID_fk")
+  Games               Games?         @relation(fields: [gameID], references: [id], onDelete: Cascade, map: "PlayerStats_PastGames_id_fk")
+  CorrectPlayer       CorrectPlayer? @relation(fields: [riotId], references: [primaryRiotID], map: "PlayerStats_Player_primaryRiotID_fk")
 
   @@index([agent], map: "PlayerStats_AgentStats_agent_fk")
   @@index([gameID], map: "PlayerStats_PastGames_id_fk")
@@ -208,18 +218,24 @@ model Stream {
 }
 
 model Team {
-  id                       Int       @id @unique(map: "id") @default(autoincrement())
+  id                       Int             @id @unique(map: "id") @default(autoincrement())
   franchise                Int
-  name                     String?   @unique(map: "Team_pk2")
+  name                     String?         @unique(map: "Team_pk2")
   tier                     String?
-  isActive                 Boolean?  @default(true)
-  Games_Games_team1ToTeam  Games[]   @relation("Games_team1ToTeam")
-  Games_Games_team2ToTeam  Games[]   @relation("Games_team2ToTeam")
-  Games_Games_winnerToTeam Games[]   @relation("Games_winnerToTeam")
-  Player                   Player[]
-  Franchise                Franchise @relation(fields: [franchise], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Team_Franchise_slug_fk")
+  isActive                 Boolean?        @default(true)
+  CorrectPlayer            CorrectPlayer[]
+  Games_Games_team1ToTeam  Games[]         @relation("Games_team1ToTeam")
+  Games_Games_team2ToTeam  Games[]         @relation("Games_team2ToTeam")
+  Games_Games_winnerToTeam Games[]         @relation("Games_winnerToTeam")
+  Franchise                Franchise       @relation(fields: [franchise], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Team_Franchise_slug_fk")
 
   @@index([franchise], map: "Team_Franchise_slug_fk")
+}
+
+model TempContract {
+  discID          String @id @default("0") @db.VarChar(255)
+  contractcurrent Int?
+  team            Int?
 }
 
 model Transactions {
@@ -235,15 +251,15 @@ model Transactions {
 }
 
 model User {
-  id            String    @id
+  id            String         @id
   name          String?
   email         String?
   emailVerified DateTime?
   image         String?
-  isStaff       Boolean   @default(false)
-  userLevel     Int       @default(0)
+  isStaff       Boolean        @default(false)
+  userLevel     Int            @default(0)
   Account       Account[]
-  Player        Player?
+  CorrectPlayer CorrectPlayer?
   Session       Session[]
 }
 
@@ -253,10 +269,4 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-}
-
-model TempContract {
-  discID          String @id @default("0") @db.VarChar(255)
-  contractcurrent Int?
-  team            Int?
 }
