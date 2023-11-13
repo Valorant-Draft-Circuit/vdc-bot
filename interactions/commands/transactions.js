@@ -95,8 +95,8 @@ async function cut(interaction, player) {
     const playerData = await Player.getBy({ discordID: player.value });
 
     // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.team == null) return interaction.reply({ content: `This player is not on a team!`, ephemeral: false });
+    if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.team == null) return interaction.editReply({ content: `This player is not on a team!`, ephemeral: false });
 
     const franchise = await Franchise.getBy({ teamID: playerData.team });
     const team = await Team.getBy({ id: playerData.team });
@@ -135,8 +135,7 @@ async function cut(interaction, player) {
 
     // create the action row, add the component to it & then reply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    await interaction.editReply({ embeds: [embed], components: [subrow] });
-    return await interaction.editReply({content: `Success!`});
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 async function sign(interaction, player, teamName) {
@@ -147,8 +146,8 @@ async function sign(interaction, player, teamName) {
 
 
     // checks
-    if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.status !== PlayerStatusCode.FREE_AGENT) return await interaction.editReply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+    // if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    // if (playerData.status !== PlayerStatusCode.FREE_AGENT) return await interaction.editReply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -184,8 +183,7 @@ async function sign(interaction, player, teamName) {
 
     // create the action row, add the component to it & then editReply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    await interaction.editReply({ embeds: [embed], components: [subrow] });
-    return await interaction.editReply({content: `Success!`});
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 async function draftSign(interaction, player, teamName) {
@@ -233,8 +231,7 @@ async function draftSign(interaction, player, teamName) {
 
     // create the action row, add the component to it & then editReply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    await interaction.editReply({ embeds: [embed], components: [subrow] });
-    return await interaction.editReply({content: `Success!`});
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 function swap(interaction, cutPlayer, signPlayer) {
@@ -442,6 +439,5 @@ async function updateTier(interaction, guildMember, newTier) {
 
     // create the action row, add the component to it & then reply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    await interaction.editReply({ embeds: [embed], components: [subrow] });
-    return await interaction.editReply({content: `Success!`});
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
