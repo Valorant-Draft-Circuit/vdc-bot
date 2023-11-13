@@ -44,7 +44,7 @@ export class Franchise {
         if (franchise == null) return undefined;
 
         return await prisma.team.findMany({
-            where: { franchise: franchise.id },
+            where: { franchise: franchise.id, isActive: true },
         });
     };
 
