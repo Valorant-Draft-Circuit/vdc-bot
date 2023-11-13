@@ -18,7 +18,7 @@ export class Player {
         })
     };
 
-    static async getAllActiveByTier(tier: "Contender" | "Advanced" | "Master" | "Elite") {
+    static async getAllActiveByTier(tier: "Prospect" | "Apprentice" | "Expert" | "Mythic") {
         return await prisma.player.findMany({
             where: {
                 OR: [
@@ -46,7 +46,7 @@ export class Player {
         })
     };
 
-    static async getAllSubsByTier(tier: "Contender" | "Advanced" | "Master" | "Elite") {
+    static async getAllSubsByTier(tier: "Prospect" | "Apprentice" | "Expert" | "Mythic") {
         return await prisma.player.findMany({
             where: {
                 OR: [
@@ -107,10 +107,10 @@ export class Player {
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
     };
 
-    static async getIGNby(option: {discordID: string;}) {
+    static async getIGNby(option: { discordID: string; }) {
         const playerAccount = await prisma.player.findFirst({
-            where:{id: option.discordID},
-            include : {Account: true}
+            where: { id: option.discordID },
+            include: { Account: true }
         })
 
         return playerAccount?.Account?.riotID;
@@ -128,9 +128,17 @@ export class Player {
 
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
 
-        if (ign) return await getPlayerByIGN(ign);
-        if (discordID) return await getPlayerByDiscordID(discordID);
-        if (riotID) return await getPlayerByRiotID(riotID);
+        if (discordID !== undefined) return await getPlayerByDiscordID(discordID);
+        
+        return await prisma.player.findFirst({
+            where: {
+                OR: [
+                    { Account: { riotID: ign } },
+                    { Account: { providerAccountId: riotID } },
+                ]
+            },
+            include: { Account: true }
+        });
     };
 };
 
@@ -139,9 +147,13 @@ export class Player {
  * @param {String} id Discord ID
  */
 async function getPlayerByID(id: string) {
-    return await prisma.player.findUnique({
-        where: { id: id }
+    const a =  await prisma.player.findUnique({
+        where: { id: id }, 
+        include: { Account: true }
     });
+
+    if (a == null) return undefined
+    else return a;
 }
 
 /** Query the Player table for a player by their IGN

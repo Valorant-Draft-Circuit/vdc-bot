@@ -120,7 +120,7 @@ async function executeSelectMenu(client, interaction) {
 }
 
 async function executeAutocomplete(client, interaction) {
-    const autocompleteCommandQuery = client.autocompletes.get(interaction.commandNam);
+    const autocompleteCommandQuery = client.autocompletes.get(interaction.commandName);
     const autocompleteSubcommandsQuery = client.autocompletes.get(interaction.options._subcommand);
 
     if (autocompleteCommandQuery) {
