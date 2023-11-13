@@ -97,7 +97,7 @@ async function executeSelectMenu(client, interaction) {
 
     switch (selectMenuIDComponent.length) {
         case 1: // select menu is not part of a managed set
-            selectMenuID = selectMenuID;
+            selectMenuID = selectMenuIDComponent[0];
             selectMenu = client.selectMenus.get(selectMenuID);
             args = [interaction];
             break;
@@ -120,7 +120,7 @@ async function executeSelectMenu(client, interaction) {
 }
 
 async function executeAutocomplete(client, interaction) {
-    const autocompleteCommandQuery = client.autocompletes.get(interaction.commandNam);
+    const autocompleteCommandQuery = client.autocompletes.get(interaction.commandName);
     const autocompleteSubcommandsQuery = client.autocompletes.get(interaction.options._subcommand);
 
     if (autocompleteCommandQuery) {

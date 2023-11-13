@@ -25,15 +25,21 @@ export class Team {
 
     };
 
-    static async getRoster(option: { id?: number; name?: string; }) {
+    static async getRosterBy(option: { id?: number; name?: string; }) {
         if (option == undefined) return new Error(`Must specify exactly 1 option!`);
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
 
         const { id, name } = option;
 
-        if (id) return await getRosterByTeamID(id);
-        if (name) return await getRosterByTeamName(name);
-
+        return await prisma.player.findMany({
+            where: {
+                OR: [
+                    { Team: { name: name } },
+                    { team: id },
+                ]
+            },
+            include: { Account: true }
+        });
     }
 }
 
