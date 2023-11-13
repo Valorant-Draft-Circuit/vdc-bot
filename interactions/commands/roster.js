@@ -21,6 +21,7 @@ module.exports = {
 
       // get data from DB
       const teamName = _hoistedOptions[0].value;
+      const team = await Team.getBy({name:teamName });
       const roster = await Team.getRosterBy({ name: teamName });
       const franchise = await Franchise.getBy({ teamName: teamName });
 
@@ -30,7 +31,7 @@ module.exports = {
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
          author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.logoFileName}` },
-         description: `\`     Tier \` : ${teamName}\n\` Team MMR \` : ${sum(player.map((p) => p.mmr))}`,
+         description: `\`     Tier \` : ${team.tier}\n\` Team MMR \` : ${sum(player.map((p) => p.mmr))}`,
          color: 0xE92929,
          fields: [
             {
