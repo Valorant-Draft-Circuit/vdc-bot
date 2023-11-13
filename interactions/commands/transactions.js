@@ -1,13 +1,10 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder } = require("discord.js");
-
 const { ButtonStyle } = require(`discord.js`)
 
-const { Franchise, Games, Player, Team } = require("../../prisma");
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode } = require(`../../utils/enums/`);
-const franchises = require(`../../cache/franchises.json`);
-const { TransactionsRenewOptions } = require("../../utils/enums/transactions");
+const { Franchise, Player, Team } = require("../../prisma");
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions } = require(`../../utils/enums/`);
 
-let chan
+let chan;
 
 module.exports = {
 
@@ -16,11 +13,8 @@ module.exports = {
     async execute(interaction) {
         chan = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 
+
         const { _subcommand, _hoistedOptions } = interaction.options;
-
-        const subcommmand = interaction.options._subcommand;
-        let player, franchise;
-
         switch (_subcommand) {
             // case `sub`:
             //     sub(interaction)
@@ -34,16 +28,15 @@ module.exports = {
             case `draft-sign`:
                 draftSign(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
+            case `update-tier`:
+                updateTier(interaction, _hoistedOptions[0].member, _hoistedOptions[1].value);
+                break;
             // case `swap`:
             //     swap(interaction, _hoistedOptions[0], _hoistedOptions[1]);
             //     break;
             // case `ir`:
             //     // player = _hoistedOptions[0];
             //     ir(interaction, _hoistedOptions[0]);
-            //     break;
-            // case `trade`:
-            //     // player = _hoistedOptions[0];
-            //     trade(interaction, _hoistedOptions);
             //     break;
             case `renew`:
                 renew(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
@@ -98,11 +91,12 @@ function sub(interaction) {
 }
 
 async function cut(interaction, player) {
+    await interaction.deferReply();
     const playerData = await Player.getBy({ discordID: player.value });
 
     // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.team == null) return interaction.reply({ content: `This player is not on a team!`, ephemeral: false });
+    if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.team == null) return interaction.editReply({ content: `This player is not on a team!`, ephemeral: false });
 
     const franchise = await Franchise.getBy({ teamID: playerData.team });
     const team = await Team.getBy({ id: playerData.team });
@@ -141,18 +135,19 @@ async function cut(interaction, player) {
 
     // create the action row, add the component to it & then reply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 async function sign(interaction, player, teamName) {
+    await interaction.deferReply();
     const playerData = await Player.getBy({ discordID: player.value });
     const teamData = await Team.getBy({ name: teamName });
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
 
     // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.status !== PlayerStatusCode.FREE_AGENT) return interaction.reply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+    // if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    // if (playerData.status !== PlayerStatusCode.FREE_AGENT) return await interaction.editReply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -186,20 +181,21 @@ async function sign(interaction, player, teamName) {
         style: ButtonStyle.Success,
     })
 
-    // create the action row, add the component to it & then reply with all the data
+    // create the action row, add the component to it & then editReply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 async function draftSign(interaction, player, teamName) {
+    await interaction.deferReply();
 
     const playerData = await Player.getBy({ discordID: player.value });
     const teamData = await Team.getBy({ name: teamName });
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
     // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
+    if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.status !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.editReply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -233,63 +229,9 @@ async function draftSign(interaction, player, teamName) {
         style: ButtonStyle.Success,
     })
 
-    // create the action row, add the component to it & then reply with all the data
+    // create the action row, add the component to it & then editReply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    interaction.reply({ embeds: [embed], components: [subrow] });
-}
-
-async function draftSign(interaction, player, franchiseName) {
-
-    const playerData = await Player.getBy({ discordID: player.value });
-
-
-    // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
-
-    const franchise = await Franchise.getBy({ name: franchiseName });
-    // const team = await Team.getBy({ id: playerData.team });
-
-    // create the base embed
-    const embed = new EmbedBuilder({
-        author: { name: `VDC Transactions Manager` },
-        description: `Are you sure you perform the following action?`,
-        color: 0xE92929,
-        fields: [
-            {
-                name: `\u200B`,
-                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
-                inline: true
-            },
-            {
-                name: `\u200B`,
-                value: `SIGN\n${player.user}\n\`${player.value}\`\n\${team.name}\n\${franchise.name}`,
-                inline: true
-            }
-        ],
-        footer: { text: `Transactions — Draft Sign` }
-    });
-
-    const cancel = new ButtonBuilder({
-        customId: `transactions_${TransactionsDraftSignOptions.CANCEL}`,
-        label: `Cancel`,
-        style: ButtonStyle.Danger,
-    })
-
-    const confirm = new ButtonBuilder({
-        customId: `transactions_${TransactionsDraftSignOptions.CONFIRM}`,
-        label: `Confirm`,
-        style: ButtonStyle.Success,
-    })
-
-    // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 function swap(interaction, cutPlayer, signPlayer) {
@@ -443,4 +385,59 @@ async function renew(interaction, player, teamName) {
     // create the action row, add the component to it & then reply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
     interaction.reply({ embeds: [embed], components: [subrow] });
+}
+
+async function updateTier(interaction, guildMember, newTier) {
+    await interaction.deferReply();
+    const player = await Player.getBy({ discordID: guildMember.id });
+
+
+    // checks
+    if (player == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (player.status !== PlayerStatusCode.SIGNED) return await interaction.editReply({ content: `This player is not signed to a franchise and therefore cannot be promoted/demoted!`, ephemeral: false });
+
+    const franchise = await Franchise.getBy({ teamID: player.team });
+    const franchiseTeams = await Franchise.getTeams({id: franchise.id});
+    const team = await Team.getBy({ id: player.team });
+
+    // ensure that the player isn't being updaeted to the same team and that the franchise has an active team in the tier the player is being promotes/demoted to
+    if (team.tier === newTier) return await interaction.editReply({ content: `This player is already in the tier you're trying to promote/demote them to (${newTier})`, ephemeral: false });
+    if (!franchiseTeams.map(t=>t.tier).includes(newTier)) return await interaction.editReply({ content: `${franchise.name} does not have an active team in the ${newTier} tier!`, ephemeral: false });
+
+
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you perform the following action?`,
+        color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`    Old Tier: \`\n\`    New Tier: \``,
+                inline: true
+            },
+            {
+                name: `\u200B`,
+                value: `UPDATE TIER\n${guildMember}\n\`${guildMember.id}\`\n${team.tier}\n${newTier}`,
+                inline: true
+            }
+        ],
+        footer: { text: `Transactions — Update Tier` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsUpdateTierOptions.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsUpdateTierOptions.CONFIRM}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
+    })
+
+    // create the action row, add the component to it & then reply with all the data
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }

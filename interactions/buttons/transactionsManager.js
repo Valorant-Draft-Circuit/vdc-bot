@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
 
 
-const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus } = require(`../../utils/enums`);
+const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus, TransactionsUpdateTierOptions } = require(`../../utils/enums`);
 
 
 const { Franchise, Team, Transaction, Player } = require(`../../prisma`);
@@ -18,30 +18,26 @@ module.exports = {
         switch (Number(args)) {
             //  CONFIRM BUTTONS  ###################################
             case TransactionsSignOptions.CONFIRM:
-                await confirmSign(interaction);
-                break;
+                return await confirmSign(interaction);
             case TransactionsDraftSignOptions.CONFIRM:
-                await confirmDraftSign(interaction);
-                break;
+                return await confirmDraftSign(interaction);
             case TransactionsCutOptions.CONFIRM:
-                await confirmCut(interaction);
-                break;
+                return await confirmCut(interaction);
             case TransactionsRenewOptions.CONFIRM:
-                await confirmRenew(interaction);
-                break;
+                return await confirmRenew(interaction);
+            case TransactionsUpdateTierOptions.CONFIRM:
+                return await confirmUpdateTier(interaction);
 
             //  CANCEL BUTTONS  ####################################
             case TransactionsSignOptions.CANCEL:
             case TransactionsDraftSignOptions.CANCEL:
             case TransactionsCutOptions.CANCEL:
             case TransactionsRenewOptions.CANCEL:
-
-                await cancel(interaction);
-                break
+            case TransactionsUpdateTierOptions.CANCEL:
+                return await cancel(interaction);
 
             default:
-                interaction.reply({ content: `There was an error. ERR: BTN_TSC_MGR` });
-                break;
+                return interaction.reply({ content: `There was an error. ERR: BTN_TSC_MGR` });
         }
 
 
@@ -49,7 +45,7 @@ module.exports = {
 };
 
 async function confirmSign(interaction) {
-    interaction.deferUpdate(); // defer as early as possible
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const playerID = data[2];
@@ -68,18 +64,15 @@ async function confirmSign(interaction) {
     // update nickname
     guildMember.setNickname(`${franchiseData.slug} | ${guildMember.nickname.split(` `)[2]}`);
 
-
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
-    if (player.team !== teamData.id) return interaction.reply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
+    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
-
     embedEdits.setDescription(`This operation was successfully completed.`);
     embedEdits.setFields([]);
-
-    interaction.message.edit({ embeds: [embedEdits], components: [] });
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
     // create the base embed
     const announcement = new EmbedBuilder({
@@ -109,46 +102,45 @@ async function confirmSign(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] });
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function confirmDraftSign(interaction) {
-    interaction.deferUpdate(); // defer as early as possible
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const playerID = data[2];
 
     const playerData = await Player.getBy({ discordID: playerID });
+    const playerRiotID = await Player.getIGNby({ discordID: playerID });
     const teamData = await Team.getBy({ name: data[3] });
     const franchiseData = await Franchise.getBy({ name: data[4] });
 
+    const playerTag = playerRiotID.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-
 
     // add the franchise role, remove FA/RFA role
     if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.DRAFT_ELIGIBLE)) await guildMember.roles.remove(ROLES.LEAGUE.DRAFT_ELIGIBLE);
-    
-    // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${guildMember.nickname.split(` `)[2]}`);
 
+    // update nickname
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag}`);
 
     // sign the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
-    if (player.team !== teamData.id) return interaction.reply({ content: `There was an error while attempting to sign the player's contract. The database was not updated.` });
+    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sign the player's contract. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
-
     embedEdits.setDescription(`This operation was successfully completed.`);
     embedEdits.setFields([]);
-
-    interaction.message.edit({ embeds: [embedEdits], components: [] });
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
-        description: `${guildMember} (${guildMember.nickname.split(` `)[2]}) was signed to ${franchiseData.name}`,
+        description: `${guildMember} (${playerTag}) was signed to ${franchiseData.name}`,
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         fields: [
@@ -173,11 +165,12 @@ async function confirmDraftSign(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] });
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function confirmCut(interaction) {
-    interaction.deferUpdate(); // defer as early as possible
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
     const playerID = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`)[2];
 
@@ -191,15 +184,14 @@ async function confirmCut(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.cut(playerID);
-    if (player.team !== null) return interaction.reply({ content: `There was an error while attempting to cut the player. The database was not updated.` });
+    if (player.team !== null) return interaction.editReply({ content: `There was an error while attempting to cut the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
-
     embedEdits.setDescription(`This operation was successfully completed.`);
     embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
-    interaction.message.edit({ embeds: [embedEdits], components: [] });
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
@@ -228,11 +220,12 @@ async function confirmCut(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] });
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function confirmRenew(interaction) {
-    interaction.deferUpdate(); // defer as early as possible
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const playerID = data[2];
@@ -246,15 +239,13 @@ async function confirmRenew(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.renew({ playerID: playerData.id });
-    if (player.team !== teamData.id || player.contractStatus !== ContractStatus.RENEWED) return interaction.reply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
+    if (player.team !== teamData.id || player.contractStatus !== ContractStatus.RENEWED) return interaction.editReply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
-
     embedEdits.setDescription(`This operation was successfully completed.`);
     embedEdits.setFields([]);
-
-    interaction.message.edit({ embeds: [embedEdits], components: [] });
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
     // create the base embed
     const announcement = new EmbedBuilder({
@@ -284,17 +275,76 @@ async function confirmRenew(interaction) {
         timestamp: Date.now(),
     });
 
-    transactionsAnnouncementChannel.send({ embeds: [announcement] });
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+}
+
+async function confirmUpdateTier(interaction) {
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+
+    const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
+    const playerID = data[2];
+
+    const player = await Player.getBy({ discordID: playerID });
+    const playerRiotID = await Player.getIGNby({ discordID: playerID });
+    const team = await Team.getBy({ playerID: playerID });
+    const franchise = await Franchise.getBy({ teamID: team.id });
+    const franchiseTeams = await Franchise.getTeams({ id: franchise.id });
+
+    const newTeam = franchiseTeams.filter(t => t.tier === data[4])[0];
+    const playerTag = playerRiotID.split(`#`)[0];
+    const guildMember = await interaction.guild.members.fetch(playerID);
+
+
+    // update the player the player & ensure that the player's team property is now null
+    const updatedPlayer = await Transaction.updateTier({ playerID: player.id, teamID: newTeam.id });
+    if (updatedPlayer.team !== newTeam.id) return await interaction.editReply({ content: `There was an error while attempting to update the player's tier. The database was not updated.` });
+
+    // create & send the "successfully completed" embed
+    const embed = interaction.message.embeds[0];
+    const embedEdits = new EmbedBuilder(embed);
+    embedEdits.setDescription(`This operation was successfully completed.`);
+    embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
+
+    // create the base embed
+    const announcement = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `${guildMember} (${playerTag})'s tier was updated!\n${data[3]} => ${data[4]}`,
+        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchise.logoFileName}` },
+        color: 0xE92929,
+        fields: [
+            {
+                name: `Franchise`,
+                value: `<${franchise.emoteID}> ${franchise.name}`,
+                inline: true
+            },
+            {
+                name: `Team`,
+                value: newTeam.name,
+                inline: true
+            },
+            /** @TODO Once GM discord IDs are in Franchsie Table, show this block */
+            // {
+            //     name: `General Manager`,
+            //     value: `"\${franchise.gm}"`,
+            //     inline: true
+            // }
+        ],
+        footer: { text: `Transactions — Renew` },
+        timestamp: Date.now(),
+    });
+
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
 }
 
 async function cancel(interaction) {
-    interaction.deferUpdate(); // defer as early as possible
-
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
 
     embedEdits.setDescription(`This operation was cancelled.`);
     embedEdits.setFields([]);
 
-    interaction.message.edit({ embeds: [embedEdits], components: [] });
+    return await interaction.message.edit({ embeds: [embedEdits], components: [] });
 }

@@ -13,7 +13,8 @@ export { GUILD } from "./guild"
 
 export { PlayerStatusCode, ContractStatus } from "./playerStatusCodes"
 export { ButtonOptions } from "./buttonOptions"
-export { TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions } from "./transactions"
+export { TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, TransactionsUpdateTierOptions } from "./transactions"
+
 // export { Channel } from "./channels"
 // export { FranchiseEmote } from "./franchiseEmotes"
 // export { ContenderTeams, AdvancedTeams, MasterTeams, EliteTeams } from "./franchiseTeams"

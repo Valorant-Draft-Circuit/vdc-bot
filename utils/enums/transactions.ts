@@ -70,3 +70,13 @@ export enum TransactionsRenewOptions {
     /** @param {enum} CANCEL - Cancel cut enumeration */
     CANCEL = 602,
 }
+
+/**
+ * @enum {TransactionsUpdateTierOptions} - Enumerations for the ir commands
+ */
+export enum TransactionsUpdateTierOptions {
+    /** @param {enum} CONFIRM - Confirm cut enumeration */
+    CONFIRM = 701,
+    /** @param {enum} CANCEL - Cancel cut enumeration */
+    CANCEL = 702,
+}
