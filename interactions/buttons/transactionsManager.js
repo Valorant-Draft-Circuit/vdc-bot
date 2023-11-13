@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
 
 
-const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus } = require(`../../utils/enums`);
+const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus, TransactionsUpdateTierOptions } = require(`../../utils/enums`);
 
 
 const { Franchise, Team, Transaction, Player } = require(`../../prisma`);
@@ -18,30 +18,26 @@ module.exports = {
         switch (Number(args)) {
             //  CONFIRM BUTTONS  ###################################
             case TransactionsSignOptions.CONFIRM:
-                await confirmSign(interaction);
-                break;
+                return await confirmSign(interaction);
             case TransactionsDraftSignOptions.CONFIRM:
-                await confirmDraftSign(interaction);
-                break;
+                return await confirmDraftSign(interaction);
             case TransactionsCutOptions.CONFIRM:
-                await confirmCut(interaction);
-                break;
+                return await confirmCut(interaction);
             case TransactionsRenewOptions.CONFIRM:
-                await confirmRenew(interaction);
-                break;
+                return await confirmRenew(interaction);
+            case TransactionsUpdateTierOptions.CONFIRM:
+                return await confirmUpdateTier(interaction);
 
             //  CANCEL BUTTONS  ####################################
             case TransactionsSignOptions.CANCEL:
             case TransactionsDraftSignOptions.CANCEL:
             case TransactionsCutOptions.CANCEL:
             case TransactionsRenewOptions.CANCEL:
-
-                await cancel(interaction);
-                break
+            case TransactionsUpdateTierOptions.CANCEL:
+                return await cancel(interaction);
 
             default:
-                interaction.reply({ content: `There was an error. ERR: BTN_TSC_MGR` });
-                break;
+                return interaction.reply({ content: `There was an error. ERR: BTN_TSC_MGR` });
         }
 
 
