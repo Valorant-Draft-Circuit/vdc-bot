@@ -1,11 +1,8 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder } = require("discord.js");
-
 const { ButtonStyle } = require(`discord.js`)
 
-const { Franchise, Games, Player, Team } = require("../../prisma");
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions } = require(`../../utils/enums/`);
-const franchises = require(`../../cache/franchises.json`);
-const { TransactionsRenewOptions } = require("../../utils/enums/transactions");
+const { Franchise, Player, Team } = require("../../prisma");
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions } = require(`../../utils/enums/`);
 
 let chan;
 
@@ -15,6 +12,7 @@ module.exports = {
 
     async execute(interaction) {
         chan = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
+
 
         const { _subcommand, _hoistedOptions } = interaction.options;
         switch (_subcommand) {
@@ -39,10 +37,6 @@ module.exports = {
             // case `ir`:
             //     // player = _hoistedOptions[0];
             //     ir(interaction, _hoistedOptions[0]);
-            //     break;
-            // case `trade`:
-            //     // player = _hoistedOptions[0];
-            //     trade(interaction, _hoistedOptions);
             //     break;
             case `renew`:
                 renew(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
