@@ -237,60 +237,6 @@ async function draftSign(interaction, player, teamName) {
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
-async function draftSign(interaction, player, franchiseName) {
-
-    const playerData = await Player.getBy({ discordID: player.value });
-
-
-    // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
-
-    const franchise = await Franchise.getBy({ name: franchiseName });
-    // const team = await Team.getBy({ id: playerData.team });
-
-    // create the base embed
-    const embed = new EmbedBuilder({
-        author: { name: `VDC Transactions Manager` },
-        description: `Are you sure you perform the following action?`,
-        color: 0xE92929,
-        fields: [
-            {
-                name: `\u200B`,
-                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
-                inline: true
-            },
-            {
-                name: `\u200B`,
-                value: `SIGN\n${player.user}\n\`${player.value}\`\n\${team.name}\n\${franchise.name}`,
-                inline: true
-            }
-        ],
-        footer: { text: `Transactions — Draft Sign` }
-    });
-
-    const cancel = new ButtonBuilder({
-        customId: `transactions_${TransactionsDraftSignOptions.CANCEL}`,
-        label: `Cancel`,
-        style: ButtonStyle.Danger,
-    })
-
-    const confirm = new ButtonBuilder({
-        customId: `transactions_${TransactionsDraftSignOptions.CONFIRM}`,
-        label: `Confirm`,
-        style: ButtonStyle.Success,
-    })
-
-    // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
-    interaction.reply({ embeds: [embed], components: [subrow] });
-}
-
 function swap(interaction, cutPlayer, signPlayer) {
     // create the base embed
     const embed = new EmbedBuilder({
