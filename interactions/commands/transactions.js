@@ -390,17 +390,23 @@ async function renew(interaction, player, teamName) {
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
-async function updateTier(interaction, player, newTier) {
-
-    const playerData = await Player.getBy({ discordID: player.value });
+async function updateTier(interaction, guildMember, newTier) {
+    await interaction.deferReply();
+    const player = await Player.getBy({ discordID: guildMember.id });
 
 
     // checks
-    // if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.isRegistered !== PlayerStatusCode.SIGNED) return interaction.reply({ content: `This player is not signed to a franchise and therefore cannot be promoted/demoted!`, ephemeral: false });
+    if (player == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (player.status !== PlayerStatusCode.SIGNED) return await interaction.editReply({ content: `This player is not signed to a franchise and therefore cannot be promoted/demoted!`, ephemeral: false });
 
-    // const franchise = await Franchise.getBy({ name: franchiseName });
-    // const team = await Team.getBy({ id: playerData.team });
+    const franchise = await Franchise.getBy({ teamID: player.team });
+    const franchiseTeams = await Franchise.getTeams({id: franchise.id});
+    const team = await Team.getBy({ id: player.team });
+
+    // ensure that the player isn't being updaeted to the same team and that the franchise has an active team in the tier the player is being promotes/demoted to
+    if (team.tier === newTier) return await interaction.editReply({ content: `This player is already in the tier you're trying to promote/demote them to (${newTier})`, ephemeral: false });
+    if (!franchiseTeams.map(t=>t.tier).includes(newTier)) return await interaction.editReply({ content: `${franchise.name} does not have an active team in the ${newTier} tier!`, ephemeral: false });
+
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -415,7 +421,7 @@ async function updateTier(interaction, player, newTier) {
             },
             {
                 name: `\u200B`,
-                value: `UPDATE TIER\n${player.user}\n\`${player.value}\`\n\${oldtier}\n\${newtier}`,
+                value: `UPDATE TIER\n${guildMember}\n\`${guildMember.id}\`\n${team.tier}\n${newTier}`,
                 inline: true
             }
         ],
@@ -435,11 +441,7 @@ async function updateTier(interaction, player, newTier) {
     })
 
     // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+    await interaction.editReply({ embeds: [embed], components: [subrow] });
+    return await interaction.editReply({content: `Success!`});
 }
