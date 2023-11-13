@@ -1,8 +1,7 @@
-const { Games, Team, Franchise, Player } = require(`../../prisma`);
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ApplicationCommand } = require("discord.js");
+const { Team, Franchise } = require(`../../prisma`);
+const { EmbedBuilder, ApplicationCommand, DiscordAPIError } = require("discord.js");
 
-// types
-const { CommandInteraction } = require("discord.js");
+const { ROLES } = require("../../utils/enums");
 
 const imagesURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
 const trackerURL = `https://tracker.gg/valorant/profile/riot`;
@@ -19,55 +18,42 @@ module.exports = {
    async execute(interaction) {
       await interaction.deferReply();
       const { _hoistedOptions } = interaction.options;
-      // interaction.channel.send(`maybe it will be one day`)
 
-      // console.log(await Player.getBy({ign: `Travestey#7227`}))
-      // console.log(await Player.getBy({discordID: `382893405178691584`}))
-      // Player.getBy();
-      // Player.getBy({riotID: `Fx-eQHvJUP-r4DQDIhEqxIu3m40Q-OkjYBkiPqJwIwcynW3vOQv4qLDpvsw-OxDsD1hENoBfxl6Gtg`});
-
-      
-
-
+      // get data from DB
       const teamName = _hoistedOptions[0].value;
       const roster = await Team.getRosterBy({ name: teamName });
       const franchise = await Franchise.getBy({ teamName: teamName });
 
-      const a = await refinedRosterData(interaction, roster);
+      // process db data and organize for display
+      const player = await refinedRosterData(interaction, roster);
 
-      console.log(a)
-
-      // console.log(sum(a.map(a => a.mmr)))
-
-      // return interaction.reply({ embeds: [embed] });
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
          author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.logoFileName}` },
-         description: `\`     Tier \` : ${teamName}\n\` Team MMR \` : ${0}\n　　　　　　　　　　　　　　　　　　　　　`,
-         // thumbnail: { url: `${imagesURL}/${franchise.logoFileName}` },
+         description: `\`     Tier \` : ${teamName}\n\` Team MMR \` : ${sum(player.map((p) => p.mmr))}`,
          color: 0xE92929,
          fields: [
             {
                name: `\u200B`,
-               value: ``,
+               value: `${player.map(g => g.captain ? `🪖` : `👤`).join(`\n`)}`,
                inline: true
             },
             {
                name: `\u200B`,
-               value: a.map((g) => `[${g.riotIDPlain}](${trackerURL}\\${g.riotID.replace(`#`, `%23`)})`.padEnd(20, ` `)).join(`\n`),
+               value: player.map((p) => `[${p.riotIDPlain}](${trackerURL}\\${sanatizeURL(p.riotID)})`.padEnd(20, ` `)).join(`\n`),
                inline: true
             },
-            // {
-            //    name: `\u200B`,
-            //    value: a.map(g => g.guildMember).join(`\n`),
-            //    inline: true
-            // },
+            {
+               name: `\u200B`,
+               value: `\u200B`,
+               inline: true
+            },
          ],
          footer: { text: `Valorant Draft Circuit — ${franchise.name}` }
       });
 
+      // send the embed
       return await interaction.editReply({ embeds: [embed] });
-      // await interaction.editReply({ content: `ok` , ephemeral: true})
    }
 };
 
@@ -86,9 +72,25 @@ async function refinedRosterData(interaction, roster) {
          mmr: p.mmr,
          riotIDPlain: p.Account.riotID.split(`#`)[0],
          riotID: p.Account.riotID,
+         captain: !(guildMember instanceof DiscordAPIError) ? guildMember._roles.includes(ROLES.LEAGUE.CAPTAIN) : undefined,
          guildMember: guildMember,
       });
    });
 
    return players;
 }
+
+function sanatizeURL(string) {
+   const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìıİłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;'
+   const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
+   const p = new RegExp(a.split('').join('|'), 'g')
+ 
+   return string.toString().toLowerCase()
+     .replace(/\s+/g, '-') // Replace spaces with -
+     .replace(p, c => b.charAt(a.indexOf(c))) // Replace special characters
+     .replace(/&/g, '-and-') // Replace & with 'and'
+     .replace(/[^\w\-]+/g, '') // Remove all non-word characters
+     .replace(/\-\-+/g, '-') // Replace multiple - with single -
+     .replace(/^-+/, '') // Trim - from start of text
+     .replace(/-+$/, '') // Trim - from end of text
+ }
