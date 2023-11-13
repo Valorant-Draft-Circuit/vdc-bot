@@ -168,10 +168,10 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     choices: [
-                        { name: `Prospect`, value: `prospect` },
-                        { name: `Apprentice`, value: `apprentice` },
-                        { name: `Expert`, value: `expert` },
-                        { name: `Mythic`, value: `mythic` },
+                        { name: `Prospect`, value: `Prospect` },
+                        { name: `Apprentice`, value: `Apprentice` },
+                        { name: `Expert`, value: `Expert` },
+                        { name: `Mythic`, value: `Mythic` },
                     ]
                 }
             ]
