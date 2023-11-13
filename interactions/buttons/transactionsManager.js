@@ -119,18 +119,19 @@ async function confirmDraftSign(interaction) {
     const playerID = data[2];
 
     const playerData = await Player.getBy({ discordID: playerID });
+    const playerRiotID = await Player.getIGNby({ discordID: playerID });
     const teamData = await Team.getBy({ name: data[3] });
     const franchiseData = await Franchise.getBy({ name: data[4] });
 
+    const playerTag = playerRiotID.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
 
-
     // add the franchise role, remove FA/RFA role
-    if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    // if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.DRAFT_ELIGIBLE)) await guildMember.roles.remove(ROLES.LEAGUE.DRAFT_ELIGIBLE);
     
     // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${guildMember.nickname.split(` `)[2]}`);
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag}`);
 
 
     // sign the player & ensure that the player's team property is now null
@@ -148,7 +149,7 @@ async function confirmDraftSign(interaction) {
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
-        description: `${guildMember} (${guildMember.nickname.split(` `)[2]}) was signed to ${franchiseData.name}`,
+        description: `${guildMember} (${playerTag}) was signed to ${franchiseData.name}`,
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         fields: [

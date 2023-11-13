@@ -97,6 +97,7 @@ function sub(interaction) {
 }
 
 async function cut(interaction, player) {
+    await interaction.deferReply();
     const playerData = await Player.getBy({ discordID: player.value });
 
     // checks
@@ -140,7 +141,7 @@ async function cut(interaction, player) {
 
     // create the action row, add the component to it & then reply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 async function sign(interaction, player, teamName) {
@@ -191,14 +192,15 @@ async function sign(interaction, player, teamName) {
 }
 
 async function draftSign(interaction, player, teamName) {
+    await interaction.deferReply();
 
     const playerData = await Player.getBy({ discordID: player.value });
     const teamData = await Team.getBy({ name: teamName });
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
     // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.isRegistered !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.reply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
+    if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.status !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.editReply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -232,9 +234,9 @@ async function draftSign(interaction, player, teamName) {
         style: ButtonStyle.Success,
     })
 
-    // create the action row, add the component to it & then reply with all the data
+    // create the action row, add the component to it & then editReply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 function swap(interaction, cutPlayer, signPlayer) {
