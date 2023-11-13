@@ -40,7 +40,7 @@ module.exports = {
             },
             {
                name: `\u200B`,
-               value: player.map((p) => `[${p.riotIDPlain}](${trackerURL}\\${sanatizeURL(p.riotID)})`.padEnd(20, ` `)).join(`\n`),
+               value: player.map((p) => `[${p.riotIDPlain}](${trackerURL}\\${p.trackerURL})`.padEnd(20, ` `)).join(`\n`),
                inline: true
             },
             {
@@ -72,6 +72,7 @@ async function refinedRosterData(interaction, roster) {
          mmr: p.mmr,
          riotIDPlain: p.Account.riotID.split(`#`)[0],
          riotID: p.Account.riotID,
+         trackerURL: encodeURIComponent(p.Account.riotID),
          captain: !(guildMember instanceof DiscordAPIError) ? guildMember._roles.includes(ROLES.LEAGUE.CAPTAIN) : undefined,
          guildMember: guildMember,
       });
@@ -79,18 +80,3 @@ async function refinedRosterData(interaction, roster) {
 
    return players;
 }
-
-function sanatizeURL(string) {
-   const a = 'àáâäæãåāăąçćčđďèéêëēėęěğǵḧîïíīįìıİłḿñńǹňôöòóœøōõőṕŕřßśšşșťțûüùúūǘůűųẃẍÿýžźż·/_,:;'
-   const b = 'aaaaaaaaaacccddeeeeeeeegghiiiiiiiilmnnnnoooooooooprrsssssttuuuuuuuuuwxyyzzz------'
-   const p = new RegExp(a.split('').join('|'), 'g')
- 
-   return string.toString().toLowerCase()
-     .replace(/\s+/g, '-') // Replace spaces with -
-     .replace(p, c => b.charAt(a.indexOf(c))) // Replace special characters
-     .replace(/&/g, '-and-') // Replace & with 'and'
-     .replace(/[^\w\-]+/g, '') // Remove all non-word characters
-     .replace(/\-\-+/g, '-') // Replace multiple - with single -
-     .replace(/^-+/, '') // Trim - from start of text
-     .replace(/-+$/, '') // Trim - from end of text
- }
