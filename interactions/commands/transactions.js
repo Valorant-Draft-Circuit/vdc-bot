@@ -29,7 +29,7 @@ module.exports = {
                 draftSign(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
             case `update-tier`:
-                updateTier(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
+                updateTier(interaction, _hoistedOptions[0].member, _hoistedOptions[1].value);
                 break;
             // case `swap`:
             //     swap(interaction, _hoistedOptions[0], _hoistedOptions[1]);
@@ -136,17 +136,19 @@ async function cut(interaction, player) {
     // create the action row, add the component to it & then reply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
     await interaction.editReply({ embeds: [embed], components: [subrow] });
+    return await interaction.editReply({content: `Success!`});
 }
 
 async function sign(interaction, player, teamName) {
+    await interaction.deferReply();
     const playerData = await Player.getBy({ discordID: player.value });
     const teamData = await Team.getBy({ name: teamName });
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
 
     // checks
-    if (playerData == undefined) return interaction.reply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.status !== PlayerStatusCode.FREE_AGENT) return interaction.reply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+    if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.status !== PlayerStatusCode.FREE_AGENT) return await interaction.editReply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -180,9 +182,10 @@ async function sign(interaction, player, teamName) {
         style: ButtonStyle.Success,
     })
 
-    // create the action row, add the component to it & then reply with all the data
+    // create the action row, add the component to it & then editReply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    interaction.reply({ embeds: [embed], components: [subrow] });
+    await interaction.editReply({ embeds: [embed], components: [subrow] });
+    return await interaction.editReply({content: `Success!`});
 }
 
 async function draftSign(interaction, player, teamName) {
@@ -230,7 +233,8 @@ async function draftSign(interaction, player, teamName) {
 
     // create the action row, add the component to it & then editReply with all the data
     const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    interaction.editReply({ embeds: [embed], components: [subrow] });
+    await interaction.editReply({ embeds: [embed], components: [subrow] });
+    return await interaction.editReply({content: `Success!`});
 }
 
 function swap(interaction, cutPlayer, signPlayer) {
