@@ -10,7 +10,7 @@ const {
 const { Channel } = require("discord.js").Partials;
 
 /** @NOTE - THIS IS TEMPORARY. WILL BE CHANGED ASAP */
-const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`, `setup`, `active`];
+const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`, `setup`, `active`, `roster`];
 
 
 module.exports = class BotClient extends Client {
