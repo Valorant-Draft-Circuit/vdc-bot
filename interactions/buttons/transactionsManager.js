@@ -110,14 +110,19 @@ async function confirmDraftSign(interaction) {
     await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
-    const playerID = data[2];
 
+    // process data into usable format(s)
+    const playerID = data[3];
+    const round = data[1].split(`/`)[0].trim();
+    const pick = data[1].split(`/`)[1].trim();
+
+    // db queries
     const playerData = await Player.getBy({ discordID: playerID });
-    const playerRiotID = await Player.getIGNby({ discordID: playerID });
-    const teamData = await Team.getBy({ name: data[3] });
-    const franchiseData = await Franchise.getBy({ name: data[4] });
+    const playerRiotID = await Player.getIGNby({discordID: playerID})
+    const teamData = await Team.getBy({ name: data[4] });
+    const franchiseData = await Franchise.getBy({ name: data[5] });
 
-    const playerTag = playerRiotID.split(`#`)[0];
+    // also get the GuildMember object
     const guildMember = await interaction.guild.members.fetch(playerID);
 
     // add the franchise role, remove FA/RFA role
@@ -125,6 +130,7 @@ async function confirmDraftSign(interaction) {
     if (guildMember._roles.includes(ROLES.LEAGUE.DRAFT_ELIGIBLE)) await guildMember.roles.remove(ROLES.LEAGUE.DRAFT_ELIGIBLE);
 
     // update nickname
+    const playerTag = playerRiotID.split(`#`)[0];
     guildMember.setNickname(`${franchiseData.slug} | ${playerTag}`);
 
     // sign the player & ensure that the player's team property is now null
@@ -139,8 +145,8 @@ async function confirmDraftSign(interaction) {
 
     // create the base embed
     const announcement = new EmbedBuilder({
-        author: { name: `VDC Transactions Manager` },
-        description: `${guildMember} (${playerTag}) was signed to ${franchiseData.name}`,
+        author: { name: `Round: ${round} | Pick: ${pick} | ${teamData.tier}` },
+        description: `${teamData.name} select ${guildMember} (${playerTag})!`,
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         fields: [

@@ -61,8 +61,20 @@ module.exports = {
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
+                    name: "round",
+                    description: "The round the player is being drafted in",
+                    type: ApplicationCommandOptionType.Number,
+                    required: true
+                },
+                {
+                    name: "pick",
+                    description: "The round pick the player was drafted in",
+                    type: ApplicationCommandOptionType.Number,
+                    required: true
+                },
+                {
                     name: "user",
-                    description: "The player to sign",
+                    description: "The player to sign from the draft",
                     type: ApplicationCommandOptionType.User,
                     required: true
                 },
