@@ -189,7 +189,7 @@ async function sign(interaction, player, teamName) {
 async function draftSign(interaction, round, pick, player, teamName) {
     await interaction.deferReply();
 
-    const playerData = await Player.getBy({ discordID: player.value });
+    const playerData = await Player.getBy({ discordID: player.id });
     const teamData = await Team.getBy({ name: teamName });
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
