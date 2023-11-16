@@ -26,7 +26,7 @@ module.exports = {
                 sign(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
             case `draft-sign`:
-                draftSign(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
+                draftSign(interaction, _hoistedOptions[0].value, _hoistedOptions[1].value, _hoistedOptions[2].member, _hoistedOptions[3].value);
                 break;
             case `update-tier`:
                 updateTier(interaction, _hoistedOptions[0].member, _hoistedOptions[1].value);
@@ -186,7 +186,7 @@ async function sign(interaction, player, teamName) {
     return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
-async function draftSign(interaction, player, teamName) {
+async function draftSign(interaction, round, pick, player, teamName) {
     await interaction.deferReply();
 
     const playerData = await Player.getBy({ discordID: player.value });
@@ -195,7 +195,7 @@ async function draftSign(interaction, player, teamName) {
 
     // checks
     if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (playerData.status !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.editReply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
+    // if (playerData.status !== PlayerStatusCode.DRAFT_ELIGIBLE) return interaction.editReply({ content: `This player is not Draft Eligible and cannot be pulled from the draft!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -205,12 +205,12 @@ async function draftSign(interaction, player, teamName) {
         fields: [
             {
                 name: `\u200B`,
-                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                value: `**Transaction**\n\`  Round/Pick : \`\n\`   Player Tag: \`\n\`    Player ID: \`\n\`         Team: \`\n\`    Franchise: \``,
                 inline: true
             },
             {
                 name: `\u200B`,
-                value: `DRAFT SIGN\n${player.user}\n\`${player.value}\`\n${teamData.name}\n${franchiseData.name}`,
+                value: `DRAFT SIGN\n\` ${round} / ${pick} \`\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}`,
                 inline: true
             }
         ],
@@ -397,12 +397,12 @@ async function updateTier(interaction, guildMember, newTier) {
     if (player.status !== PlayerStatusCode.SIGNED) return await interaction.editReply({ content: `This player is not signed to a franchise and therefore cannot be promoted/demoted!`, ephemeral: false });
 
     const franchise = await Franchise.getBy({ teamID: player.team });
-    const franchiseTeams = await Franchise.getTeams({id: franchise.id});
+    const franchiseTeams = await Franchise.getTeams({ id: franchise.id });
     const team = await Team.getBy({ id: player.team });
 
     // ensure that the player isn't being updaeted to the same team and that the franchise has an active team in the tier the player is being promotes/demoted to
     if (team.tier === newTier) return await interaction.editReply({ content: `This player is already in the tier you're trying to promote/demote them to (${newTier})`, ephemeral: false });
-    if (!franchiseTeams.map(t=>t.tier).includes(newTier)) return await interaction.editReply({ content: `${franchise.name} does not have an active team in the ${newTier} tier!`, ephemeral: false });
+    if (!franchiseTeams.map(t => t.tier).includes(newTier)) return await interaction.editReply({ content: `${franchise.name} does not have an active team in the ${newTier} tier!`, ephemeral: false });
 
 
     // create the base embed
