@@ -57,15 +57,15 @@ async function confirmSign(interaction) {
 
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-    const accolades = guildMember.nickname.match(emoteregex);
+    const accolades = guildMember.nickname?.match(emoteregex);
 
     // add the franchise role, remove FA/RFA role
-    if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    // if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.FREE_AGENT);
     if (guildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
 
     // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades.join(``)}`);
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``): ``}`);
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
@@ -128,14 +128,14 @@ async function confirmDraftSign(interaction) {
     // also get the GuildMember object
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-    const accolades = guildMember.nickname.match(emoteregex);
+    const accolades = guildMember.nickname?.match(emoteregex);
 
     // add the franchise role, remove FA/RFA role
     if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.DRAFT_ELIGIBLE)) await guildMember.roles.remove(ROLES.LEAGUE.DRAFT_ELIGIBLE);
 
     // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades.join(``)}`);
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``): ``}`);
 
     // sign the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
@@ -187,12 +187,12 @@ async function confirmCut(interaction) {
     const playerData = await Player.getInfoBy({ discordID: playerID });
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-    const accolades = guildMember.nickname.match(emoteregex);
+    const accolades = guildMember.nickname?.match(emoteregex);
 
     // remove the franchise role and update their nickname
     if (guildMember._roles.includes(playerData.franchise.roleID)) await guildMember.roles.remove(playerData.franchise.roleID);
     await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
-    guildMember.setNickname(`FA | ${playerTag} ${accolades.join(``)}`);
+    guildMember.setNickname(`FA | ${playerTag} ${accolades ? accolades.join(``): ``}`);
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.cut(playerID);
@@ -249,7 +249,7 @@ async function confirmRenew(interaction) {
 
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-    const accolades = guildMember.nickname.match(emoteregex);
+    const accolades = guildMember.nickname?.match(emoteregex);
 
 
     // cut the player & ensure that the player's team property is now null
@@ -309,7 +309,7 @@ async function confirmUpdateTier(interaction) {
     const newTeam = franchiseTeams.filter(t => t.tier === data[4])[0];
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-    const accolades = guildMember.nickname.match(emoteregex);
+    const accolades = guildMember.nickname?.match(emoteregex);
 
 
     // update the player the player & ensure that the player's team property is now null
