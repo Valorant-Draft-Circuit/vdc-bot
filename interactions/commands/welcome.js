@@ -35,7 +35,8 @@ module.exports = {
 
         // update the name to match convention
         const ign = (await Player.getIGNby({ discordID: player.value })).split(`#`)[0];
-        guildMember.setNickname(`${status} | ${ign}`);
+        const accolades = guildMember.nickname.match(emoteregex);
+        guildMember.setNickname(`${status} | ${ign} ${accolades.join(``)}`);
 
         // assign the proper roles & send the correct message
         switch (status) {

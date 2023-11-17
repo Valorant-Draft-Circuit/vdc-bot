@@ -1,10 +1,10 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
 
-
 const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus, TransactionsUpdateTierOptions } = require(`../../utils/enums`);
 
-
 const { Franchise, Team, Transaction, Player } = require(`../../prisma`);
+
+const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 let transactionsAnnouncementChannel;
 
@@ -51,18 +51,21 @@ async function confirmSign(interaction) {
     const playerID = data[2];
 
     const playerData = await Player.getBy({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
     const teamData = await Team.getBy({ name: data[3] });
     const franchiseData = await Franchise.getBy({ name: data[4] });
 
+    const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
+    const accolades = guildMember.nickname.match(emoteregex);
 
     // add the franchise role, remove FA/RFA role
-    if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    // if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.FREE_AGENT);
     if (guildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
 
     // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${guildMember.nickname.split(` `)[2]}`);
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades.join(``)}`);
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
@@ -77,7 +80,7 @@ async function confirmSign(interaction) {
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
-        description: `${guildMember} (${guildMember.nickname.split(` `)[2]}) was signed to ${franchiseData.name}`,
+        description: `${guildMember} (${playerTag}) was signed to ${franchiseData.name}`,
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         fields: [
@@ -118,20 +121,21 @@ async function confirmDraftSign(interaction) {
 
     // db queries
     const playerData = await Player.getBy({ discordID: playerID });
-    const playerRiotID = await Player.getIGNby({discordID: playerID})
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
     const teamData = await Team.getBy({ name: data[4] });
     const franchiseData = await Franchise.getBy({ name: data[5] });
 
     // also get the GuildMember object
+    const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
+    const accolades = guildMember.nickname.match(emoteregex);
 
     // add the franchise role, remove FA/RFA role
     if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.DRAFT_ELIGIBLE)) await guildMember.roles.remove(ROLES.LEAGUE.DRAFT_ELIGIBLE);
 
     // update nickname
-    const playerTag = playerRiotID.split(`#`)[0];
-    guildMember.setNickname(`${franchiseData.slug} | ${playerTag}`);
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades.join(``)}`);
 
     // sign the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
@@ -181,12 +185,14 @@ async function confirmCut(interaction) {
     const playerID = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`)[2];
 
     const playerData = await Player.getInfoBy({ discordID: playerID });
+    const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
+    const accolades = guildMember.nickname.match(emoteregex);
 
     // remove the franchise role and update their nickname
     if (guildMember._roles.includes(playerData.franchise.roleID)) await guildMember.roles.remove(playerData.franchise.roleID);
     await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
-    guildMember.setNickname(`FA | ${guildMember.nickname.split(` `)[2]}`);
+    guildMember.setNickname(`FA | ${playerTag} ${accolades.join(``)}`);
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.cut(playerID);
@@ -201,7 +207,7 @@ async function confirmCut(interaction) {
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
-        description: `${guildMember} (${guildMember.nickname.split(` `)[2]}) was cut from ${playerData.franchise.name}`,
+        description: `${guildMember} (${playerTag}) was cut from ${playerData.franchise.name}`,
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${playerData.franchise.logoFileName}` },
         color: 0xE92929,
         fields: [
@@ -237,10 +243,13 @@ async function confirmRenew(interaction) {
     const playerID = data[2];
 
     const playerData = await Player.getBy({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
     const teamData = await Team.getBy({ name: data[3] });
     const franchiseData = await Franchise.getBy({ name: data[4] });
 
+    const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
+    const accolades = guildMember.nickname.match(emoteregex);
 
 
     // cut the player & ensure that the player's team property is now null
@@ -256,7 +265,7 @@ async function confirmRenew(interaction) {
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
-        description: `${guildMember} (${guildMember.nickname.split(` `)[2]})'s contract was renewed by ${franchiseData.name}`,
+        description: `${guildMember} (${playerTag})'s contract was renewed by ${franchiseData.name}`,
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         fields: [
@@ -292,14 +301,15 @@ async function confirmUpdateTier(interaction) {
     const playerID = data[2];
 
     const player = await Player.getBy({ discordID: playerID });
-    const playerRiotID = await Player.getIGNby({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
     const team = await Team.getBy({ playerID: playerID });
     const franchise = await Franchise.getBy({ teamID: team.id });
     const franchiseTeams = await Franchise.getTeams({ id: franchise.id });
 
     const newTeam = franchiseTeams.filter(t => t.tier === data[4])[0];
-    const playerTag = playerRiotID.split(`#`)[0];
+    const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
+    const accolades = guildMember.nickname.match(emoteregex);
 
 
     // update the player the player & ensure that the player's team property is now null
