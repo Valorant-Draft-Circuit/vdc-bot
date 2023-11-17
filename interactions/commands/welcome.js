@@ -1,8 +1,8 @@
 const { Player, Transaction } = require("../../prisma");
 const { CHANNELS, ROLES, PlayerStatusCode } = require(`../../utils/enums`);
 
-
 const validStatusesToDE = [PlayerStatusCode.PENDING, PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT];
+const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 module.exports = {
 
@@ -35,8 +35,8 @@ module.exports = {
 
         // update the name to match convention
         const ign = (await Player.getIGNby({ discordID: player.value })).split(`#`)[0];
-        const accolades = guildMember.nickname.match(emoteregex);
-        guildMember.setNickname(`${status} | ${ign} ${accolades.join(``)}`);
+        const accolades = guildMember.nickname?.match(emoteregex);
+        guildMember.setNickname(`${status} | ${ign} ${accolades ? accolades.join(``): ``}`);
 
         // assign the proper roles & send the correct message
         switch (status) {
