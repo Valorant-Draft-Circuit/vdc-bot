@@ -70,7 +70,7 @@ async function refinedRosterData(interaction, roster) {
       const guildMember = await interaction.guild.members.fetch(p.id).catch(e => e);
       players.push({
          id: p.id,
-         mmr: p.mmr,
+         mmr: p.MMR,
          riotIDPlain: p.Account.riotID.split(`#`)[0],
          riotID: p.Account.riotID,
          trackerURL: encodeURIComponent(p.Account.riotID),
