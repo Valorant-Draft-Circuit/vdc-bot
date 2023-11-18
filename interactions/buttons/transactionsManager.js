@@ -133,6 +133,24 @@ async function confirmDraftSign(interaction) {
     // add the franchise role, remove FA/RFA role
     if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.DRAFT_ELIGIBLE)) await guildMember.roles.remove(ROLES.LEAGUE.DRAFT_ELIGIBLE);
+    if (guildMember._roles.includes(ROLES.LEAGUE.FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.FREE_AGENT);
+    if (guildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
+
+    switch (teamData.tier) {
+        case `Prospect`:
+            await guildMember.roles.add(ROLES.TIER.PROSPECT);
+            console.log(`here`)
+            break;
+        case `Apprentice`:
+            await guildMember.roles.add(ROLES.TIER.APPRENTICE);
+            break;
+        case `Expert`:
+            await guildMember.roles.add(ROLES.TIER.EXPERT);
+            break;
+        case `Mythic`:
+            await guildMember.roles.add(ROLES.TIER.MYTHIC);
+            break;
+    }
 
     // update nickname
     guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``): ``}`);
