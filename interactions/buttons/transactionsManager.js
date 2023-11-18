@@ -60,7 +60,7 @@ async function confirmSign(interaction) {
     const accolades = guildMember.nickname?.match(emoteregex);
 
     // add the franchise role, remove FA/RFA role
-    // if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
+    if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
     if (guildMember._roles.includes(ROLES.LEAGUE.FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.FREE_AGENT);
     if (guildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
 
@@ -185,8 +185,10 @@ async function confirmCut(interaction) {
     const playerID = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`)[2];
 
     const playerData = await Player.getInfoBy({ discordID: playerID });
-    const playerTag = playerIGN.split(`#`)[0];
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
     const guildMember = await interaction.guild.members.fetch(playerID);
+
+    const playerTag = playerIGN.split(`#`)[0];
     const accolades = guildMember.nickname?.match(emoteregex);
 
     // remove the franchise role and update their nickname
@@ -249,7 +251,6 @@ async function confirmRenew(interaction) {
 
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-    const accolades = guildMember.nickname?.match(emoteregex);
 
 
     // cut the player & ensure that the player's team property is now null
@@ -309,7 +310,6 @@ async function confirmUpdateTier(interaction) {
     const newTeam = franchiseTeams.filter(t => t.tier === data[4])[0];
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
-    const accolades = guildMember.nickname?.match(emoteregex);
 
 
     // update the player the player & ensure that the player's team property is now null
