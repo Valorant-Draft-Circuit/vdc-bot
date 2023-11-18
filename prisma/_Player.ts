@@ -129,7 +129,7 @@ export class Player {
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
 
         if (discordID !== undefined) return await getPlayerByDiscordID(discordID);
-        
+
         return await prisma.player.findFirst({
             where: {
                 OR: [
@@ -140,6 +140,20 @@ export class Player {
             include: { Account: true }
         });
     };
+
+    static async updateBy(option: {
+        userIdentifier: { ign?: string; discordID?: string; riotID?: string; },
+        updateParamaters: { teamID: number, status: number, contractStatus: number, mmr: number }
+    }) {
+        console.log(option.updateParamaters)
+        const player = await this.getBy(option.userIdentifier);
+        if (!player) return new Error(`Could not find that player in the database!`);
+
+        return await prisma.player.update({
+            where: { id: player.id },
+            data: option.updateParamaters
+        })
+    }
 };
 
 /** Query the Player table for a player by their Discord ID
@@ -147,8 +161,8 @@ export class Player {
  * @param {String} id Discord ID
  */
 async function getPlayerByID(id: string) {
-    const a =  await prisma.player.findUnique({
-        where: { id: id }, 
+    const a = await prisma.player.findUnique({
+        where: { id: id },
         include: { Account: true }
     });
 
