@@ -1,5 +1,6 @@
 const { Team, Player } = require(`../../prisma`);
 const { EmbedBuilder, ApplicationCommand } = require("discord.js");
+const { PlayerStatusCode, ContractStatus } = require("../../utils/enums");
 
 module.exports = {
 
@@ -50,19 +51,18 @@ module.exports = {
             },
             {
                name: `Before`,
-               value: `${(await Team.getBy({ id: playerBefore.team })).name}\n${playerBefore.status}\n${playerBefore.contractStatus}\n${playerBefore.MMR}`,
+               value: `${(await Team.getBy({ id: playerBefore.team })).name}\n${Object.keys(PlayerStatusCode).find(key => PlayerStatusCode[key] === playerBefore.status)}\n${Object.keys(ContractStatus).find(key => ContractStatus[key] === playerBefore.contractStatus)}\n${playerBefore.MMR}`,
                inline: true
             },
             {
                name: `After`,
-               value: `${(await Team.getBy({ id: playerAfter.team })).name}\n${playerAfter.status}\n${playerAfter.contractStatus}\n${playerAfter.MMR}`,
+               value: `${(await Team.getBy({ id: playerAfter.team })).name}\n${Object.keys(PlayerStatusCode).find(key => PlayerStatusCode[key] === playerAfter.status)}\n${Object.keys(ContractStatus).find(key => ContractStatus[key] === playerAfter.contractStatus)}\n${playerAfter.MMR}`,
 
                inline: true
             }
          ],
          footer: { text: `Sudo — Player: Update` }
       });
-
       // create the action row, add the component to it & then editReply with all the dat
       return await interaction.editReply({ embeds: [embed] });
    }
