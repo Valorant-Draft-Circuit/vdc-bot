@@ -143,16 +143,15 @@ export class Player {
 
     static async updateBy(option: {
         userIdentifier: { ign?: string; discordID?: string; riotID?: string; },
-        updateParamaters: { teamID: number, status: number, contractStatus: number, mmr: number }
+        updateParamaters: { teamID: number, status: number, contractStatus: number, MMR: number }
     }) {
-        console.log(option.updateParamaters)
         const player = await this.getBy(option.userIdentifier);
         if (!player) return new Error(`Could not find that player in the database!`);
 
         return await prisma.player.update({
             where: { id: player.id },
             data: option.updateParamaters
-        })
+        });
     }
 };
 
