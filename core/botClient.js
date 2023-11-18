@@ -115,7 +115,7 @@ module.exports = class BotClient extends Client {
         // readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
 
         // globally register all application commands
-        readyClient.application.commands.set([]);
+        // readyClient.application.commands.set([]);
         readyClient.application.commands.set(commandStructures);
 
         this.logger.console({
