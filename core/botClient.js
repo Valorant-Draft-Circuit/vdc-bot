@@ -10,7 +10,7 @@ const {
 const { Channel } = require("discord.js").Partials;
 
 /** @NOTE - THIS IS TEMPORARY. WILL BE CHANGED ASAP */
-const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`, `setup`, `active`, `roster`];
+const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`, `setup`, `active`, `roster`, `profile`];
 
 
 module.exports = class BotClient extends Client {
@@ -111,12 +111,12 @@ module.exports = class BotClient extends Client {
 
 
         /** @todo create filters to register VDC servers, franchise servers and other */
-        // const serverID = `1027754353207033966`;
-        // readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
+        const serverID = `1027754353207033966`;
+        readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
 
         // globally register all application commands
         // readyClient.application.commands.set([]);
-        readyClient.application.commands.set(commandStructures);
+        // readyClient.application.commands.set(commandStructures);
 
         this.logger.console({
             level: `DEBUG`,
