@@ -116,6 +116,17 @@ export class Player {
         return playerAccount?.Account?.riotID;
     }
 
+    static async updateRiotID(option: {puuid: string; newRiotID: string;}) {
+        const { puuid, newRiotID } = option;
+
+        if (Object.keys(option).length != 1) throw new Error(`Must specify both options!`);
+
+        return await prisma.account.update({
+          where: { providerAccountId: puuid },
+          data: { riotID: newRiotID }
+        });
+    }
+
     /** Get a user by a specific option
      * @param {Object} option
      * @param {?Number} option.ign
