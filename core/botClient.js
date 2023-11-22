@@ -10,7 +10,6 @@ const {
 const { Channel } = require("discord.js").Partials;
 
 /** @NOTE - THIS IS TEMPORARY. WILL BE CHANGED ASAP */
-const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`, `setup`, `active`, `roster`, `sudo`];
 const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`, `setup`, `active`, `roster`, `sudo`, `sub`];
 
 
