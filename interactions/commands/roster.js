@@ -4,9 +4,14 @@ const { EmbedBuilder, ApplicationCommand, DiscordAPIError } = require("discord.j
 const { ROLES } = require("../../utils/enums");
 
 const imagesURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
-const trackerURL = `https://tracker.gg/valorant/profile/riot`;
-
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
+
+const teamMMRAllowance = {
+   prospect: 386,
+   apprentice: 538,
+   expert: 716,
+   mythic: 948
+}; // max MMR allowance for teams to "spend" on players
 
 module.exports = {
 
@@ -22,32 +27,22 @@ module.exports = {
       // get data from DB
       const teamName = _hoistedOptions[0].value;
       const team = await Team.getBy({name:teamName });
-      const roster = await Team.getRosterBy({ name: teamName });
+      const teamRoster = await Team.getRosterBy({ name: teamName });
       const franchise = await Franchise.getBy({ teamName: teamName });
 
       // process db data and organize for display
-      const player = await refinedRosterData(interaction, roster);
+      const refinedRoster = await refinedRosterData(interaction, teamRoster);
 
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
          author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.logoFileName}` },
-         description: `\`     Tier \` : ${team.tier}\n\` Team MMR \` : ${sum(player.map((p) => p.mmr))}`,
+         description: `\`     Tier \` : ${team.tier}\n\` Team MMR \` : ${sum(refinedRoster.map((player) => player.mmr))} / ${teamMMRAllowance[team.tier.toLowerCase()]}`,
          color: 0xE92929,
          fields: [
             {
                name: `\u200B`,
-               value: `${player.map(g => g.captain ? `🪖` : `👤`).join(`\n`)}`,
-               inline: true
-            },
-            {
-               name: `\u200B`,
-               value: player.map((p) => `[${p.riotIDPlain}](${trackerURL}\\${p.trackerURL})`.padEnd(20, ` `)).join(`\n`),
-               inline: true
-            },
-            {
-               name: `\u200B`,
-               value: `\u200B`,
-               inline: true
+               value: `${refinedRoster.map((player) => `${player.captain ? `🪖` : `👤`} | [${player.riotIDPlain}](${player.trackerURL})`).join(`\n`)}`,
+               inline: false
             },
          ],
          footer: { text: `Valorant Draft Circuit — ${franchise.name}` }
@@ -61,20 +56,20 @@ module.exports = {
 /**
  * 
  * @param {ApplicationCommand} interaction command interaction
- * @param {[Object]} roster 
+ * @param {[Object]} teamRoster 
  */
-async function refinedRosterData(interaction, roster) {
+async function refinedRosterData(interaction, teamRoster) {
    const players = [];
 
-   await roster.forEach(async (p) => {
-      const guildMember = await interaction.guild.members.fetch(p.id).catch(e => e);
+   await teamRoster.forEach(async (player) => {
+      const guildMember = await interaction.guild.members.fetch(player.id).catch(err => err);
       players.push({
-         id: p.id,
-         mmr: p.MMR,
-         riotIDPlain: p.Account.riotID.split(`#`)[0],
-         riotID: p.Account.riotID,
-         trackerURL: encodeURIComponent(p.Account.riotID),
+         id: player.id,
+         riotIDPlain: player.Account.riotID.split(`#`)[0],
+         riotID: player.Account.riotID,
+         trackerURL: `https://tracker.gg/valorant/profile/riot${encodeURIComponent(player.Account.riotID)}`,
          captain: !(guildMember instanceof DiscordAPIError) ? guildMember._roles.includes(ROLES.LEAGUE.CAPTAIN) : undefined,
+         mmr: player.MMR_Player_MMRToMMR.mmr_overall,
          guildMember: guildMember,
       });
    });
