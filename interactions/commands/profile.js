@@ -96,7 +96,7 @@ async function update(interaction) {
     // If they updated their riot id
   } else if (data.gameName !== riotNameFromDB) {
     const guildMember = await interaction.guild.members.fetch(userId);
-    await Player.updateRiotID(puuid, riotIDFromRiot);
+    await Player.updateRiotID({puuid: puuid, newRiotID: riotIDFromRiot});
 
     const playerIGN = await Player.getIGNby({ discordID: userId });
     const emoteregex =

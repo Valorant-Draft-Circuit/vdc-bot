@@ -118,7 +118,6 @@ export class Player {
 
     static async updateRiotID(option: {puuid: string; newRiotID: string;}) {
         const { puuid, newRiotID } = option;
-        console.log(option)
         if (Object.keys(option).length != 2) throw new Error(`Must specify both options!`);
 
         return await prisma.account.update({
