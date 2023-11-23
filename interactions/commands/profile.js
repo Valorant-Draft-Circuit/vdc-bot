@@ -79,8 +79,7 @@ async function update(interaction) {
     data.gameName === riotIDFromDB &&
     data.tagLine !== riotIDFromDB.split("#")[1]
   ) {
-    await Player.updateRiotID(puuid, riotIDFromRiot);
-
+    await Player.updateRiotID({ puuid: puuid, newRiotID: riotIDFromRiot });
     const embed = new EmbedBuilder({
       author: { name: `Success` },
       description: "Your Riot tagline has been updated!",
