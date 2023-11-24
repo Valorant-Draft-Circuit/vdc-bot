@@ -1,136 +1,78 @@
-const { EmbedBuilder } = require("discord.js");
-const { Player } = require("../../prisma");
-// TODO: create endpoint via vdc website
-const byPuuid =
-  "https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid";
+const { EmbedBuilder, GuildMember } = require(`discord.js`);
+const { Player } = require(`../../prisma`);
+
+/** Riot's API endpoint to fetch a user's account by their puuid 
+ * @TODO Update to the internal VDC endpoint once it's ready */
+const getAccountByPuuid = `https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid`;
+
+const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 module.exports = {
-  name: "profile",
+  name: `profile`,
 
   async execute(interaction) {
     const { _subcommand, hoistedOptions } = interaction.options;
 
     switch (_subcommand) {
       case `user`:
-        interaction.reply({
-          content: `This is a work in progress, please check back later!`,
-        });
-        break;
+        return await interaction.reply({ content: `This is a work in progress, please check back later!` });
       case `update`:
-        update(interaction);
-        break;
+        return await update(interaction);
       default:
-        interaction.reply({
-          content: `That's not a valid subcommand or this command is a work in progress!`,
-        });
-        break;
+        return await interaction.reply({ content: `That's not a valid subcommand or this command is a work in progress!` });
     }
   },
 };
 
 async function update(interaction) {
-  await interaction.deferReply();
+  await interaction.deferReply({ ephemeral: true });
 
   const userId = interaction.user.id;
-  const playerData = await Player.getInfoBy({ discordID: userId });
+  const playerData = await Player.getBy({ discordID: userId });
+  if (!playerData.primaryRiotID) return await interaction.editReply({ content: `I looked through our filing cabinets and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!` });
+
+  // get the player's updated IGN from Riot's accountByPuuid endpoint
   const puuid = playerData.primaryRiotID;
+  const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
+  if (!response.ok) return await interaction.editReply({ content: `There was a problem checking Riot's filing cabinets! Please try again later and/or let a bot developer know!` });
 
-  if (puuid == null) {
-    const embed = new EmbedBuilder({
-      author: { name: `Error` },
-      color: 0xe92929,
-      footer: {
-        text: "Profile - Update",
-      },
-    });
-    embed.setDescription(
-      "You don't have a Riot account linked. Please link one [here](https://vdc.gg/me)."
-    );
-    return interaction.editReply({
-      embeds: [embed],
-      ephemeral: true,
-    });
+  const { gameName, tagLine } = await response.json();
+  const updatedIGN = `${gameName}#${tagLine}`;
+
+  const ignFromDB = (await Player.getIGNby({ discordID: userId })).split(`#`)[0];
+  const riotNameFromDB = ignFromDB.split(`#`)[0];
+
+  /** @type GuildMember */
+  const guildMember = await interaction.guild.members.fetch(userId);
+
+  // If database value is the exact same from the API call, don't update the database- simply continue & try to update the nickname
+  if (ignFromDB === gameName) {
+    await interaction.editReply({ content: `Well... This is awkward. The database already has your most up-to-date IGN... checking to see if I can update your nickname!` });
+  } else {
+    const updatedPlayer = await Player.updateIGN({ puuid: puuid, newRiotID: updatedIGN });
+    if (updatedPlayer.riotID !== updatedIGN) return await interaction.editReply({ content: `Looks like there was an error and the database wasn't updated! Please try again later and/or let a bot developer know!` });
   }
-  const riotIDFromDB = await Player.getIGNby({ discordID: userId });
-  const riotNameFromDB = riotIDFromDB.split("#")[0];
 
-  const endpoint = `${byPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`;
-  const response = await fetch(endpoint);
-  const data = await response.json();
-  const riotIDFromRiot = `${data.gameName}#${data.tagLine}`;
+  // check to make sure the bot can update the user's nickname
+  if (!guildMember.manageable) return await interaction.editReply({ content: `The database was updated to reflect your new IGN: (\`${updatedIGN}\`) but I can't update your nickname- your roles are higher than mine! You will need to update your nickname manually!` });
 
-  // If database value is the exact same from the API call
-  if (riotIDFromDB === riotIDFromRiot) {
-    const embed = new EmbedBuilder({
-      author: { name: `Error` },
-      description:
-        "This is awkward because your discord nickname is already the same as your Valorant IGN...",
-      color: 0xe92929,
-      footer: {
-        text: "Profile - Update",
-      },
-    });
-    return interaction.editReply({
-      embeds: [embed],
-      ephemeral: true,
-    });
-    // If they only updated their tagline.
-  } else if (
-    data.gameName === riotIDFromDB &&
-    data.tagLine !== riotIDFromDB.split("#")[1]
-  ) {
-    await Player.updateRiotID({ puuid: puuid, newRiotID: riotIDFromRiot });
-    const embed = new EmbedBuilder({
-      author: { name: `Success` },
-      description: "Your Riot tagline has been updated!",
-      color: 0x008000,
-      footer: {
-        text: "Profile - Update",
-      },
-    });
+  // update the user's nickname in the server
+  const slug = playerData.franchise.slug;
+  const accolades = guildMember.nickname?.match(emoteregex);
+  guildMember.setNickname(`${slug} | ${gameName} ${accolades ? accolades.join(``) : ``}`);
 
-    return interaction.editReply({
-      embeds: [embed],
-      ephemeral: true,
-    });
-    // If they updated their riot id
-  } else if (data.gameName !== riotNameFromDB) {
-    const guildMember = await interaction.guild.members.fetch(userId);
-    await Player.updateRiotID({ puuid: puuid, newRiotID: riotIDFromRiot });
+  // create the success update "announcement"
+  const embed = new EmbedBuilder({
+    description: `${guildMember}'s nickname has been updated!`,
+    color: 0x008000,
+    fields: [
+      { name: `From:`, value: riotNameFromDB, inline: true },
+      { name: `To:`, value: gameName, inline: true },
+    ],
+    footer: { text: `Profile - Update` },
+  });
 
-    const playerIGN = await Player.getIGNby({ discordID: userId });
-    const emoteregex =
-      /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
-    const playerTag = playerIGN.split(`#`)[0];
-    const accolades = guildMember.nickname?.match(emoteregex);
-    const slug = guildMember.nickname.split(" | ")[0];
-
-    guildMember.setNickname(
-      `${slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`
-    );
-
-    const embed = new EmbedBuilder({
-      author: { name: `Success` },
-      description: `${guildMember}'s nickname has been updated!`,
-      color: 0x008000,
-      fields: [
-        {
-          name: `From:`,
-          value: riotNameFromDB,
-        },
-        {
-          name: `To:`,
-          value: playerTag,
-        },
-      ],
-      footer: {
-        text: "Profile - Update",
-      },
-    });
-
-    return interaction.editReply({
-      embeds: [embed],
-      ephemeral: false,
-    });
-  }
+  // ephemerally update status and then exit with the announcement
+  await interaction.editReply({ content: `Success! The database, your nickname & your Riot IGN are all in sync!` });
+  return await interaction.channel.send({ embeds: [embed] });
 }
