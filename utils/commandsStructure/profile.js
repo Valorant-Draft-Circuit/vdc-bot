@@ -33,7 +33,7 @@ module.exports = {
         },
         {
             name: 'update',
-            description: 'The type of match played',
+            description: 'Update your nickname & the database to reflect your new Valorant IGN!',
             type: ApplicationCommandOptionType.Subcommand,
             required: false,
         },
