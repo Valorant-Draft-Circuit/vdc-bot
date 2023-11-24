@@ -46,8 +46,8 @@ async function update(interaction) {
   const guildMember = await interaction.guild.members.fetch(userId);
 
   // If database value is the exact same from the API call, don't update the database- simply continue & try to update the nickname
-  if (ignFromDB === gameName) {
-    await interaction.editReply({ content: `Well... This is awkward. The database already has your most up-to-date IGN... checking to see if I can update your nickname!` });
+  if (ignFromDB === gameName && guildMember.nickname.includes(gameName)) {
+    return await interaction.editReply({ content: `Well... This is awkward. The database already has your most up-to-date IGN and upon some super close inspection, your nickname looks like it's correct as well!!` });
   } else {
     const updatedPlayer = await Player.updateIGN({ puuid: puuid, newRiotID: updatedIGN });
     if (updatedPlayer.riotID !== updatedIGN) return await interaction.editReply({ content: `Looks like there was an error and the database wasn't updated! Please try again later and/or let a bot developer know!` });
