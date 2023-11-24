@@ -116,7 +116,7 @@ export class Player {
         return playerAccount?.Account?.riotID;
     }
 
-    static async updateRiotID(option: {puuid: string; newRiotID: string;}) {
+    static async updateIGN(option: {puuid: string; newRiotID: string;}) {
         const { puuid, newRiotID } = option;
         if (Object.keys(option).length != 2) throw new Error(`Must specify both options!`);
 
