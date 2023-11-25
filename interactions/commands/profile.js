@@ -54,7 +54,7 @@ async function update(interaction) {
   }
 
   // check to make sure the bot can update the user's nickname
-  if (!guildMember.manageable) return await interaction.editReply({ content: `The database was updated to reflect your new IGN: (\`${updatedIGN}\`) but I can't update your nickname- your roles are higher than mine! You will need to update your nickname manually!` });
+  if (!guildMember.manageable) return await interaction.editReply({ content: `The database was updated to reflect your new IGN: (\`${updatedIGN}\`), but I can't update your nickname- your roles are higher than mine! You will need to update your nickname manually!` });
 
   // update the user's nickname in the server
   const slug = playerData.franchise.slug;
