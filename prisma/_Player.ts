@@ -18,22 +18,6 @@ export class Player {
         })
     };
 
-    static async getAllActiveByTier(tier: "Prospect" | "Apprentice" | "Expert" | "Mythic") {
-        return await prisma.player.findMany({
-            where: {
-                OR: [
-                    { status: PlayerStatusCode.DRAFT_ELIGIBLE },
-                    { status: PlayerStatusCode.FREE_AGENT },
-                    { status: PlayerStatusCode.RESTRICTED_FREE_AGENT },
-                    { status: PlayerStatusCode.SIGNED },
-                ],
-                Team: {
-                    tier: tier
-                }
-            }
-        })
-    };
-
     /** Get all substitutes */
     static async getAllSubs() {
         return await prisma.player.findMany({
@@ -46,29 +30,8 @@ export class Player {
         })
     };
 
-    static async getAllSubsByTier(tier: "Prospect" | "Apprentice" | "Expert" | "Mythic") {
-        return await prisma.player.findMany({
-            where: {
-                OR: [
-                    {
-                        AND: {
-                            status: PlayerStatusCode.FREE_AGENT,
-                            Team: { tier: tier }
-                        }
-                    },
-                    {
-                        AND: {
-                            status: PlayerStatusCode.FREE_AGENT,
-                            Team: { tier: tier }
-                        }
-                    }
-                ],
-
-            }
-        })
-    };
-
-    static async getInfoBy(option: { name?: string; discordID?: string; riotID?: string; } | undefined) {
+    /** @deprecated DO NOT USE - TO BE REPLACED BY `Player.getBy()` */
+    static async getInfoBy(option: { ign?: string; discordID?: string; riotID?: string; accountID: string } | undefined) {
         const player = await this.getBy(option);
         if (player == null) return undefined;
 
@@ -116,13 +79,13 @@ export class Player {
         return playerAccount?.Account?.riotID;
     }
 
-    static async updateIGN(option: {puuid: string; newRiotID: string;}) {
+    static async updateIGN(option: { puuid: string; newRiotID: string; }) {
         const { puuid, newRiotID } = option;
         if (Object.keys(option).length != 2) throw new Error(`Must specify both options!`);
 
         return await prisma.account.update({
-          where: { providerAccountId: puuid },
-          data: { riotID: newRiotID }
+            where: { providerAccountId: puuid },
+            data: { riotID: newRiotID }
         });
     }
 
@@ -132,9 +95,9 @@ export class Player {
      * @param {?String} option.discordID
      * @param {?String} option.riotID
      */
-    static async getBy(option: { ign?: string; discordID?: string; riotID?: string; } | undefined) {
+    static async getBy(option: { ign?: string; discordID?: string; riotID?: string; accountID: string } | undefined) {
         if (option == undefined) throw new Error(`Must specify exactly 1 option!`);
-        const { ign, discordID, riotID } = option;
+        const { ign, discordID, riotID, accountID } = option;
 
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
 
@@ -145,14 +108,15 @@ export class Player {
                 OR: [
                     { Account: { riotID: ign } },
                     { Account: { providerAccountId: riotID } },
+                    { AND: [{ Account: { provider: `riot` } }, { Account: { userId: accountID } }] }
                 ]
             },
-            include: { Account: true }
+            include: { Account: true, Team: true }
         });
     };
 
     static async updateBy(option: {
-        userIdentifier: { ign?: string; discordID?: string; riotID?: string; },
+        userIdentifier: { ign?: string; discordID?: string; riotID?: string; accountID: string },
         updateParamaters: { teamID: number, status: number, contractStatus: number, MMR: number }
     }) {
         const player = await this.getBy(option.userIdentifier);
@@ -165,78 +129,17 @@ export class Player {
     }
 };
 
-/** Query the Player table for a player by their Discord ID
- * @private
- * @param {String} id Discord ID
- */
-async function getPlayerByID(id: string) {
-    const a = await prisma.player.findUnique({
-        where: { id: id },
-        include: { Account: true }
-    });
-
-    if (a == null) return undefined
-    else return a;
-}
-
-/** Query the Player table for a player by their IGN
- * @private
- * @param {String} ign Valorant IGN
- */
-async function getPlayerByIGN(ign: any) {
-    return await prisma.player.findFirst({
-        where: {
-            Account: {
-                riotID: ign
-            }
-        }
-    });
-}
-
 /** Query the Account table for a player by their Discord ID
  * @private
  * @param {String} id Discord ID
  */
 async function getPlayerByDiscordID(id: string) {
     const playerDiscordAccount = await prisma.account.findFirst({
-        where: {
-            AND: [
-                { provider: `discord` },
-                { providerAccountId: id },
-            ]
-        },
+        where: { AND: [{ provider: `discord` }, { providerAccountId: id }] }
     });
 
     if (playerDiscordAccount == null) return undefined;
-    return await getPlayerByID(playerDiscordAccount.providerAccountId);
-}
-
-/** Query the Account table for a player by their Riot ID
- * @private
- * @param id Discord ID
- */
-async function getPlayerByRiotID(id: string) {
-    const playerRiotAccount = await prisma.account.findFirst({
-        where: {
-            AND: [
-                { provider: `riot` },
-                { providerAccountId: id },
-            ]
-        }
-    });
-
-    if (playerRiotAccount == null) return undefined;
-    const playerDiscordAccount = await prisma.account.findFirst({
-        where: {
-            AND: [
-                { provider: `discord` },
-                { userId: playerRiotAccount.userId },
-            ]
-        },
-    });
-
-    if (playerDiscordAccount == null) return undefined;
-    return await getPlayerByID(playerDiscordAccount.providerAccountId);
+    return await Player.getBy({ accountID: playerDiscordAccount.userId });
 }
 
 function validateProperties(object: Object, validProperties: [String]) {
