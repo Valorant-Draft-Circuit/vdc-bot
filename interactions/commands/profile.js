@@ -1,5 +1,6 @@
 const { EmbedBuilder, GuildMember } = require(`discord.js`);
-const { Player } = require(`../../prisma`);
+const { Player, Franchise } = require(`../../prisma`);
+const { PlayerStatusCode } = require("../../utils/enums");
 
 /** Riot's API endpoint to fetch a user's account by their puuid 
  * @TODO Update to the internal VDC endpoint once it's ready */
@@ -57,7 +58,7 @@ async function update(interaction) {
   if (!guildMember.manageable) return await interaction.editReply({ content: `The database was updated to reflect your new IGN: (\`${updatedIGN}\`), but I can't update your nickname- your roles are higher than mine! You will need to update your nickname manually!` });
 
   // update the user's nickname in the server
-  const slug = playerData.franchise.slug;
+  const slug = playerData.team ? (await Franchise.getBy({teamID: playerData.team})).slug : playerData.status == PlayerStatusCode.FREE_AGENT ? `FA` : `RFA`;
   const accolades = guildMember.nickname?.match(emoteregex);
   guildMember.setNickname(`${slug} | ${gameName} ${accolades ? accolades.join(``) : ``}`);
 
