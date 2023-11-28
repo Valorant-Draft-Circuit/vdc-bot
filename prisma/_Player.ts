@@ -14,6 +14,10 @@ export class Player {
                     { status: PlayerStatusCode.RESTRICTED_FREE_AGENT },
                     { status: PlayerStatusCode.SIGNED },
                 ]
+            },
+            include: {
+                MMR_Player_MMRToMMR: true,
+                Account: true
             }
         })
     };
@@ -26,6 +30,10 @@ export class Player {
                     { status: PlayerStatusCode.FREE_AGENT },
                     { status: PlayerStatusCode.RESTRICTED_FREE_AGENT }
                 ]
+            },
+            include: {
+                MMR_Player_MMRToMMR: true,
+                Account: true
             }
         })
     };
