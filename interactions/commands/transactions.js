@@ -4,6 +4,13 @@ const { ButtonStyle } = require(`discord.js`)
 const { Franchise, Player, Team } = require("../../prisma");
 const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions } = require(`../../utils/enums/`);
 
+const teamMMRAllowance = {
+    prospect: 386,
+    apprentice: 538,
+    expert: 716,
+    mythic: 948
+ }; // max MMR allowance for teams to "spend" on players
+ 
 let chan;
 
 module.exports = {
