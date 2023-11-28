@@ -38,7 +38,7 @@ export class Team {
                     { team: id },
                 ]
             },
-            include: { Account: true }
+            include: { Account: true, MMR_Player_MMRToMMR: true }
         });
     }
 }
