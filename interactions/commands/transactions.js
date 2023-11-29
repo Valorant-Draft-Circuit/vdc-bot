@@ -9,8 +9,10 @@ const teamMMRAllowance = {
     apprentice: 538,
     expert: 716,
     mythic: 948
- }; // max MMR allowance for teams to "spend" on players
- 
+}; // max MMR allowance for teams to "spend" on players
+
+const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
+
 let chan;
 
 module.exports = {
@@ -308,8 +310,15 @@ async function renew(interaction, player, teamName) {
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
-function sub(interaction, player, teamName) {
-    // sub
+async function sub(interaction, player, teamName) {
+    await interaction.deferReply();
+
+    const playerData = await Player.getBy({ discordID: player.id });
+    const teamData = await Team.getBy({ name: teamName });
+    const franchiseData = await Franchise.getBy({ id: teamData.franchise });
+
+
+    await interaction.editReply({content: `Sub Time: <t:${Date.now()}:R>\nUnsub Time: <t:${Date.now() + activeSubTime}:R>`})
 }
 
 function unsub(interaction, player) {
