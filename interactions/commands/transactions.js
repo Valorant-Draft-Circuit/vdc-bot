@@ -366,8 +366,55 @@ async function sub(interaction, player, teamName) {
     return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
-function unsub(interaction, player) {
-    // unsub
+async function unsub(interaction, player) {
+    await interaction.deferReply();
+
+    const playerData = await Player.getBy({ discordID: player.id });
+    const teamData = await Team.getBy({ id: playerData.team });
+    const roster = await Team.getRosterBy({ id: playerData.team });
+    const franchiseData = await Franchise.getBy({ id: teamData.franchise });
+
+    console.log(playerData)
+
+    // checks
+    if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.contractStatus !== ContractStatus.ACTIVE_SUB) return await interaction.editReply({ content: `This player is not an active sub!`, ephemeral: false });
+
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you perform the following action?`,
+        color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                inline: true
+            },
+            {
+                name: `\u200B`,
+                value: `UNSUB\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}`,
+                inline: true
+            }
+        ],
+        footer: { text: `Transactions — Unsub` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsSubTypes.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsSubTypes.CONFIRM_UNSUB}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
+    })
+
+    // create the action row, add the component to it & then editReply with all the data
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 function swap(interaction, cutPlayer, signPlayer) {
