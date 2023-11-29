@@ -394,7 +394,7 @@ async function confirmSub(interaction) {
     const guildMember = await interaction.guild.members.fetch(playerID);
 
     // cut the player & ensure that the player's team property is now null
-    const player = await Transaction.sub({ playerID:
+    const player = await Transaction.sub({ playerID: playerID, teamID: teamData.id});
     if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sub the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];

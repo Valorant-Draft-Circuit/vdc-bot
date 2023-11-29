@@ -12,15 +12,6 @@ const teamMMRAllowance = {
 }; // max MMR allowance for teams to "spend" on players
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 
-const teamMMRAllowance = {
-    prospect: 386,
-    apprentice: 538,
-    expert: 716,
-    mythic: 948
-}; // max MMR allowance for teams to "spend" on players
-const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
-
-
 let chan;
 
 module.exports = {
@@ -383,8 +374,6 @@ async function unsub(interaction, player) {
     const roster = await Team.getRosterBy({ id: playerData.team });
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
-    console.log(playerData)
-
     // checks
     if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
     if (playerData.contractStatus !== ContractStatus.ACTIVE_SUB) return await interaction.editReply({ content: `This player is not an active sub!`, ephemeral: false });
@@ -405,7 +394,7 @@ async function unsub(interaction, player) {
                 inline: true
             },
             {
-
+                name: `\u200B`,
                 value: `UNSUB\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}`,
                 inline: true
             }
