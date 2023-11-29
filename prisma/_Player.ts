@@ -170,25 +170,11 @@ export class Player {
 async function getPlayerByID(id: string) {
     const a = await prisma.player.findUnique({
         where: { id: id },
-        include: { Account: true }
+        include: { Account: true, MMR_Player_MMRToMMR: true }
     });
 
     if (a == null) return undefined
     else return a;
-}
-
-/** Query the Player table for a player by their IGN
- * @private
- * @param {String} ign Valorant IGN
- */
-async function getPlayerByIGN(ign: any) {
-    return await prisma.player.findFirst({
-        where: {
-            Account: {
-                riotID: ign
-            }
-        }
-    });
 }
 
 /** Query the Account table for a player by their Discord ID
@@ -201,34 +187,6 @@ async function getPlayerByDiscordID(id: string) {
             AND: [
                 { provider: `discord` },
                 { providerAccountId: id },
-            ]
-        },
-    });
-
-    if (playerDiscordAccount == null) return undefined;
-    return await getPlayerByID(playerDiscordAccount.providerAccountId);
-}
-
-/** Query the Account table for a player by their Riot ID
- * @private
- * @param id Discord ID
- */
-async function getPlayerByRiotID(id: string) {
-    const playerRiotAccount = await prisma.account.findFirst({
-        where: {
-            AND: [
-                { provider: `riot` },
-                { providerAccountId: id },
-            ]
-        }
-    });
-
-    if (playerRiotAccount == null) return undefined;
-    const playerDiscordAccount = await prisma.account.findFirst({
-        where: {
-            AND: [
-                { provider: `discord` },
-                { userId: playerRiotAccount.userId },
             ]
         },
     });
