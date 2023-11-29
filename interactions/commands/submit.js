@@ -14,9 +14,6 @@ module.exports = {
       const type = _hoistedOptions[1].value;
       const url = _hoistedOptions[2].value;
 
-      // restrict preseason & playoff submission
-      if (type == `Preseason` || type == `Playoffs`) return interaction.reply({ content: `You can't submit this type of match yet!`, ephemeral: true });
-
       // check URL integrity - if it doesn't look like a valid URL, send an error message
       if (!validMatchRegex.test(url)) return interaction.reply({ content: `That doesn't look like a valid match URL! Please try again or reach out to Travestey!`, ephemeral: true });
 
@@ -26,7 +23,7 @@ module.exports = {
       if (exists) return interaction.reply({ content: `Looks like this match was already submitted!`, ephemeral: true });
 
       // save the match to the database
-      const matchType = type == `Combine` ? `${type} - ${tier}` : tier;
+      const matchType = `${type} - ${tier}`;
       await Games.saveMatch({ id: matchID, type: matchType });
 
       // build and then send the embed confirmation

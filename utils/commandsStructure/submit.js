@@ -52,8 +52,8 @@ module.exports = {
                     value: 'Combine'
                 },
                 {
-                    name: 'Preseason',
-                    value: 'Preseason'
+                    name: 'Season',
+                    value: 'Season'
                 },
                 {
                     name: 'Playoffs',
