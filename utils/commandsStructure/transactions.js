@@ -19,8 +19,23 @@ module.exports = {
     options: [
         {
             name: "sub",
-            description: "Description",
-            "type": ApplicationCommandOptionType.Subcommand,
+            description: "Assign a substitute to a team",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "user",
+                    description: "The player to who will be subbing",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+                {
+                    name: `team`,
+                    description: "The team the player will be subbing for",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    autocomplete: true
+                }
+            ]
         },
         {
             name: "cut",
