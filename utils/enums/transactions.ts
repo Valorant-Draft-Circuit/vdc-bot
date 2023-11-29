@@ -10,14 +10,9 @@
  * @enum {TransactionsSubTypes} Enumerations for the sub commands
  */
 export enum TransactionsSubTypes {
-    /** @param {Number} FRANCHISE - Franchise enumeration */
-    FRANCHISE = 101,
-    /** @param {Number} TEAM - Team enumeration */
-    TEAM = 102,
-    /** @param {Number} PLAYER - Player enumeration */
-    PLAYER = 103,
-    /** @param {Number} SUB - Substitute enumeration */
-    SUB = 104,
+    CONFIRM_SUB = 101,
+    CONFIRM_UNSUB = 102,
+    CANCEL = 202,
 }
 
 /**

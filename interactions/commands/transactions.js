@@ -4,6 +4,15 @@ const { ButtonStyle } = require(`discord.js`)
 const { Franchise, Player, Team } = require("../../prisma");
 const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions } = require(`../../utils/enums/`);
 
+const teamMMRAllowance = {
+    prospect: 386,
+    apprentice: 538,
+    expert: 716,
+    mythic: 948
+}; // max MMR allowance for teams to "spend" on players
+const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
+
+
 let chan;
 
 module.exports = {
@@ -301,8 +310,63 @@ async function renew(interaction, player, teamName) {
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
-function sub(interaction, player, teamName) {
-    // sub
+async function sub(interaction, player, teamName) {
+    await interaction.deferReply();
+
+    const playerData = await Player.getBy({ discordID: player.id });
+    const teamData = await Team.getBy({ name: teamName });
+    const roster = await Team.getRosterBy({ name: teamName });
+    const franchiseData = await Franchise.getBy({ id: teamData.franchise });
+
+    const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall)
+    console.log(sum(totalMMR))
+
+
+    const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
+    const unsubTime = Math.round(Date.now() / 1000)+ activeSubTime;
+
+    // await interaction.editReply({ content: `Sub Time: <t:${Math.floor(Date.now() / 1000)}:R>\nUnsub Time: <t:${Math.floor(Date.now() / 1000) + activeSubTime}:R>` })
+
+
+    // checks
+    if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if ([PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT].includes(player.status)) return await interaction.editReply({ content: `This player is not a Free Agent/Restricted Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you perform the following action?`,
+        color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \`\n\`  Unsub Time: \``,
+                inline: true
+            },
+            {
+                name: `\u200B`,
+                value: `SUB\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}\n<t:${unsubTime}:t> (<t:${unsubTime}:R>)`,
+                inline: true
+            }
+        ],
+        footer: { text: `Transactions — Sub` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsSubTypes.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsSubTypes.CONFIRM_SUB}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
+    })
+
+    // create the action row, add the component to it & then editReply with all the data
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 function unsub(interaction, player) {

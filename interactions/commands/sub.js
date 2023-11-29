@@ -1,4 +1,4 @@
-const { EmbedBuilder, ApplicationCommand } = require("discord.js");
+const { EmbedBuilder, ChatInputCommandInteraction } = require("discord.js");
 
 const { Player } = require("../../prisma");
 const { PlayerStatusCode } = require("../../utils/enums");
@@ -14,14 +14,11 @@ module.exports = {
 
     name: `sub`,
 
-    /**
-     * @param {ApplicationCommand} interaction 
-     */
-    async execute(interaction) {
+    async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
-        const tier = interaction.options[0].value;
-        const mmrMax = interaction.options[1]?.value;
+        const tier = interaction.options._hoistedOptions[0].value;
+        const mmrMax = interaction.options._hoistedOptions[1]?.value;
 
         // logic to correcly determine MMR ranges for a tier
         const capMin = tier === `Mythic` ? tiercaps.expert : tier === `Prospect` ? 0 : tiercaps[Object.keys(tiercaps)[Object.keys(tiercaps).indexOf(tier.toLowerCase()) - 1]];
