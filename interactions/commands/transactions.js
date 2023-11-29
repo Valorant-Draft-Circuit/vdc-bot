@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder }
 const { ButtonStyle } = require(`discord.js`)
 
 const { Franchise, Player, Team } = require("../../prisma");
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions } = require(`../../utils/enums/`);
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions, ContractStatus } = require(`../../utils/enums/`);
 
 const teamMMRAllowance = {
     prospect: 386,
@@ -317,19 +317,17 @@ async function sub(interaction, player, teamName) {
     const roster = await Team.getRosterBy({ name: teamName });
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
-    const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall)
-    console.log(sum(totalMMR))
-
+    const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall);
+    console.log(totalMMR)
 
     const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
-    const unsubTime = Math.round(Date.now() / 1000)+ activeSubTime;
-
-    // await interaction.editReply({ content: `Sub Time: <t:${Math.floor(Date.now() / 1000)}:R>\nUnsub Time: <t:${Math.floor(Date.now() / 1000) + activeSubTime}:R>` })
-
+    const unsubTime = Math.round(Date.now() / 1000) + activeSubTime;
 
     // checks
     if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
-    if ([PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT].includes(player.status)) return await interaction.editReply({ content: `This player is not a Free Agent/Restricted Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+    // if (sum(totalMMR) + playerData.MMR_Player_MMRToMMR.mmr_overall > teamMMRAllowance[teamData.tier.toLowerCase()]) return await interaction.editReply({ content: `This player cannot be a substitute for ${teamData.name}, doing so would exceed the team's MMR cap!\nAvailable MMR: ${teamMMRAllowance[teamData.tier.toLowerCase()] - sum(totalMMR)}\nSub MMR: ${playerData.MMR_Player_MMRToMMR.mmr_overall}`, ephemeral: false });
+    if (![PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT].includes(playerData.status)) return await interaction.editReply({ content: `This player is not a Free Agent/Restricted Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+    if (playerData.contractStatus === ContractStatus.ACTIVE_SUB) return await interaction.editReply({ content: `This player is already an active sub and cannot sign another temporary contract!`, ephemeral: false });
 
     // create the base embed
     const embed = new EmbedBuilder({
