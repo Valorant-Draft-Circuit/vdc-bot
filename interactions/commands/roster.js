@@ -67,7 +67,7 @@ async function refinedRosterData(interaction, teamRoster) {
          id: player.id,
          riotIDPlain: player.Account.riotID.split(`#`)[0],
          riotID: player.Account.riotID,
-         trackerURL: `https://tracker.gg/valorant/profile/riot${encodeURIComponent(player.Account.riotID)}`,
+         trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.Account.riotID)}`,
          captain: !(guildMember instanceof DiscordAPIError) ? guildMember._roles.includes(ROLES.LEAGUE.CAPTAIN) : undefined,
          mmr: player.MMR_Player_MMRToMMR.mmr_overall,
          guildMember: guildMember,
