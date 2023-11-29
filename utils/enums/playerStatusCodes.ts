@@ -47,4 +47,6 @@ export enum ContractStatus {
     GM_SIGNED = 6,
     GM_UNSIGNED = 7,
     RENEWED = 8,
+    INACTIVE_RESERVE = 9,
+    ACTIVE_SUB = 10,
 }
