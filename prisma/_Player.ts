@@ -103,7 +103,7 @@ export class Player {
      * @param {?String} option.discordID
      * @param {?String} option.riotID
      */
-    static async getBy(option: { ign?: string; discordID?: string; riotID?: string; accountID: string } | undefined) {
+    static async getBy(option: { ign?: string; discordID?: string; riotID?: string; accountID?: string } | undefined) {
         if (option == undefined) throw new Error(`Must specify exactly 1 option!`);
         const { ign, discordID, riotID, accountID } = option;
 
@@ -156,7 +156,7 @@ async function getPlayerByID(id: string) {
  * @param {String} id Discord ID
  */
 async function getPlayerByDiscordID(id: string) {
-    const playerDiscordAccount = await prisma.ac
+    const playerDiscordAccount = await prisma.account.findFirst({
         where: { AND: [{ provider: `discord` }, { providerAccountId: id }] }
     });
 
