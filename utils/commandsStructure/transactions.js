@@ -38,6 +38,19 @@ module.exports = {
             ]
         },
         {
+            name: "unsub",
+            description: "Forcefully unsign a sub (use in the event this doesn't happen automatically)",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "user",
+                    description: "The player to whose temporary contract is complete",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+            ]
+        },
+        {
             name: "cut",
             description: "Cut a rostered player from their team",
             type: ApplicationCommandOptionType.Subcommand,

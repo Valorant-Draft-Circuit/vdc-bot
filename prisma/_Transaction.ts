@@ -1,5 +1,6 @@
 import { PlayerStatusCode, ContractStatus } from '../utils/enums';
 import { PrismaClient } from '@prisma/client';
+import { Player } from './_Player';
 
 const prisma = new PrismaClient();
 
@@ -61,6 +62,20 @@ export class Transaction {
             data: {
                 team: teamID,
                 contractStatus: ContractStatus.ACTIVE_SUB,
+            }
+        })
+    };
+
+    static async unsub(options: { playerID: string }) {
+        const { playerID } = options;
+        const player = await Player.getBy({ discordID: playerID });
+        return await prisma.player.update({
+            where: { id: playerID },
+            data: {
+                team: null,
+                contractStatus: player?.status === PlayerStatusCode.FREE_AGENT ?
+                    ContractStatus.FREE_AGENT :
+                    ContractStatus.RESTRICTED_FREE_AGENT,
             }
         })
     };

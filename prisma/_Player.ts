@@ -103,7 +103,7 @@ export class Player {
      * @param {?String} option.discordID
      * @param {?String} option.riotID
      */
-    static async getBy(option: { ign?: string; discordID?: string; riotID?: string; accountID: string } | undefined) {
+    static async getBy(option: { ign?: string; discordID?: string; riotID?: string; accountID?: string } | undefined) {
         if (option == undefined) throw new Error(`Must specify exactly 1 option!`);
         const { ign, discordID, riotID, accountID } = option;
 
@@ -136,6 +136,20 @@ export class Player {
         });
     }
 };
+
+/** Query the Player table for a player by their Discord ID
+ * @private
+ * @param {String} id Discord ID
+ */
+async function getPlayerByID(id: string) {
+    const a = await prisma.player.findUnique({
+        where: { id: id },
+        include: { Account: true, MMR_Player_MMRToMMR: true }
+    });
+
+    if (a == null) return undefined
+    else return a;
+}
 
 /** Query the Account table for a player by their Discord ID
  * @private
