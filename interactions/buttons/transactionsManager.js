@@ -434,9 +434,25 @@ async function confirmSub(interaction) {
     await interaction.deleteReply();
     await transactionsAnnouncementChannel.send({ embeds: [announcement] });
 
+
+    const activeSubTimeMS = 8 /* Hours a sub is active for the team */ * 60 * 60 * 1000; // conversion to milliseconds
     setTimeout(async () => {
-        console.log(`3 s later`)
-    }, 3000)
+        // unsub the player & ensure that the player's team property is now null
+        const player = await Transaction.unsub({ playerID: playerData.id });
+        if (player.team !== null) return await interaction.channel.send({ content: `There was an error while attempting to unsub ${guildMember} (${playerTag}). The database was not updated.` });
+
+        // create the base embed
+        const announcement = new EmbedBuilder({
+            author: { name: `VDC Transactions Manager` },
+            description: `${guildMember} (${playerTag})'s temporary contract with ${teamData.name} has ended!`,
+            thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
+            color: 0xE92929,
+            footer: { text: `Transactions — Unsub` },
+            timestamp: Date.now(),
+        });
+
+        return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+    }, activeSubTimeMS)
 }
 
 async function confirmUnsub(interaction) {
@@ -455,7 +471,7 @@ async function confirmUnsub(interaction) {
     const guildMember = await interaction.guild.members.fetch(playerID);
 
     // cut the player & ensure that the player's team property is now null
-    const player = await Transaction.unsub({ playerID: playerData.id, teamID: teamData.id });
+    const player = await Transaction.unsub({ playerID: playerData.id });
     if (player.team !== null) return interaction.editReply({ content: `There was an error while attempting to unsub the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
