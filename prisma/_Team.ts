@@ -18,11 +18,14 @@ export class Team {
 
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
 
-
-        if (id) return await getTeamByID(id);
-        if (name) return await getTeamByName(name);
-        if (playerID) return await getTeamByPlayerID(playerID);
-
+        return await prisma.team.findFirst({
+            where: {
+                OR: [
+                    { id: id }, { name: name },
+                    { Player: { some: { id: playerID } } }
+                ]
+            }
+        });
     };
 
     static async getRosterBy(option: { id?: number; name?: string; }) {
@@ -41,45 +44,4 @@ export class Team {
             include: { Account: true, MMR_Player_MMRToMMR: true }
         });
     }
-}
-
-async function getTeamByID(id: number) {
-    return await prisma.team.findUnique({
-        where: { id: id }
-    })
-}
-
-async function getTeamByName(name: string) {
-    return await prisma.team.findUnique({
-        where: { name: name }
-    })
-}
-
-async function getTeamByPlayerID(id: string) {
-    const player = await prisma.player.findUnique({
-        where: { id: id }
-    });
-
-    if (player == null) return undefined;
-    if (player.team == null) return undefined;
-    return await getTeamByID(player.team);
-}
-
-async function getRosterByTeamID(id: number) {
-    return await prisma.player.findMany({
-        where: {
-            team: id,
-        }
-    })
-}
-
-async function getRosterByTeamName(name: string) {
-    const team = await getTeamByName(name);
-
-    if (team == null) return undefined;
-    return await prisma.player.findMany({
-        where: {
-            team: team.id,
-        }
-    })
 }
