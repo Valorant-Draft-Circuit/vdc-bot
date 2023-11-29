@@ -16,11 +16,7 @@ export class Games {
             },
         })
 
-        await fetch(`https://numbers.vdc.gg/game/season/process`, {
-            method: `PUT`,
-            headers: { 'Content-type': 'application/json' },
-        });
-
+        await fetch(`https://numbers.vdc.gg/game/season/process`, { method: `PUT` });
         return match;
     }
 
