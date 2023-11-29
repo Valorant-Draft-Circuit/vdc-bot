@@ -27,6 +27,8 @@ module.exports = {
                 return await confirmRenew(interaction);
             case TransactionsUpdateTierOptions.CONFIRM:
                 return await confirmUpdateTier(interaction);
+            case TransactionsSubTypes.CONFIRM_SUB:
+                return await confirmSub(interaction);
 
             //  CANCEL BUTTONS  ####################################
             case TransactionsSignOptions.CANCEL:
@@ -34,6 +36,7 @@ module.exports = {
             case TransactionsCutOptions.CANCEL:
             case TransactionsRenewOptions.CANCEL:
             case TransactionsUpdateTierOptions.CANCEL:
+            case TransactionsSubTypes.CANCEL:
                 return await cancel(interaction);
 
             default:
@@ -65,7 +68,7 @@ async function confirmSign(interaction) {
     if (guildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
 
     // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``): ``}`);
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
@@ -153,7 +156,7 @@ async function confirmDraftSign(interaction) {
     }
 
     // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``): ``}`);
+    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
     // sign the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
@@ -212,7 +215,7 @@ async function confirmCut(interaction) {
     // remove the franchise role and update their nickname
     if (guildMember._roles.includes(playerData.franchise.roleID)) await guildMember.roles.remove(playerData.franchise.roleID);
     await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
-    guildMember.setNickname(`FA | ${playerTag} ${accolades ? accolades.join(``): ``}`);
+    guildMember.setNickname(`FA | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.cut(playerID);
@@ -366,6 +369,63 @@ async function confirmUpdateTier(interaction) {
             // }
         ],
         footer: { text: `Transactions — Renew` },
+        timestamp: Date.now(),
+    });
+
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+}
+
+async function confirmSub(interaction) {
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+
+    const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
+    const playerID = data[2];
+
+    const playerData = await Player.getBy({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
+    const teamData = await Team.getBy({ name: data[3] });
+    const franchiseData = await Franchise.getBy({ name: data[4] });
+    
+
+    const playerTag = playerIGN.split(`#`)[0];
+    const guildMember = await interaction.guild.members.fetch(playerID);
+
+    // cut the player & ensure that the player's team property is now null
+    const player = await Transaction.sub({ playerID: playerData.id, teamID: teamData.id });
+    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
+
+    const embed = interaction.message.embeds[0];
+    const embedEdits = new EmbedBuilder(embed);
+    embedEdits.setDescription(`This operation was successfully completed.`);
+    embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
+
+    // create the base embed
+    const announcement = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `${guildMember} (${playerTag}) has signed a temporary contract with ${franchiseData.name}!`,
+        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
+        color: 0xE92929,
+        fields: [
+            {
+                name: `Franchise`,
+                value: `<${franchiseData.emoteID}> ${franchiseData.name}`,
+                inline: true
+            },
+            {
+                name: `Team`,
+                value: teamData.name,
+                inline: true
+            },
+            /** @TODO Once GM discord IDs are in Franchsie Table, show this block */
+            // {
+            //     name: `General Manager`,
+            //     value: `"\${franchiseData.gm}"`,
+            //     inline: true
+            // }
+        ],
+        footer: { text: `Transactions — Sub` },
         timestamp: Date.now(),
     });
 

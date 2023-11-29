@@ -22,7 +22,7 @@ export class Team {
             where: {
                 OR: [
                     { id: id }, { name: name },
-                    { Player: { some: { id: playerID } } }
+                    // { Player: { some: { id: playerID } } }
                 ]
             }
         });

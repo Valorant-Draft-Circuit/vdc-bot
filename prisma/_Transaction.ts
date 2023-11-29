@@ -52,5 +52,16 @@ export class Transaction {
                 team: options.teamID,
             }
         })
-    }
+    };
+
+    static async sub(options: { playerID: string, teamID: number }) {
+        const { playerID, teamID } = options;
+        return await prisma.player.update({
+            where: { id: playerID },
+            data: {
+                team: teamID,
+                contractStatus: ContractStatus.ACTIVE_SUB,
+            }
+        })
+    };
 };
