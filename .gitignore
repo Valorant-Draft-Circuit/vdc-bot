@@ -19,6 +19,7 @@ utils/commandsStructure/stash
 ################################################################
 
 # Ignored Files ################################################
+package-lock.json
 utils/commandsStructure/test.js
 interactions/commands/test.js
 ################################################################

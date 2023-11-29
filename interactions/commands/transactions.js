@@ -12,6 +12,15 @@ const teamMMRAllowance = {
 }; // max MMR allowance for teams to "spend" on players
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 
+const teamMMRAllowance = {
+    prospect: 386,
+    apprentice: 538,
+    expert: 716,
+    mythic: 948
+}; // max MMR allowance for teams to "spend" on players
+const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
+
+
 let chan;
 
 module.exports = {
@@ -380,6 +389,10 @@ async function unsub(interaction, player) {
     if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
     if (playerData.contractStatus !== ContractStatus.ACTIVE_SUB) return await interaction.editReply({ content: `This player is not an active sub!`, ephemeral: false });
 
+    // checks
+    if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if ([PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT].includes(player.status)) return await interaction.editReply({ content: `This player is not a Free Agent/Restricted Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+
     // create the base embed
     const embed = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
@@ -392,7 +405,7 @@ async function unsub(interaction, player) {
                 inline: true
             },
             {
-                name: `\u200B`,
+
                 value: `UNSUB\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}`,
                 inline: true
             }

@@ -65,7 +65,7 @@ export class Transaction {
             }
         })
     };
-
+  
     static async unsub(options: { playerID: string }) {
         const { playerID } = options;
         const player = await Player.getBy({ discordID: playerID });
