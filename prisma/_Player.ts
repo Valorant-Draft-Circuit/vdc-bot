@@ -31,10 +31,7 @@ export class Player {
                     { status: PlayerStatusCode.RESTRICTED_FREE_AGENT }
                 ]
             },
-            include: {
-                MMR_Player_MMRToMMR: true,
-                Account: true
-            }
+            include: { Account: true, MMR_Player_MMRToMMR: true }
         })
     };
 
