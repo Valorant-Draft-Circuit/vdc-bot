@@ -30,10 +30,10 @@ module.exports = {
                 id: player.id,
                 riotIDPlain: player.Account.riotID.split(`#`)[0],
                 riotID: player.Account.riotID,
-                trackerURL: `https://tracker.gg/valorant/profile/riot${encodeURIComponent(player.Account.riotID)}`,
+                trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.Account.riotID)}`,
                 status: player.status,
                 type: player.status == PlayerStatusCode.FREE_AGENT ? ` FA` : `RFA`,
-                mmr: player.MMR_Player_MMRToMMR.mmr_overall
+                mmr: player.MMR_Player_MMRToMMR?.mmr_overall
             }
         }).filter(player => player.mmr > capMin && player.mmr <= capMax).sort((a, b) => a.mmr - b.mmr);
 
