@@ -7,7 +7,7 @@ module.exports = {
 
    name: `submit`,
 
-   async execute(interaction) {
+   async execute(/** @type ChatInputCommandInteraction */ interaction) {
       const { _hoistedOptions } = interaction.options;
 
       const tier = _hoistedOptions[0].value;
@@ -24,7 +24,7 @@ module.exports = {
 
       // save the match to the database
       const matchType = `${type} - ${tier}`;
-      await Games.saveMatch({ id: matchID, type: matchType });
+      Games.saveMatch({ id: matchID, type: matchType });
 
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
