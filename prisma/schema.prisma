@@ -182,8 +182,8 @@ model Schedule {
   team2                               Int
   isMOTW                              Boolean    @default(false)
   tier                                String     @default("premier")
-  Franchise_Schedule_team1ToFranchise Franchise? @relation("Schedule_team1ToFranchise", fields: [team1], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Schedule_Teams_id_fk")
-  Franchise_Schedule_team2ToFranchise Franchise  @relation("Schedule_team2ToFranchise", fields: [team2], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "Schedule_Teams_id_fk2")
+  Franchise_Schedule_team1ToFranchise Franchise? @relation("Schedule_team1ToFranchise", fields: [team1], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "Schedule_Teams_id_fk")
+  Franchise_Schedule_team2ToFranchise Franchise  @relation("Schedule_team2ToFranchise", fields: [team2], references: [id], onUpdate: Restrict, map: "Schedule_Teams_id_fk2")
 
   @@index([team1], map: "Schedule_Teams_id_fk")
   @@index([team2], map: "Schedule_Teams_id_fk2")
