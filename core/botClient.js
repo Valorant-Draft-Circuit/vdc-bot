@@ -10,7 +10,6 @@ const {
 const { Channel } = require("discord.js").Partials;
 
 /** @NOTE - THIS IS TEMPORARY. WILL BE CHANGED ASAP */
-const cmdWhitelist = [`ping`, `submit`, `topic`, `welcome`, `transactions`, `setup`, `active`, `roster`, `sudo`, `profile`, `sub`];
 
 
 module.exports = class BotClient extends Client {
@@ -100,23 +99,23 @@ module.exports = class BotClient extends Client {
 
         slashCommandFiles.forEach(slashCommandFile => {
             const command = require(`.${directory}/${slashCommandFile}`);
-
-            if (!cmdWhitelist.includes(command.name)) return;
-
             commandStructures.push(command);
             success++;
         });
 
-        // console.log(commandStructures.options)
-
-
         /** @todo create filters to register VDC servers, franchise servers and other */
-        // const serverID = `1027754353207033966`;
-        // readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
+        if (process.env.ENVIRONMENT === `DEV`) {
+            const serverID = `1027754353207033966`;
+            readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
+            readyClient.application.commands.set([]);
+            this.logger.console({ level: `INFO`, title: `Running in the development environment` });
+        } else {
+            // globally register all application commands
+            readyClient.application.commands.set(commandStructures);
+            this.logger.console({ level: `INFO`, title: `Running in the production environment` });
 
-        // globally register all application commands
-        // readyClient.application.commands.set([]);
-        readyClient.application.commands.set(commandStructures);
+        }
+
 
         this.logger.console({
             level: `DEBUG`,
@@ -144,7 +143,6 @@ module.exports = class BotClient extends Client {
 
         slashCommandFiles.forEach(slashCommandFile => {
             const slashCommand = require(`.${directory}/${slashCommandFile}`);
-            if (!cmdWhitelist.includes(slashCommand.name)) return;
             this.slashCommands.set(slashCommand.name, slashCommand);
             success++;
         });
