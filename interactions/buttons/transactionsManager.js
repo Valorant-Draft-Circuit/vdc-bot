@@ -31,6 +31,10 @@ module.exports = {
                 return await confirmSub(interaction);
             case TransactionsSubTypes.CONFIRM_UNSUB:
                 return await confirmUnsub(interaction);
+            case TransactionsIROptions.CONFIRM_SET:
+                return await confirmSetIR(interaction);
+            case TransactionsIROptions.CONFIRM_REMOVE:
+                return await confirmRemoveIR(interaction);
 
             //  CANCEL BUTTONS  ####################################
             case TransactionsSignOptions.CANCEL:
@@ -39,6 +43,7 @@ module.exports = {
             case TransactionsRenewOptions.CANCEL:
             case TransactionsUpdateTierOptions.CANCEL:
             case TransactionsSubTypes.CANCEL:
+            case TransactionsIROptions.CANCEL:
                 return await cancel(interaction);
 
             default:
@@ -394,7 +399,7 @@ async function confirmSub(interaction) {
     const guildMember = await interaction.guild.members.fetch(playerID);
 
     // cut the player & ensure that the player's team property is now null
-    const player = await Transaction.sub({ playerID: playerID, teamID: teamData.id});
+    const player = await Transaction.sub({ playerID: playerID, teamID: teamData.id });
     if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sub the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
@@ -487,6 +492,117 @@ async function confirmUnsub(interaction) {
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         footer: { text: `Transactions — Unsub` },
+        timestamp: Date.now(),
+    });
+
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+}
+
+async function confirmSetIR(interaction) {
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+
+    const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
+    const playerID = data[2];
+
+    const playerData = await Player.getBy({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
+    const franchiseData = await Franchise.getBy({ name: data[4] });
+
+    const playerTag = playerIGN.split(`#`)[0];
+    const guildMember = await interaction.guild.members.fetch(playerID);
+
+    // cut the player & ensure that the player's team property is now null
+    const player = await Transaction.inactiveReserve({ playerID: playerData.id });
+    if (player.contractStatus !== ContractStatus.INACTIVE_RESERVE) return interaction.editReply({ content: `There was an error while attempting to place the player on Inactive Reserve. The database was not updated.` });
+
+    const embed = interaction.message.embeds[0];
+    const embedEdits = new EmbedBuilder(embed);
+    embedEdits.setDescription(`This operation was successfully completed.`);
+    embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
+
+    // create the base embed
+    const announcement = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `${guildMember} (${playerTag}) has been placed on Inactive Reserve`,
+        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
+        color: 0xE92929,
+        footer: { text: `Transactions — Inactive Reserve` },
+        timestamp: Date.now(),
+    });
+
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+}
+
+async function confirmSetIR(interaction) {
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+
+    const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
+    const playerID = data[2];
+
+    const playerData = await Player.getBy({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
+    const franchiseData = await Franchise.getBy({ name: data[4] });
+
+    const playerTag = playerIGN.split(`#`)[0];
+    const guildMember = await interaction.guild.members.fetch(playerID);
+
+    // cut the player & ensure that the player's team property is now null
+    const player = await Transaction.toggleInactiveReserve({ playerID: playerData.id, toggle: `SET` });
+    if (player.contractStatus !== ContractStatus.INACTIVE_RESERVE) return interaction.editReply({ content: `There was an error while attempting to place the player on Inactive Reserve. The database was not updated.` });
+
+    const embed = interaction.message.embeds[0];
+    const embedEdits = new EmbedBuilder(embed);
+    embedEdits.setDescription(`This operation was successfully completed.`);
+    embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
+
+    // create the base embed
+    const announcement = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `${guildMember} (${playerTag}) has been placed on Inactive Reserve`,
+        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
+        color: 0xE92929,
+        footer: { text: `Transactions — Inactive Reserve` },
+        timestamp: Date.now(),
+    });
+
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+}
+
+async function confirmRemoveIR(interaction) {
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+
+    const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
+    const playerID = data[2];
+
+    const playerData = await Player.getBy({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
+    const franchiseData = await Franchise.getBy({ name: data[4] });
+
+    const playerTag = playerIGN.split(`#`)[0];
+    const guildMember = await interaction.guild.members.fetch(playerID);
+
+    // cut the player & ensure that the player's team property is now null
+    const player = await Transaction.toggleInactiveReserve({ playerID: playerData.id, toggle: `REMOVE` });
+    if (player.contractStatus === ContractStatus.INACTIVE_RESERVE) return interaction.editReply({ content: `There was an error while attempting to remove the player from Inactive Reserve. The database was not updated.` });
+
+    const embed = interaction.message.embeds[0];
+    const embedEdits = new EmbedBuilder(embed);
+    embedEdits.setDescription(`This operation was successfully completed.`);
+    embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
+
+    // create the base embed
+    const announcement = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `${guildMember} (${playerTag}) is no longer on Inactive Reserve`,
+        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
+        color: 0xE92929,
+        footer: { text: `Transactions — Inactive Reserve` },
         timestamp: Date.now(),
     });
 

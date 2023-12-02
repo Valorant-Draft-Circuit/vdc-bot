@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder }
 const { ButtonStyle } = require(`discord.js`)
 
 const { Franchise, Player, Team } = require("../../prisma");
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions, ContractStatus } = require(`../../utils/enums/`);
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions, TransactionsIROptions,  ContractStatus } = require(`../../utils/enums/`);
 
 const teamMMRAllowance = {
     prospect: 386,
@@ -45,12 +45,11 @@ module.exports = {
             case `unsub`:
                 unsub(interaction, _hoistedOptions[0].member);
                 break;
+            case `ir`:
+                ir(interaction, _hoistedOptions[0].member);
+                break;
             // case `swap`:
             //     swap(interaction, _hoistedOptions[0], _hoistedOptions[1]);
-            //     break;
-            // case `ir`:
-            //     // player = _hoistedOptions[0];
-            //     ir(interaction, _hoistedOptions[0]);
             //     break;
             default:
                 interaction.reply({ content: `That's not a valid subcommand or this command is a work in progress!` });
@@ -318,7 +317,6 @@ async function sub(interaction, player, teamName) {
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
     const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall);
-    console.log(totalMMR)
 
     const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
     const unsubTime = Math.round(Date.now() / 1000) + activeSubTime;
@@ -419,6 +417,100 @@ async function unsub(interaction, player) {
     return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
+async function ir(interaction, player) {
+    await interaction.deferReply();
+
+    const playerData = await Player.getBy({ discordID: player.id });
+
+    // checks
+    if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.team === null) return await interaction.editReply({ content: `This player is not on a team and cannot be placed on Inactive Reserve!`, ephemeral: false });
+
+    if (playerData.contractStatus === ContractStatus.INACTIVE_RESERVE) {
+        const teamData = await Team.getBy({ id: playerData.team });
+        const franchiseData = await Franchise.getBy({ id: teamData.franchise });
+    
+        // create the base embed
+        const embed = new EmbedBuilder({
+            author: { name: `VDC Transactions Manager` },
+            description: `Are you sure you perform the following action?`,
+            color: 0xE92929,
+            fields: [
+                {
+                    name: `\u200B`,
+                    value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                    inline: true
+                },
+                {
+                    name: `\u200B`,
+                    value: `REMOVE IR\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}`,
+                    inline: true
+                }
+            ],
+            footer: { text: `Transactions — Inactive Reserve` }
+        });
+    
+        const cancel = new ButtonBuilder({
+            customId: `transactions_${TransactionsIROptions.CANCEL}`,
+            label: `Cancel`,
+            style: ButtonStyle.Danger,
+            // emoji: `❌`,
+        })
+    
+        const confirm = new ButtonBuilder({
+            customId: `transactions_${TransactionsIROptions.CONFIRM_REMOVE}`,
+            label: `Confirm`,
+            style: ButtonStyle.Success,
+            // emoji: `✔`,
+        })
+    
+        // create the action row, add the component to it & then reply with all the data
+        const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+        return await interaction.editReply({ embeds: [embed], components: [subrow] });
+    } else if (playerData.status === PlayerStatusCode.SIGNED) {
+        const teamData = await Team.getBy({ id: playerData.team });
+        const franchiseData = await Franchise.getBy({ id: teamData.franchise });
+    
+        // create the base embed
+        const embed = new EmbedBuilder({
+            author: { name: `VDC Transactions Manager` },
+            description: `Are you sure you perform the following action?`,
+            color: 0xE92929,
+            fields: [
+                {
+                    name: `\u200B`,
+                    value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                    inline: true
+                },
+                {
+                    name: `\u200B`,
+                    value: `PLACE IR\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}`,
+                    inline: true
+                }
+            ],
+            footer: { text: `Transactions — Inactive Reserve` }
+        });
+    
+        const cancel = new ButtonBuilder({
+            customId: `transactions_${TransactionsIROptions.CANCEL}`,
+            label: `Cancel`,
+            style: ButtonStyle.Danger,
+            // emoji: `❌`,
+        })
+    
+        const confirm = new ButtonBuilder({
+            customId: `transactions_${TransactionsIROptions.CONFIRM_SET}`,
+            label: `Confirm`,
+            style: ButtonStyle.Success,
+            // emoji: `✔`,
+        })
+    
+        // create the action row, add the component to it & then reply with all the data
+        const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+        return await interaction.editReply({ embeds: [embed], components: [subrow] });
+    } else return await interaction.editReply({ content: `This player is not signed to a franchise and cannot be placed on Inactive Reserve!`, ephemeral: false });
+}
+
 function swap(interaction, cutPlayer, signPlayer) {
     // create the base embed
     const embed = new EmbedBuilder({
@@ -427,39 +519,6 @@ function swap(interaction, cutPlayer, signPlayer) {
         color: 0xE92929,
         thumbnail: { url: `https://cdn.discordapp.com/banners/963274331251671071/57044c6a68be1065a21963ee7e697f80.webp?size=480` },
         footer: { text: `Transactions — Swap` }
-    });
-
-    const cancel = new ButtonBuilder({
-        customId: `transactions_${TransactionsCutOptions.CONFIRM}`,
-        label: `Cancel`,
-        style: ButtonStyle.Danger,
-        // emoji: `❌`,
-    })
-
-    const confirm = new ButtonBuilder({
-        customId: `transactions_${TransactionsCutOptions.CANCEL}`,
-        label: `Confirm`,
-        style: ButtonStyle.Success,
-        // emoji: `✔`,
-    })
-
-    // create the action row, add the component to it & then reply with all the data
-    const subrow = new ActionRowBuilder();
-    // console.log(subrow)
-    subrow.addComponents(cancel, confirm);
-
-    // interaction.message.edit({ embeds: [embedEdits] });
-    // console.log(subrow)
-    interaction.reply({ embeds: [embed], components: [subrow] });
-}
-
-function ir(interaction, player) {
-    // create the base embed
-    const embed = new EmbedBuilder({
-        author: { name: `VDC Transactions Manager` },
-        description: `Are you sure you want to place ${player.user} on Inactive Reserve?`,
-        color: 0xE92929,
-        footer: { text: `Transactions — Inactive Reserve` }
     });
 
     const cancel = new ButtonBuilder({

@@ -79,4 +79,14 @@ export class Transaction {
             }
         })
     };
+
+    static async toggleInactiveReserve(options: { playerID: string, toggle: `SET` | `REMOVE` }) {
+        const { playerID, toggle } = options;
+
+        const contractStatus = toggle === `SET` ? ContractStatus.INACTIVE_RESERVE : ContractStatus.SIGNED;
+        return await prisma.player.update({
+            where: { id: playerID },
+            data: { contractStatus: contractStatus }
+        });
+    };
 };
