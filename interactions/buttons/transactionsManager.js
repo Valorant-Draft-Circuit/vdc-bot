@@ -15,8 +15,6 @@ module.exports = {
     async execute(interaction, args) {
         transactionsAnnouncementChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 
-        console.log(args)
-
         switch (Number(args)) {
             //  CONFIRM BUTTONS  ###################################
             case TransactionsSignOptions.CONFIRM:

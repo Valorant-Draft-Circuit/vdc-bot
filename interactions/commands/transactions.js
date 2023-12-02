@@ -317,7 +317,6 @@ async function sub(interaction, player, teamName) {
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
     const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall);
-    console.log(totalMMR)
 
     const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
     const unsubTime = Math.round(Date.now() / 1000) + activeSubTime;
@@ -422,7 +421,6 @@ async function ir(interaction, player) {
     await interaction.deferReply();
 
     const playerData = await Player.getBy({ discordID: player.id });
-    console.log(playerData)
 
     // checks
     if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
