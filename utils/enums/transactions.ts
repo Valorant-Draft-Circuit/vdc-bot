@@ -12,7 +12,7 @@
 export enum TransactionsSubTypes {
     CONFIRM_SUB = 101,
     CONFIRM_UNSUB = 102,
-    CANCEL = 202,
+    CANCEL = 199,
 }
 
 /**
@@ -40,9 +40,10 @@ export enum TransactionsSignOptions {
  */
 export enum TransactionsIROptions {
     /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 401,
+    CONFIRM_SET = 401,
+    CONFIRM_REMOVE = 402,
     /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 402,
+    CANCEL = 499,
 }
 
 /**
