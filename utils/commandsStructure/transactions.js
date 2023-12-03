@@ -215,6 +215,25 @@ module.exports = {
                     ]
                 }
             ]
+        },
+        {
+            name: "swap",
+            description: "Swap a rostered player for a Free Agent",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "cut",
+                    description: "The player to cut",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+                {
+                    name: "sign",
+                    description: "The player to sign",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+            ]
         }
     ]
 }
