@@ -40,7 +40,7 @@ module.exports = {
                 renew(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
                 break;
             case `sub`:
-                sub(interaction, _hoistedOptions[0].member, _hoistedOptions[1].value);
+                sub(interaction, _hoistedOptions[0].member, _hoistedOptions[1].member);
                 break;
             case `unsub`:
                 unsub(interaction, _hoistedOptions[0].member);
@@ -311,22 +311,29 @@ async function renew(interaction, player, teamName) {
     interaction.reply({ embeds: [embed], components: [subrow] });
 }
 
-async function sub(interaction, player, teamName) {
+async function sub(interaction, player, subFor) {
     await interaction.deferReply();
 
     const playerData = await Player.getBy({ discordID: player.id });
-    const teamData = await Team.getBy({ name: teamName });
-    const roster = await Team.getRosterBy({ name: teamName });
+    const subForData = await Player.getBy({ discordID: subFor.id });
+
+    if (subForData.team == null) return await interaction.editReply({ content: `The player you're trying to sub out isn't on a team!`, ephemeral: false });
+
+    const teamData = await Team.getBy({ id: subForData.team });
+    const roster = (await Team.getRosterBy({ id: subForData.team }))
+        .filter(player => player.status === PlayerStatusCode.SIGNED && player.contractStatus !== ContractStatus.INACTIVE_RESERVE);
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
-    const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall);
+    const oldMMR = sum(roster.map(p => p.MMR_Player_MMRToMMR.mmr_overall));
+    const mmrWithoutSubbedOutPlayer = sum(roster.filter(p => p.id !== subFor.id).map(p => p.MMR_Player_MMRToMMR.mmr_overall));
+    const newMMR = mmrWithoutSubbedOutPlayer + playerData.MMR_Player_MMRToMMR.mmr_overall;
 
     const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
     const unsubTime = Math.round(Date.now() / 1000) + activeSubTime;
 
     // checks
     if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (sum(totalMMR) + playerData.MMR_Player_MMRToMMR.mmr_overall > teamMMRAllowance[teamData.tier.toLowerCase()]) return await interaction.editReply({ content: `This player cannot be a substitute for ${teamData.name}, doing so would exceed the team's MMR cap!\nAvailable MMR: ${teamMMRAllowance[teamData.tier.toLowerCase()] - sum(totalMMR)}\nSub MMR: ${playerData.MMR_Player_MMRToMMR.mmr_overall}`, ephemeral: false });
+    if (newMMR > teamMMRAllowance[teamData.tier.toLowerCase()]) return await interaction.editReply({ content: `This player cannot be a substitute for ${teamData.name}, doing so would exceed the tier's MMR cap!\nAvailable MMR: ${oldMMR - mmrWithoutSubbedOutPlayer}\nSub MMR: ${playerData.MMR_Player_MMRToMMR.mmr_overall}`, ephemeral: false });
     if (![PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT].includes(playerData.status)) return await interaction.editReply({ content: `This player is not a Free Agent/Restricted Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
     if (playerData.contractStatus === ContractStatus.ACTIVE_SUB) return await interaction.editReply({ content: `This player is already an active sub and cannot sign another temporary contract!`, ephemeral: false });
 
@@ -338,12 +345,12 @@ async function sub(interaction, player, teamName) {
         fields: [
             {
                 name: `\u200B`,
-                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \`\n\`  Unsub Time: \``,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`         MMR: \`\n\`        Team: \`\n\`   Franchise: \`\n\`  Unsub Time: \``,
                 inline: true
             },
             {
                 name: `\u200B`,
-                value: `SUB\n${player.user}\n\`${player.id}\`\n${teamData.name}\n${franchiseData.name}\n<t:${unsubTime}:t> (<t:${unsubTime}:R>)`,
+                value: `SUB\n${player.user}\n\`${player.id}\`\n\`${oldMMR} => ${newMMR} / ${teamMMRAllowance[teamData.tier.toLowerCase()]}\`\n${teamData.name}\n${franchiseData.name}\n<t:${unsubTime}:t> (<t:${unsubTime}:R>)`,
                 inline: true
             }
         ],
