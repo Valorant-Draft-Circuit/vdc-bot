@@ -18,10 +18,17 @@ module.exports = {
     description: "Get a player's stats",
     options: [
         {
-            name: "user",
-            description: "The player to get stats for",
-            type: ApplicationCommandOptionType.User,
-            required: true
+            name: `match`,
+            description: "Get the stats for a specific match",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: 'url',
+                    description: 'The URL of the match',
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                }
+            ]
         }
     ]
 }
