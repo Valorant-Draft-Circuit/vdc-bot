@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
 
-const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus, TransactionsUpdateTierOptions } = require(`../../utils/enums`);
+const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus, TransactionsUpdateTierOptions, TransactionsSwapOptions } = require(`../../utils/enums`);
 
 const { Franchise, Team, Transaction, Player } = require(`../../prisma`);
 
@@ -35,6 +35,9 @@ module.exports = {
                 return await confirmSetIR(interaction);
             case TransactionsIROptions.CONFIRM_REMOVE:
                 return await confirmRemoveIR(interaction);
+            case TransactionsSwapOptions.CONFIRM:
+                return await confirmSwap(interaction);
+
 
             //  CANCEL BUTTONS  ####################################
             case TransactionsSignOptions.CANCEL:
@@ -44,6 +47,7 @@ module.exports = {
             case TransactionsUpdateTierOptions.CANCEL:
             case TransactionsSubTypes.CANCEL:
             case TransactionsIROptions.CANCEL:
+            case TransactionsSwapOptions.CANCEL:
                 return await cancel(interaction);
 
             default:
@@ -79,7 +83,7 @@ async function confirmSign(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
-    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
+    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -603,6 +607,67 @@ async function confirmRemoveIR(interaction) {
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         footer: { text: `Transactions — Inactive Reserve` },
+        timestamp: Date.now(),
+    });
+
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+}
+
+async function confirmSwap(interaction) {
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+
+    const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
+    const cutPlayerID = data[2];
+    const signPlayerID = data[4];
+
+    const cutPlayerIGN = await Player.getIGNby({ discordID: cutPlayerID });
+    const signPlayerIGN = await Player.getIGNby({ discordID: signPlayerID });
+    const teamData = await Team.getBy({ name: data[5] });
+    const franchiseData = await Franchise.getBy({ name: data[6] });
+
+    const cutPlayerTag = cutPlayerIGN.split(`#`)[0];
+    const cutGuildMember = await interaction.guild.members.fetch(cutPlayerID);
+    const signPlayerTag = signPlayerIGN.split(`#`)[0];
+    const signGuildMember = await interaction.guild.members.fetch(signPlayerID);
+
+
+    // change roles for cut player
+    if (cutGuildMember._roles.includes(franchiseData.roleID)) await cutGuildMember.roles.remove(franchiseData.roleID);
+    await cutGuildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
+
+    // update nickname for cut player
+    const cutAccolades = cutGuildMember.nickname?.match(emoteregex);
+    cutGuildMember.setNickname(`FA | ${cutPlayerTag} ${cutAccolades ? cutAccolades.join(``) : ``}`);
+
+    // change roles for signed player
+    if (!signGuildMember._roles.includes(franchiseData.roleID)) await signGuildMember.roles.add(franchiseData.roleID);
+    if (signGuildMember._roles.includes(ROLES.LEAGUE.FREE_AGENT)) await signGuildMember.roles.remove(ROLES.LEAGUE.FREE_AGENT);
+    if (signGuildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await signGuildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
+
+    // update nickname for signed player
+    const signAccolades = signGuildMember.nickname?.match(emoteregex);
+    signGuildMember.setNickname(`${franchiseData.slug} | ${signPlayerTag} ${signAccolades ? signAccolades.join(``) : ``}`);
+
+    // cut the player & ensure that the player's team property is now null
+    const cutPlayer = await Transaction.cut(cutPlayerID);
+    if (cutPlayer.team !== null) return interaction.editReply({ content: `There was an error while attempting to cut the player. The database was not updated.` });
+    const signPlayer = await Transaction.sign({ playerID: signPlayerID, teamID: teamData.id });
+    if (signPlayer.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
+
+    const embed = interaction.message.embeds[0];
+    const embedEdits = new EmbedBuilder(embed);
+    embedEdits.setDescription(`This operation was successfully completed.`);
+    embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
+
+    // create the base embed
+    const announcement = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `${teamData.name} has decided to swap ${cutGuildMember} (${cutPlayerTag})\nfor ${signGuildMember} (${signPlayerTag})`,
+        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
+        color: 0xE92929,
+        footer: { text: `Transactions — Swap` },
         timestamp: Date.now(),
     });
 
