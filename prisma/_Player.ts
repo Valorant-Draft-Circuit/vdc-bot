@@ -116,7 +116,7 @@ export class Player {
                     { AND: [{ Account: { provider: `riot` } }, { Account: { userId: accountID } }] }
                 ]
             },
-            include: { Account: true, Team: true }
+            include: { Account: true, Team: true, MMR_Player_MMRToMMR: true }
         });
     };
 
