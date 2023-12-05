@@ -321,17 +321,16 @@ async function sub(interaction, player, subFor) {
         .filter(player => player.status === PlayerStatusCode.SIGNED && player.contractStatus !== ContractStatus.INACTIVE_RESERVE);
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
-    const oldMMR = sum(roster.map(p => p.MMR_Player_MMRToMMR.mmr_overall))
-    const newMMR = sum(roster.filter(p => p.id !== subFor.id).map(p => p.MMR_Player_MMRToMMR.mmr_overall))
-        + playerData.MMR_Player_MMRToMMR.mmr_overall;
-    const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall);
+    const oldMMR = sum(roster.map(p => p.MMR_Player_MMRToMMR.mmr_overall));
+    const mmrWithoutSubbedOutPlayer = sum(roster.filter(p => p.id !== subFor.id).map(p => p.MMR_Player_MMRToMMR.mmr_overall));
+    const newMMR = mmrWithoutSubbedOutPlayer + playerData.MMR_Player_MMRToMMR.mmr_overall;
 
     const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
     const unsubTime = Math.round(Date.now() / 1000) + activeSubTime;
 
     // checks
     if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
-    if (newMMR > teamMMRAllowance[teamData.tier.toLowerCase()]) return await interaction.editReply({ content: `This player cannot be a substitute for ${teamData.name}, doing so would exceed the tier's MMR cap!\nAvailable MMR: ${sum(totalMMR) - newMMR}\nSub MMR: ${playerData.MMR_Player_MMRToMMR.mmr_overall}`, ephemeral: false });
+    if (newMMR > teamMMRAllowance[teamData.tier.toLowerCase()]) return await interaction.editReply({ content: `This player cannot be a substitute for ${teamData.name}, doing so would exceed the tier's MMR cap!\nAvailable MMR: ${oldMMR - mmrWithoutSubbedOutPlayer}\nSub MMR: ${playerData.MMR_Player_MMRToMMR.mmr_overall}`, ephemeral: false });
     if (![PlayerStatusCode.FREE_AGENT, PlayerStatusCode.RESTRICTED_FREE_AGENT].includes(playerData.status)) return await interaction.editReply({ content: `This player is not a Free Agent/Restricted Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
     if (playerData.contractStatus === ContractStatus.ACTIVE_SUB) return await interaction.editReply({ content: `This player is already an active sub and cannot sign another temporary contract!`, ephemeral: false });
 
