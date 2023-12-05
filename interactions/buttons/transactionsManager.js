@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
 
-const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus, TransactionsUpdateTierOptions, TransactionsSwapOptions } = require(`../../utils/enums`);
+const { CHANNELS, ROLES, TransactionsSubTypes, TransactionsCutOptions, TransactionsIROptions, TransactionsSignOptions, TransactionsDraftSignOptions, TransactionsRenewOptions, ContractStatus, TransactionsUpdateTierOptions, TransactionsSwapOptions, TransactionsRetireOptions, PlayerStatusCode } = require(`../../utils/enums`);
 
 const { Franchise, Team, Transaction, Player } = require(`../../prisma`);
 
@@ -37,6 +37,8 @@ module.exports = {
                 return await confirmRemoveIR(interaction);
             case TransactionsSwapOptions.CONFIRM:
                 return await confirmSwap(interaction);
+            case TransactionsRetireOptions.CONFIRM:
+                return await confirmRetire(interaction);
 
 
             //  CANCEL BUTTONS  ####################################
@@ -48,10 +50,11 @@ module.exports = {
             case TransactionsSubTypes.CANCEL:
             case TransactionsIROptions.CANCEL:
             case TransactionsSwapOptions.CANCEL:
+            case TransactionsRetireOptions.CANCEL:
                 return await cancel(interaction);
 
             default:
-                return interaction.reply({ content: `There was an error. ERR: BTN_TSC_MGR` });
+                return await interaction.reply({ content: `There was an error. ERR: BTN_TSC_MGR` });
         }
 
 
@@ -83,7 +86,7 @@ async function confirmSign(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
-    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
+    if (player.team !== teamData.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -171,7 +174,7 @@ async function confirmDraftSign(interaction) {
 
     // sign the player & ensure that the player's team property is now null
     const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
-    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sign the player's contract. The database was not updated.` });
+    if (player.team !== teamData.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player's contract. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -230,7 +233,7 @@ async function confirmCut(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.cut(playerID);
-    if (player.team !== null) return interaction.editReply({ content: `There was an error while attempting to cut the player. The database was not updated.` });
+    if (player.team !== null) return await interaction.editReply({ content: `There was an error while attempting to cut the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -287,7 +290,7 @@ async function confirmRenew(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.renew({ playerID: playerData.id });
-    if (player.team !== teamData.id || player.contractStatus !== ContractStatus.RENEWED) return interaction.editReply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
+    if (player.team !== teamData.id || player.contractStatus !== ContractStatus.RENEWED) return await interaction.editReply({ content: `There was an error while attempting to renew the player's contract. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -404,7 +407,7 @@ async function confirmSub(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.sub({ playerID: playerID, teamID: teamData.id });
-    if (player.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sub the player. The database was not updated.` });
+    if (player.team !== teamData.id) return await interaction.editReply({ content: `There was an error while attempting to sub the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -481,7 +484,7 @@ async function confirmUnsub(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.unsub({ playerID: playerData.id });
-    if (player.team !== null) return interaction.editReply({ content: `There was an error while attempting to unsub the player. The database was not updated.` });
+    if (player.team !== null) return await interaction.editReply({ content: `There was an error while attempting to unsub the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -518,7 +521,7 @@ async function confirmSetIR(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.inactiveReserve({ playerID: playerData.id });
-    if (player.contractStatus !== ContractStatus.INACTIVE_RESERVE) return interaction.editReply({ content: `There was an error while attempting to place the player on Inactive Reserve. The database was not updated.` });
+    if (player.contractStatus !== ContractStatus.INACTIVE_RESERVE) return await interaction.editReply({ content: `There was an error while attempting to place the player on Inactive Reserve. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -555,7 +558,7 @@ async function confirmSetIR(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.toggleInactiveReserve({ playerID: playerData.id, toggle: `SET` });
-    if (player.contractStatus !== ContractStatus.INACTIVE_RESERVE) return interaction.editReply({ content: `There was an error while attempting to place the player on Inactive Reserve. The database was not updated.` });
+    if (player.contractStatus !== ContractStatus.INACTIVE_RESERVE) return await interaction.editReply({ content: `There was an error while attempting to place the player on Inactive Reserve. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -592,7 +595,7 @@ async function confirmRemoveIR(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const player = await Transaction.toggleInactiveReserve({ playerID: playerData.id, toggle: `REMOVE` });
-    if (player.contractStatus === ContractStatus.INACTIVE_RESERVE) return interaction.editReply({ content: `There was an error while attempting to remove the player from Inactive Reserve. The database was not updated.` });
+    if (player.contractStatus === ContractStatus.INACTIVE_RESERVE) return await interaction.editReply({ content: `There was an error while attempting to remove the player from Inactive Reserve. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -651,9 +654,9 @@ async function confirmSwap(interaction) {
 
     // cut the player & ensure that the player's team property is now null
     const cutPlayer = await Transaction.cut(cutPlayerID);
-    if (cutPlayer.team !== null) return interaction.editReply({ content: `There was an error while attempting to cut the player. The database was not updated.` });
+    if (cutPlayer.team !== null) return await interaction.editReply({ content: `There was an error while attempting to cut the player. The database was not updated.` });
     const signPlayer = await Transaction.sign({ playerID: signPlayerID, teamID: teamData.id });
-    if (signPlayer.team !== teamData.id) return interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
+    if (signPlayer.team !== teamData.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -668,6 +671,48 @@ async function confirmSwap(interaction) {
         thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
         color: 0xE92929,
         footer: { text: `Transactions — Swap` },
+        timestamp: Date.now(),
+    });
+
+    await interaction.deleteReply();
+    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+}
+
+async function confirmRetire(interaction) {
+    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+
+    const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
+    const playerID = data[2];
+
+    const playerData = await Player.getBy({ discordID: playerID });
+    const playerIGN = await Player.getIGNby({ discordID: playerID });
+    const teamData = await Team.getBy({ name: data[3] });
+    const franchiseData = await Franchise.getBy({ name: data[4] });
+
+    const playerTag = playerIGN.split(`#`)[0];
+    const guildMember = await interaction.guild.members.fetch(playerID);
+    const accolades = guildMember.nickname?.match(emoteregex);
+
+    // remove the franchise role and update their nickname
+    if (guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.remove(franchiseData.roleID);
+    await guildMember.roles.add(ROLES.LEAGUE.FORMER_PLAYER);
+    guildMember.setNickname(`${playerTag} ${accolades ? accolades.join(``) : ``}`);
+
+    const retiredPlayer = await Transaction.retire(playerID);
+    if (retiredPlayer.team !== null && retiredPlayer.status !== PlayerStatusCode.FORMER_PLAYER && retiredPlayer.contractStatus !== ContractStatus.RETIRED) return await interaction.editReply({ content: `There was an error while attempting to retire the player. The database was not updated.` });
+
+    const embed = interaction.message.embeds[0];
+    const embedEdits = new EmbedBuilder(embed);
+    embedEdits.setDescription(`This operation was successfully completed.`);
+    embedEdits.setFields([]);
+    await interaction.message.edit({ embeds: [embedEdits], components: [] });
+
+    // create the base embed
+    const announcement = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `${guildMember} (${playerTag}) is retiring from the league`,
+        color: 0xE92929,
+        footer: { text: `Transactions — Retire` },
         timestamp: Date.now(),
     });
 

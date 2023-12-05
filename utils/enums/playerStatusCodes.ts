@@ -23,7 +23,8 @@ export enum PlayerStatusCode {
     FREE_AGENT = 3,
     RESTRICTED_FREE_AGENT = 4,
     SUSPENDED = 5,
-    SIGNED = 6
+    SIGNED = 6,
+    FORMER_PLAYER = 7,
 };
 
 /**
@@ -49,4 +50,5 @@ export enum ContractStatus {
     RENEWED = 8,
     INACTIVE_RESERVE = 9,
     ACTIVE_SUB = 10,
+    RETIRED = 11,
 }

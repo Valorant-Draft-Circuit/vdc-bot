@@ -234,6 +234,19 @@ module.exports = {
                     required: true
                 },
             ]
+        },
+        {
+            name: "retire",
+            description: "Retire a rostered player",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "retire",
+                    description: "The player to retire",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+            ]
         }
     ]
 }

@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder }
 const { ButtonStyle } = require(`discord.js`)
 
 const { Franchise, Player, Team } = require("../../prisma");
-const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions, TransactionsIROptions, TransactionsSwapOptions, ContractStatus } = require(`../../utils/enums/`);
+const { TransactionsSubTypes, TransactionsCutOptions, TransactionsSignOptions, TransactionsDraftSignOptions, CHANNELS, PlayerStatusCode, TransactionsUpdateTierOptions, TransactionsRenewOptions, TransactionsIROptions, TransactionsSwapOptions, ContractStatus, TransactionsRetireOptions } = require(`../../utils/enums/`);
 
 const teamMMRAllowance = {
     prospect: 386,
@@ -50,6 +50,9 @@ module.exports = {
                 break;
             case `swap`:
                 swap(interaction, _hoistedOptions[0].member, _hoistedOptions[1].member);
+                break;
+            case `retire`:
+                retire(interaction, _hoistedOptions[0].member);
                 break;
             default:
                 interaction.reply({ content: `That's not a valid subcommand or this command is a work in progress!` });
@@ -558,6 +561,54 @@ async function swap(interaction, cutPlayer, signPlayer) {
         label: `Confirm`,
         style: ButtonStyle.Success,
         // emoji: `✔`,
+    })
+
+    // create the action row, add the component to it & then reply with all the data
+    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+    return await interaction.editReply({ embeds: [embed], components: [subrow] });
+}
+
+async function retire(interaction, player) {
+    await interaction.deferReply();
+    const playerData = await Player.getBy({ discordID: player.id });
+
+    // checks
+    if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+    if (playerData.team == null) return interaction.editReply({ content: `This player is not on a team!`, ephemeral: false });
+
+    const franchise = await Franchise.getBy({ teamID: playerData.team });
+    const team = await Team.getBy({ id: playerData.team });
+
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: `VDC Transactions Manager` },
+        description: `Are you sure you perform the following action?`,
+        color: 0xE92929,
+        fields: [
+            {
+                name: `\u200B`,
+                value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+                inline: true
+            },
+            {
+                name: `\u200B`,
+                value: `RETIRE\n${player.user}\n\`${player.id}\`\n${team.name}\n${franchise.name}`,
+                inline: true
+            }
+        ],
+        footer: { text: `Transactions — Retire` }
+    });
+
+    const cancel = new ButtonBuilder({
+        customId: `transactions_${TransactionsRetireOptions.CANCEL}`,
+        label: `Cancel`,
+        style: ButtonStyle.Danger,
+    })
+
+    const confirm = new ButtonBuilder({
+        customId: `transactions_${TransactionsRetireOptions.CONFIRM}`,
+        label: `Confirm`,
+        style: ButtonStyle.Success,
     })
 
     // create the action row, add the component to it & then reply with all the data

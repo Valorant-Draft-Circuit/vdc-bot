@@ -86,3 +86,13 @@ export enum TransactionsSwapOptions {
     /** @param {enum} CANCEL - Cancel cut enumeration */
     CANCEL = 899,
 }
+
+/**
+ * @enum {TransactionsRetireOptions} - Enumerations for the ir commands
+ */
+export enum TransactionsRetireOptions {
+    /** @param {enum} CONFIRM - Confirm cut enumeration */
+    CONFIRM = 901,
+    /** @param {enum} CANCEL - Cancel cut enumeration */
+    CANCEL = 999,
+}
