@@ -89,4 +89,15 @@ export class Transaction {
             data: { contractStatus: contractStatus }
         });
     };
+
+    static async retire(playerID) {
+        return await prisma.player.update({
+            where: { id: playerID },
+            data: {
+                team: null,
+                status: PlayerStatusCode.FORMER_PLAYER,
+                contractStatus: ContractStatus.RETIRED
+            }
+        });
+    };
 };
