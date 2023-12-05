@@ -316,6 +316,9 @@ async function sub(interaction, player, subFor) {
 
     const playerData = await Player.getBy({ discordID: player.id });
     const subForData = await Player.getBy({ discordID: subFor.id });
+
+    if (subForData.team == null) return await interaction.editReply({ content: `The player you're trying to sub out isn't on a team!`, ephemeral: false });
+
     const teamData = await Team.getBy({ id: subForData.team });
     const roster = (await Team.getRosterBy({ id: subForData.team }))
         .filter(player => player.status === PlayerStatusCode.SIGNED && player.contractStatus !== ContractStatus.INACTIVE_RESERVE);
