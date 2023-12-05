@@ -322,7 +322,8 @@ async function sub(interaction, player, subFor) {
     const franchiseData = await Franchise.getBy({ id: teamData.franchise });
 
     const oldMMR = sum(roster.map(p => p.MMR_Player_MMRToMMR.mmr_overall))
-    const newMMR = sum(roster.filter(p => p.id !== subFor.id).map(p => p.MMR_Player_MMRToMMR.mmr_overall));
+    const newMMR = sum(roster.filter(p => p.id !== subFor.id).map(p => p.MMR_Player_MMRToMMR.mmr_overall))
+        + playerData.MMR_Player_MMRToMMR.mmr_overall;
     const totalMMR = roster.map(mmr => mmr.MMR_Player_MMRToMMR.mmr_overall);
 
     const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60; // conversion to milliseconds
