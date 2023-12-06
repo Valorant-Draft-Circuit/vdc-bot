@@ -398,8 +398,8 @@ async function confirmSub(interaction) {
 
     const playerData = await Player.getBy({ discordID: playerID });
     const playerIGN = await Player.getIGNby({ discordID: playerID });
-    const teamData = await Team.getBy({ name: data[3] });
-    const franchiseData = await Franchise.getBy({ name: data[4] });
+    const teamData = await Team.getBy({ name: data[4] });
+    const franchiseData = await Franchise.getBy({ name: data[5] });
 
 
     const playerTag = playerIGN.split(`#`)[0];
