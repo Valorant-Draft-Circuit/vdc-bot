@@ -1,12 +1,5 @@
 const { ChatInputCommandInteraction, EmbedBuilder } = require("discord.js");
 
-const { ButtonStyle } = require(`discord.js`)
-
-const { TransactionsSubTypes, TransactionsCutOptions } = require(`../../utils/enums/transactions`);
-// const { FranchiseEmote } = require(`../../utils/enums/franchiseEmotes`);
-// const { getPlayerStatsByDiscordId } = require(`../../prisma`)
-const franchises = require(`../../cache/franchises.json`);
-const DiscordAssets = require(`../../utils/functions/discordAssets`);
 const { Games, Team } = require("../../prisma");
 const { AgentEmotes } = require("../../utils/enums");
 
