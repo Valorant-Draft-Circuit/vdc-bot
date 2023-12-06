@@ -43,5 +43,12 @@ export class Team {
             },
             include: { Account: true, MMR_Player_MMRToMMR: true }
         });
-    }
+    };
+
+    static async getAllActiveByTier(tier: `Prospect` | `Advanced` | `Expert` | `Mythic`) {
+        return await prisma.team.findMany({
+            where: { AND: [{ tier: tier }, { isActive: true }] },
+            include: { Franchise: true }
+        })
+    };
 }

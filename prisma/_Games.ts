@@ -20,7 +20,7 @@ export class Games {
     static async exists(options: { id: string }) {
         const { id } = options;
         if (!/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/.test(id)) throw new Error(`Invalid Match ID!`);
-        
+
         const match = await prisma.games.findUnique({
             where: { id: id }
         })
@@ -38,4 +38,14 @@ export class Games {
         });
 
     };
+
+    static async getAllBy(options: {
+        type: `Combine` | `Season`,
+        tier: `Prospect` | `Advanced` | `Expert` | `Mythic`
+    }) {
+        const { type, tier } = options;
+        return await prisma.games.findMany({
+            where: { type: `${type} - ${tier}` }
+        })
+    }
 }
