@@ -51,6 +51,8 @@ module.exports = {
         if (descriptionFA.length > 0) description.push([`__Free Agents__`, ...descriptionFA].join(`\n`));
         if (descriptionRFA.length > 0) description.push([`__Restricted Free Agents__`, ...descriptionRFA].join(`\n`));
 
+        const mmrRangeMessage = tier === `Mythic` ? `MMR: ${capMin}+` : `MMR: ${capMin} - ${capMax-1}`;
+
         // and then create the embed
         const embed = new EmbedBuilder({
             author: { name: `${tier} Substitutes` },
@@ -59,7 +61,7 @@ module.exports = {
             fields: [
                 {
                     name: `\u200B`,
-                    value: `MMR: ${capMin} - ${capMax}`
+                    value: mmrRangeMessage
                 },
             ],
             footer: { text: `Valorant Draft Circuit - ${tier} Substitutes` }
