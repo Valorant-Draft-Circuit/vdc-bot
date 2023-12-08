@@ -30,7 +30,7 @@ async function sendMatchStats(interaction, matchURL) {
 
     // checks
     const exists = await Games.exists({ id: id });
-    if (!exists) return interaction.reply({ content: `Looks like this match doesn't exist in out database!` });
+    if (!exists) return interaction.editReply({ content: `Looks like this match doesn't exist in out database!` });
     const game = await Games.getMatchData({ id: id });
     if (!game.type.includes(`Season`)) return await interaction.editReply({ content: `You can only get match stats for a season game!` });
 
