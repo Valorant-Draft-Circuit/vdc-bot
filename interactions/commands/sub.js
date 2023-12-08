@@ -35,7 +35,7 @@ module.exports = {
                 type: player.status == PlayerStatusCode.FREE_AGENT ? ` FA` : `RFA`,
                 mmr: player.MMR_Player_MMRToMMR?.mmr_overall
             }
-        }).filter(player => player.mmr > capMin && player.mmr <= capMax).sort((a, b) => a.mmr - b.mmr);
+        }).filter(player => player.mmr >= capMin && player.mmr < capMax).sort((a, b) => a.mmr - b.mmr);
 
         // filter by FA/RFA and format with Riot ID and Tracker link
         const descriptionFA = activeSubs
