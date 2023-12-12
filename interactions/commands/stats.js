@@ -1,11 +1,15 @@
-const { ChatInputCommandInteraction, EmbedBuilder } = require("discord.js");
+const { ChatInputCommandInteraction, GuildMember, EmbedBuilder } = require("discord.js");
 
-const { Games, Team } = require("../../prisma");
+const { Games, Team, Player } = require("../../prisma");
 const { AgentEmotes } = require("../../utils/enums");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
+
+const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
+const avg = (array) => array.reduce((s, v) => s += v, 0) / array.length;
 
 module.exports = {
-    //https://cdn.discordapp.com/avatars/173237627955314689/d643c62aed33ec505c3e5fb2f1806c17.jpg
 
     name: `stats`,
 
@@ -16,7 +20,11 @@ module.exports = {
         switch (_subcommand) {
             case `match`:
                 const matchURL = _hoistedOptions[0].value;
-                return await sendMatchStats(interaction, matchURL)
+                return await sendMatchStats(interaction, matchURL);
+            case `player`:
+                const guildMember = _hoistedOptions[0].member;
+                return await sendPlayerStats(interaction, guildMember);
+
 
             default:
                 return await interaction.editReply({ content: `This is a work in progress!` })
@@ -25,7 +33,12 @@ module.exports = {
     }
 };
 
-async function sendMatchStats(interaction, matchURL) {
+
+// MAIN FUNCTIONS
+// ################################################################################################
+// ################################################################################################
+
+async function sendMatchStats(/** @type ChatInputCommandInteraction */ interaction, matchURL) {
     const id = matchURL.replace(`https://tracker.gg/valorant/match/`, ``);
 
     // checks
@@ -40,7 +53,7 @@ async function sendMatchStats(interaction, matchURL) {
 
     // create outputs
     const roundsWonBar = createRoundsWonBar((({ PlayerStats, ...o }) => o)(game));
-    const dataOutput = game.PlayerStats.map(p => createPlayerStatsOut(p, game.team1, p.Player.team));
+    const dataOutput = game.PlayerStats.map(p => createMatchPlayerStats(p, game.team1, p.Player.team));
     const date = new Date(game.date_played).toLocaleString("en-US", { dateZone: `CST`, month: `short`, day: `2-digit` });
 
     // create the base embed
@@ -53,6 +66,74 @@ async function sendMatchStats(interaction, matchURL) {
 
     return await interaction.editReply({ embeds: [embed] })
 }
+
+async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interaction, /** @type GuildMember */ guildMember) {
+
+    const allStats = await prisma.playerStats.findMany({ include: {Player:{include: {Team:true}}}});
+    const prospect = (allStats.filter(as=> as.Player?.Team?.tier == `Prospect`).map(as=>as.total_kills))/allStats.length
+    console.log(`AVG KILLS` + prospect)
+
+
+
+
+
+
+    const did = `283614189178585099`;
+    const player = await Player.getBy({ discordID: did /** guildMember.user.id */ });
+    const team = await Team.getBy({ playerID: did });
+    const playerStats = (await Player.getStatsBy({ discordID: did /** guildMember.user.id */ }))
+        .map(s => {
+            const rounds = Math.round(s.total_kills / s.pr_kills);
+            return { ...s, rounds: rounds, total_damage: rounds * s.pr_damage }
+        }).filter(g => g.Games.winner !== null); // calculate rounds
+    console.log(playerStats[0])
+
+    const totalGames = playerStats.length;
+    console.log(totalGames)
+    const summedStats = {
+        total_kills: sum(playerStats.map(ps => ps.total_kills)),
+        total_assists: sum(playerStats.map(ps => ps.total_assists)),
+        total_deaths: sum(playerStats.map(ps => ps.total_deaths)),
+        total_first_kills: sum(playerStats.map(ps => ps.total_first_kills)),
+        total_first_deaths: sum(playerStats.map(ps => ps.total_first_deaths)),
+        total_damage: sum(playerStats.map(ps => ps.total_damage)),
+        rounds: sum(playerStats.map(ps => ps.rounds)),
+        avgkast: avg(playerStats.map(ps => ps.kast)),
+        avgwin: playerStats.map(ps => ps.Games.winner).filter(ps => ps === team?.id)/totalGames
+    }
+
+    console.log(summedStats)
+
+    const kpr = (summedStats.total_kills / summedStats.rounds).toFixed(2);
+    const apr = (summedStats.total_assists / summedStats.rounds).toFixed(2);
+    const dpr = (summedStats.total_deaths / summedStats.rounds).toFixed(2);
+    const dmgpr = (summedStats.total_damage / summedStats.rounds).toFixed(2);
+    const fkpr = (summedStats.total_first_kills / summedStats.rounds).toFixed(2);
+    const fdpr = (summedStats.total_first_deaths / summedStats.rounds).toFixed(2);
+    const avgkast = (summedStats.avgkast).toFixed(2);
+
+    // create the base embed
+    const embed = new EmbedBuilder({
+        author: { name: player.Account.riotID },
+        description: `stuff`,
+        color: 0xE92929,
+        fields: [
+            { name: `K/R`, value: `\`\`\`ansi\n\u001b[0;36m${kpr}\`\`\``, inline: true },
+            { name: `D/R`, value: `\`\`\`ansi\n\u001b[0;36m${dpr}\`\`\``, inline: true },
+            { name: `A/R`, value: `\`\`\`ansi\n\u001b[0;36m${apr}\`\`\``, inline: true },
+            { name: `FK/R`, value: `\`\`\`ansi\n\u001b[0;36m${fkpr}\`\`\``, inline: true },
+            { name: `FD/R`, value: `\`\`\`ansi\n\u001b[0;36m${fdpr}\`\`\``, inline: true },
+            { name: `Average KAST`, value: `\`\`\`ansi\n\u001b[0;36m${avgkast}\`\`\``, inline: true },
+
+        ],
+        footer: { text: `Stats — Player` }
+    });
+    return await interaction.editReply({ embeds: [embed] })
+}
+
+// HELPER FUNCTIONS
+// ################################################################################################
+// ################################################################################################
 
 /** Dynamically create the bar for rounds won by each team */
 function createRoundsWonBar(match) {
@@ -71,7 +152,7 @@ function createRoundsWonBar(match) {
 }
 
 /** Create the stats "module" for a player */
-function createPlayerStatsOut(player, team1, team) {
+function createMatchPlayerStats(player, team1, team) {
     // collect & organize data for outputs
     const trackerLink = `[${player.Player.Account.riotID.split(`#`)[0]}](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.Player.Account.riotID)})`
     const color = team === null ? `[0;30m` : team === team1 ? `[0;31m` : `[0;34m`; // gray > red > blue
@@ -111,11 +192,5 @@ function createPlayerStatsOut(player, team1, team) {
         `\`\`\`ansi\n\u001b${color}${headings.join(` |`)}\n${data.join(` |`)} \`\`\``;
 }
 
-
-
-
-
-
-function getAverage(arr) {
-    return arr.reduce((s, v) => s += v, 0) / arr.length;
-}
+// ################################################################################################
+// ################################################################################################
