@@ -25,7 +25,6 @@ module.exports = {
                 const guildMember = _hoistedOptions[0].member;
                 return await sendPlayerStats(interaction, guildMember);
 
-
             default:
                 return await interaction.editReply({ content: `This is a work in progress!` })
         }
