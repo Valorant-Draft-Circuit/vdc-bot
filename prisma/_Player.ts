@@ -75,9 +75,12 @@ export class Player {
 
         return await prisma.playerStats.findMany({
             where: {
-                Player: { OR: [{ id: discordID }, { primaryRiotID: riotID }, { Account: { riotID: ign } }] }
+                AND: [
+                    { Player: { OR: [{ id: discordID }, { primaryRiotID: riotID }, { Account: { riotID: ign } }] } },
+                    { Games: { type: { contains: `Season` } } }
+                ]
             },
-            include: { Games: true }
+            include: { Player: { include: { Team: { include: { Franchise: true } } } } }
         })
     };
 
@@ -122,7 +125,7 @@ export class Player {
                     { AND: [{ Account: { provider: `riot` } }, { Account: { userId: accountID } }] }
                 ]
             },
-            include: { Account: true, Team: true, MMR_Player_MMRToMMR: true }
+            include: { Account: true, Team: { include: { Franchise: true } }, MMR_Player_MMRToMMR: true }
         });
     };
 
