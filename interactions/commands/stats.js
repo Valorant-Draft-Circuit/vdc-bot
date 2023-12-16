@@ -127,10 +127,10 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     const prefix = player.Team?.Franchise ? player.Team.Franchise.slug : player.status == PlayerStatusCode.FREE_AGENT ? `FA` : `RFA`;
 
     const description = [
+        `ATK : \` ${rating_atk} \` // DEF : \` ${rating_def} \``,
         [
             `MMR: \` ${String(mmr).padStart(3, ` `)} \``,
             `Games: \` ${String(processedPlayerStats.length).padStart(3, ` `)} \``,
-            `ATK : \`${rating_atk}\` / DEF : \`${rating_def}\``,
             agentPool.join(` `)
         ].join(` | `),
         associatedData
@@ -231,8 +231,8 @@ async function createFranchiseStatsModule(player) {
 
     const allTeamGames = await Games.getAllBy({ team: team.id });
     const teamStats = {
-        wins: allTeamGames.filter(atg => atg.winner == - team.id).length,
-        loss: allTeamGames.length,
+        wins: allTeamGames.filter(atg => atg.winner === team.id).length,
+        loss: allTeamGames.filter(atg => atg.winner !== team.id).length,
         roundsWon: sum(allTeamGames.map(atg => atg.team1 === team.id ? atg.rounds_won_t1 : atg.rounds_won_t2)),
         totalRounds: sum(allTeamGames.map(atg => atg.rounds_played))
     }
@@ -273,8 +273,12 @@ async function createSubOverview(player) {
     else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.apprentice) tier = `Apprentice`;
     else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.expert) tier = `Expert`;
     else tier = `Mythic`;
-  
-    return `\n\`\`\`ansi\n\u001b[0;30m Substitute - ${subtype} - ${tier} \n\`\`\``;
+
+    const string = `Substitute - ${subtype} - ${tier}`;
+    const barlen = 45;
+    const padStart = Math.ceil((barlen - string.length) / 2) + string.length;
+
+    return `\n\`\`\`ansi\n\u001b[0;30m ${string.padStart(padStart, ` `).padEnd(barlen, ` `)} \n\`\`\``;
 }
 
 // ################################################################################################
