@@ -103,9 +103,13 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         total_plants: sum(processedPlayerStats.map(ps => ps.total_plants)),
         total_plants: sum(processedPlayerStats.map(ps => ps.total_plants)),
         total_clutches: sum(processedPlayerStats.map(ps => ps.total_clutches)),
+        rating_atk: avg(processedPlayerStats.map(ps => ps.rating_atk)),
+        rating_def: avg(processedPlayerStats.map(ps => ps.rating_def)),
     }
 
     // do calculations and formatting
+    const rating_atk = summedStats.rating_atk.toFixed(2)
+    const rating_def = summedStats.rating_def.toFixed(2)
     const kpr = (summedStats.total_kills / summedStats.rounds).toFixed(2);
     const apr = (summedStats.total_assists / summedStats.rounds).toFixed(2);
     const dpr = (summedStats.total_deaths / summedStats.rounds).toFixed(2);
@@ -122,10 +126,20 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     // prefix for user
     const prefix = player.Team?.Franchise ? player.Team.Franchise.slug : player.status == PlayerStatusCode.FREE_AGENT ? `FA` : `RFA`;
 
+    const description = [
+        [
+            `MMR: \` ${String(mmr).padStart(3, ` `)} \``,
+            `Games: \` ${String(processedPlayerStats.length).padStart(3, ` `)} \``,
+            `ATK : \`${rating_atk}\` / DEF : \`${rating_def}\``,
+            agentPool.join(` `)
+        ].join(` | `),
+        associatedData
+    ];
+
     // create the embed
     const embed = new EmbedBuilder({
         author: { name: [prefix, riotID.split(`#`)[0]].join(` | `), url: trackerURL },
-        description: [`MMR: \` ${String(mmr).padStart(3, ` `)} \` | Games: \` ${String(processedPlayerStats.length).padStart(3, ` `)} \` | ${agentPool.join(` `)}`, associatedData].join(`\n`),
+        description: description.join(`\n`),
         color: 0xE92929,
         fields: [
             { name: `Kills/Round`, value: `\`\`\`ansi\n\u001b[0;36m${kpr}\`\`\``, inline: true },
@@ -207,7 +221,6 @@ function createMatchPlayerStats(player, team1, team) {
 
 /** Create the standings "module" for a franchise if the player is signed to one */
 async function createFranchiseStatsModule(player) {
-    // console.log(player)
     const team = player.Team;
     const franchise = team.Franchise;
 
@@ -223,7 +236,6 @@ async function createFranchiseStatsModule(player) {
         roundsWon: sum(allTeamGames.map(atg => atg.team1 === team.id ? atg.rounds_won_t1 : atg.rounds_won_t2)),
         totalRounds: sum(allTeamGames.map(atg => atg.rounds_played))
     }
-    // console.log(allTeamGames)
 
     // text coloring
     const color = `\u001b[0;30m`;
@@ -261,8 +273,7 @@ async function createSubOverview(player) {
     else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.apprentice) tier = `Apprentice`;
     else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.expert) tier = `Expert`;
     else tier = `Mythic`;
-    
-    console.log(player)
+
     return `\n\`\`\`ansi\n\u001b[0;30m Substitute - ${subtype} - ${tier} \n\`\`\``;
 }
 
