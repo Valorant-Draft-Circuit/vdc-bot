@@ -237,6 +237,7 @@ async function createFranchiseStatsModule(player) {
         totalRounds: sum(allTeamGames.map(atg => atg.rounds_played))
     }
 
+
     // text coloring
     const color = `\u001b[0;30m`;
     const GREEN = `\u001b[0;32m`;
@@ -267,13 +268,12 @@ async function createSubOverview(player) {
     /** @todo When we have extra sub data, we can return sub stats here */
 
     const subtype = player.status === PlayerStatusCode.FREE_AGENT ? `Free Agent` : `Restricted Free Agent`;
-
     let tier;
     if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.prospect) tier = `Prospect`;
     else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.apprentice) tier = `Apprentice`;
     else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.expert) tier = `Expert`;
     else tier = `Mythic`;
-
+  
     return `\n\`\`\`ansi\n\u001b[0;30m Substitute - ${subtype} - ${tier} \n\`\`\``;
 }
 
