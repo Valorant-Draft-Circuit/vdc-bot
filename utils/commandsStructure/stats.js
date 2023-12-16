@@ -29,6 +29,19 @@ module.exports = {
                     required: true,
                 }
             ]
+        },
+        {
+            name: `player`,
+            description: "Get the aggregate stats for a specific player",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: 'player',
+                    description: 'The player to get stats for',
+                    type: ApplicationCommandOptionType.User,
+                    required: true,
+                }
+            ]
         }
     ]
 }

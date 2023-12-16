@@ -67,12 +67,21 @@ export class Player {
      * @param {?String} option.discordID
      * @param {?String} option.riotID
      */
-    static async getStatsBy(option: { name?: string; discordID?: string; riotID?: string; } | undefined) {
+    static async getStatsBy(option: { discordID?: string; riotID?: string; ign?: string } | undefined) {
 
         if (option == undefined) throw new Error(`Must specify exactly 1 option!`);
-        const { name, discordID, riotID } = option;
-
+        const { discordID, riotID, ign } = option;
         if (Object.keys(option).length > 1) throw new Error(`Must specify exactly 1 option!`);
+
+        return await prisma.playerStats.findMany({
+            where: {
+                AND: [
+                    { Player: { OR: [{ id: discordID }, { primaryRiotID: riotID }, { Account: { riotID: ign } }] } },
+                    { Games: { type: { contains: `Season` } } }
+                ]
+            },
+            include: { Player: { include: { Team: { include: { Franchise: true } } } } }
+        })
     };
 
     static async getIGNby(option: { discordID: string; }) {
@@ -116,7 +125,7 @@ export class Player {
                     { AND: [{ Account: { provider: `riot` } }, { Account: { userId: accountID } }] }
                 ]
             },
-            include: { Account: true, Team: true, MMR_Player_MMRToMMR: true }
+            include: { Account: true, Team: { include: { Franchise: true } }, MMR_Player_MMRToMMR: true }
         });
     };
 

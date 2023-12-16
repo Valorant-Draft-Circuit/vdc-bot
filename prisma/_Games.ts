@@ -40,12 +40,32 @@ export class Games {
     };
 
     static async getAllBy(options: {
-        type: `Combine` | `Season`,
-        tier: `Prospect` | `Advanced` | `Expert` | `Mythic`
+        type?: `Combine` | `Season`,
+        tier?: `Prospect` | `Advanced` | `Expert` | `Mythic`,
+        franchise?: number,
+        team?: number,
     }) {
-        const { type, tier } = options;
+        const { type, tier, franchise, team } = options;
+        const gameType = type !== undefined && tier !== undefined ? `${type} - ${tier}` : undefined;
+
         return await prisma.games.findMany({
-            where: { type: `${type} - ${tier}` }
-        })
+            where: {
+                AND: [
+                    {
+                        OR: [
+                            { type: { equals: gameType } },
+                            { Team_Games_team1ToTeam: { franchise: franchise } },
+                            { Team_Games_team2ToTeam: { franchise: franchise } },
+                            { team1: team },
+                            { team2: team },
+                        ]
+                    },
+                    { date_played: { not: null } },
+                    { team1: { not: null } },
+                    { team2: { not: null } },
+                    { winner: { not: null } },
+                ]
+            }
+        });
     }
 }

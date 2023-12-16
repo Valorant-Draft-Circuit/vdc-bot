@@ -17,7 +17,7 @@ module.exports = {
         await interaction.deferReply();
 
         const tier = interaction.options._hoistedOptions[0].value
-        const allgames = (await Games.getAllBy({ type: `Season`, tier: tier })).filter(g => g.date_played !== null);
+        const allgames = await Games.getAllBy({ type: `Season`, tier: tier });
         const activeTeamsInTier = await Team.getAllActiveByTier(tier)
 
         // Get wins, losses, round wins & losses, total rounds and then first sort bt RWP and then total wins to correctly order the standings
