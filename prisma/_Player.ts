@@ -131,7 +131,7 @@ export class Player {
 
     static async updateBy(option: {
         userIdentifier: { ign?: string; discordID?: string; riotID?: string; accountID: string },
-        updateParamaters: { teamID: number, status: number, contractStatus: number, MMR: number }
+        updateParamaters: { teamID: number, status: number, contractStatus: number, /* MMR: number */ }
     }) {
         const player = await this.getBy(option.userIdentifier);
         if (!player) return new Error(`Could not find that player in the database!`);
