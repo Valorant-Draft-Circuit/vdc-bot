@@ -35,6 +35,10 @@ module.exports = {
                     value: `DE`
                 },
                 {
+                    name: `Free Agent`,
+                    value: `FA`
+                },
+                {
                     name: `Restricted Free Agent`,
                     value: `RFA`
                 }
