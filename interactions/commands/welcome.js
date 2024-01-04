@@ -28,7 +28,7 @@ module.exports = {
         if (!guildMember.manageable) return await interaction.editReply({ content: `I can't manage this player- their roles are higher than mine! You will need to perform this action manually!` });
         if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!` });
         if (!validStatuses.includes(playerData.status)) return await interaction.editReply({ content: `This player doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!` });
-        if (status === `FA` && playerData.status !== PlayerStatusCode.RESTRICTED_FREE_AGENT) return await interaction.editReply({ content: `This player doesn't have an Restricted Free Agent player status and cannot become a Free Agent!` });
+        if (status === `FA` && playerData.status !== PlayerStatusCode.RESTRICTED_FREE_AGENT) return await interaction.editReply({ content: `This player doesn't have a status of Restricted Free Agent player and cannot become a Free Agent!` });
 
         // renove the viewer role & add the league role
         if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
@@ -61,6 +61,6 @@ module.exports = {
                 throw new Error(`INVALID STATUS VALUE. EXPECTED DE or RFA & instead got ${status}`);
         }
 
-        return await interaction.editReply({ content: `${player.user} was welcomed to the league as ${status == `DE` ? `a` : `an`} ${status}!` });
+        return await interaction.editReply({ content: `${player.user} was welcomed to the league as ${status === `DE` || status == `FA` ? `a` : `an`} ${status}!` });
     }
 };
