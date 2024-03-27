@@ -1,7 +1,7 @@
 require(`dotenv`).config();
 
-const BotClient = require(`./core/botClient.js`);
-const Logger = require(`./core/logger.js`)
+const BotClient = require(`./src/core/botClient.js`);
+const Logger = require(`./src/core/logger.js`)
 
 console.clear();
 
@@ -38,11 +38,11 @@ client.logger.console({
     message: `Initalized BotClient & attached Logger to the BotClient instance`,
 });
 
-client.loadSlashCommands(`./interactions/commands`);
-client.loadButtons(`./interactions/buttons`);
-client.loadSelectMenus(`./interactions/selectMenus`);
-client.loadAutocomplete(`./interactions/autocomplete`);
-client.loadEvents(`./events`);
+client.loadSlashCommands(`src/interactions/commands`);
+client.loadButtons(`src/interactions/buttons`);
+client.loadSelectMenus(`src/interactions/selectMenus`);
+client.loadAutocomplete(`src/interactions/autocomplete`);
+client.loadEvents(`src/events`);
 
 client.login(process.env.TOKEN);
 client.logger.console({

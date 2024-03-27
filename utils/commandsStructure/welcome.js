@@ -19,26 +19,38 @@ module.exports = {
     default_member_permissions: PermissionFlagsBits.BanMembers,
     options: [
         {
-            name: `player`,
-            description: "The player to welcome to the league",
-            type: ApplicationCommandOptionType.User,
-            required: true,
-        },
-        {
-            name: `status`,
-            description: "The player's status in the league",
-            type: ApplicationCommandOptionType.String,
-            required: true,
-            choices: [
+            name: `single`,
+            description: "Welcome a single player to the league",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
                 {
-                    name: `Draft Eligible`,
-                    value: `DE`
+                    name: `player`,
+                    description: "The player to welcome to the league",
+                    type: ApplicationCommandOptionType.User,
+                    required: true,
                 },
                 {
-                    name: `Restricted Free Agent`,
-                    value: `RFA`
+                    name: `status`,
+                    description: "The player's status in the league",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        {
+                            name: `Draft Eligible`,
+                            value: `DE`
+                        },
+                        {
+                            name: `Restricted Free Agent`,
+                            value: `RFA`
+                        }
+                    ]
                 }
             ]
+        },
+        {
+            name: `bulk`,
+            description: "Welcome players to the league in bulk",
+            type: ApplicationCommandOptionType.Subcommand,
         }
     ]
 }

@@ -29,7 +29,6 @@ module.exports = {
 
 function franchiseChoices() {
     const franchiseData = require(`../../cache/franchises.json`);
-
     const signOptions = [];
 
     franchiseData.forEach(franchise => {

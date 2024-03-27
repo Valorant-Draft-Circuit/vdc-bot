@@ -1,0 +1,4 @@
+[submodule "prisma"]
+	path = prisma
+	url = https://github.com/Valorant-Draft-Circuit/vdc-prisma
+	branch = main
