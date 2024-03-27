@@ -4,8 +4,8 @@ const { requestDraftSign, confirmDraftSign } = require("./draftSign");
 const { requestUpdateTier, confirmUpdateTier } = require("./updateTier");
 const { requestRenew, confirmRenew } = require("./renew");
 const { requestSub, confirmSub } = require("./sub");
-const { requestUnsub, confirmUnsub } = require("./unSub");
-const { requestIR, confirmSetIR, confirmRemoveIR } = require("./IR");
+const { requestUnsub, confirmUnsub } = require("./unsub");
+const { requestIR, confirmSetIR, confirmRemoveIR } = require("./ir");
 const { requestSwap, confirmSwap } = require("./swap");
 const { requestRetire, confirmRetire } = require("./retire");
 
