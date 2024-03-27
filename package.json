@@ -11,7 +11,7 @@
     "compile":"tsc utils/enums/index && tsc prisma/index",
     "cache" : "node ./cache/cache.js",
 
-    "generate": "prisma db pull && prisma generate",
+    "generate": "prisma generate && (clear || cls)",
     "pull": "prisma db pull --force",
     "studio": "prisma studio"
   },
