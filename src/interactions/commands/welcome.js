@@ -117,7 +117,10 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     const int = setInterval(async () => {
         await singleWelcome(interaction, playersToWelcome[i]);
 
-        if (i !== playersToWelcome - 1) return clearInterval(int);
+        if (i !== playersToWelcome - 1) {
+            await interaction.followUp({content: `Hey there, ${interaction.user}, the players have been welcomed!`})
+            return clearInterval(int);
+        };
         i++
     }, rateLimitinMS)
 
