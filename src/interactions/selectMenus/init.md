@@ -1,1 +1,1 @@
-init folder
+initialize folder
