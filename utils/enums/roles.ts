@@ -6,42 +6,6 @@
  * @option tsc ./utils/enums/playerStatusCodes.ts
  */
 
-/**
- * @enum {Status} The player's Status
- * @param {String} DRAFT_ELIGIBLE Role ID for the Draft Eligible Status
- * @param {String} FREE_AGENT Role ID for the Free Agent Status
- * @param {String} RESTRICTED_FREE_AGENT Role ID for the Restricted Free Agent Status
- * @param {String} INACTIVE_RESERVE Role ID for the Inactive Reserve Status
- */
-export enum Status {
-    DRAFT_ELIGIBLE = "963568945959419905",
-    FREE_AGENT = "963343035683455007",
-    RESTRICTED_FREE_AGENT = "965817407094530068",
-    INACTIVE_RESERVE = "976541355625025536",
-
-    /** @note - Additional Roles here */
-    // ELITE_FREE_AGENT = "1028478484349206572",
-    // MASTERS_FREE_AGENT = "1028478833055240243",
-    // ADVANCED_FREE_AGENT = "1028478841611620463",
-    // CONTENDER_FREE_AGENT = "1028478846753837106",
-}
-
-
-/**
- * @enum {Tier} Enumerations for the tier roles
- * @param {String} ELITE Role ID for the elite tier
- * @param {String} MASTER Role ID for the master tier
- * @param {String} ADVANCED Role ID for the advanced tier
- * @param {String} CONTENDER Role ID for the contender tier
- */
-
-export enum Tier {
-    ELITE = "967698140612395018",
-    MASTER = "967697939772354600",
-    ADVANCED = "973344710540271666",
-    CONTENDER = "966106018796941392",
-}
-
 export const ROLES = process.env.ENVIRONMENT == "DEV" ?
     /** @development */
     {
@@ -57,11 +21,18 @@ export const ROLES = process.env.ENVIRONMENT == "DEV" ?
             FORMER_PLAYER: "1062105226225660005",
         },
         TIER: {
+            // Regular tier roles
             MYTHIC: "1057161199659257928",
             EXPERT: "1057161297319440485",
             APPRENTICE: "1057161301102698567",
             PROSPECT: "1057161308535005204",
-        }
+
+            // Free agent tier roles
+            MYTHIC_FREE_AGENT: "1224023294093561996",
+            EXPERT_FREE_AGENT: "1224023492085940225",
+            APPRENTICE_FREE_AGENT: "1224023553498939493",
+            PROSPECT_FREE_AGENT: "1224023630330204303",
+        },
     } :
     /** @production */
     {
@@ -77,9 +48,16 @@ export const ROLES = process.env.ENVIRONMENT == "DEV" ?
             FORMER_PLAYER: "966901052626595860",
         },
         TIER: {
+            // Regular tier roles
             MYTHIC: "967698140612395018",
             EXPERT: "967697939772354600",
             APPRENTICE: "973344710540271666",
             PROSPECT: "966106018796941392",
-        }
+
+            // Free agent tier roles
+            MYTHIC_FREE_AGENT: "1224022851112403047",
+            EXPERT_FREE_AGENT: "1224022851112403047",
+            APPRENTICE_FREE_AGENT: "1224022851112403047",
+            PROSPECT_FREE_AGENT: "1224022851112403047",
+        },
     };

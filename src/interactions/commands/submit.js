@@ -1,7 +1,9 @@
 const { Games } = require(`../../../prisma`);
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, WebhookClient, Message } = require("discord.js");
 
 const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
+const webhookURL = `https://discord.com/api/webhooks/1224147441712889988/mIgidbXQbZP_LarMLrn7oqbYzQvRF9xH_ii3HYogTwAIm5DHyhcbSYUYPvvkqAyZQuDZ`;
+const iconURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png`;
 
 module.exports = {
 
@@ -23,14 +25,13 @@ module.exports = {
       if (exists) return interaction.reply({ content: `Looks like this match was already submitted!`, ephemeral: true });
 
       // save the match to the database
-      const matchType = `${type} - ${tier}`;
-      Games.saveMatch({ id: matchID, type: matchType });
+      Games.saveMatch({ id: matchID, tier: tier, type: type });
 
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
          author: { name: `VDC Match Submission` },
-         description: `Your match was successfully submitted!`,
-         thumbnail: { url: `https://cdn.discordapp.com/banners/963274331251671071/57044c6a68be1065a21963ee7e697f80.webp?size=480` },
+         // description: `Your match was successfully submitted!`,
+         thumbnail: { url: iconURL },
          color: 0xE92929,
          fields: [
             {
@@ -47,6 +48,16 @@ module.exports = {
          footer: { text: `Valorant Draft Circuit — Match Result Submissions` }
       });
 
+      // forward the webhook to the thread
+      const webhookClient = new WebhookClient({ url: webhookURL });
+      await webhookClient.send({
+         username: `${type} - ${tier}`,
+         avatarURL: iconURL,
+         embeds: [embed],
+      });
+      webhookClient.destroy();
+
+      embed.setDescription(`Your match was successfully submitted!`)
       return interaction.reply({ embeds: [embed] });
    }
 };

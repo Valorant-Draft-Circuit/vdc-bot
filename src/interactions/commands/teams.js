@@ -19,10 +19,14 @@ module.exports = {
         const franchiseTeams = await Franchise.getTeams({ name: franchiseName });
         // console.log(franchiseTeams)
 
+        const gm = franchise.GM.name;
+        const agmsArray = [franchise.AGM1?.name, franchise.AGM2?.name].filter(agm => agm !== undefined)
+        const agms = agmsArray.length === 0 ? `N/A` : agmsArray.join(`, `)
+
         const embed = new EmbedBuilder({
-            // author: { name: franchiseName, iconURL: `${imagepath}${franchise.logoFileName}` },
-            // title: `Valorant Draft Circuit - ${franchiseName}`,
-            // description: `Valorant Draft Circuit - ${franchiseName}`,
+            author: { name: franchiseName, iconURL: `${imagepath}${franchise.Brand.logo}` },
+            title: `Valorant Draft Circuit - ${franchiseName}`,
+            description: `**General Manager** : ${gm}\n**AGMs** : ${agms}`,
                 // `ㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ`,
             fields: [
                 {
