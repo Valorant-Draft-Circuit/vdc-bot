@@ -25,19 +25,23 @@ module.exports = {
             choices: [
                 {
                     name: 'Prospect',
-                    value: 'Prospect'
+                    value: 'PROSPECT'
                 },
                 {
                     name: 'Apprentice',
-                    value: 'Apprentice'
+                    value: 'APPRENTICE'
                 },
                 {
                     name: 'Expert',
-                    value: 'Expert'
+                    value: 'EXPERT'
                 },
                 {
                     name: 'Mythic',
-                    value: 'Mythic'
+                    value: 'MYTHIC'
+                },
+                {
+                    name: 'Mixed',
+                    value: 'MIXED'
                 }
             ]
         },
@@ -49,15 +53,15 @@ module.exports = {
             choices: [
                 {
                     name: 'Combine',
-                    value: 'Combine'
+                    value: 'COMBINE'
                 },
                 {
                     name: 'Season',
-                    value: 'Season'
+                    value: 'SEASON'
                 },
                 {
                     name: 'Playoffs',
-                    value: 'Playoffs'
+                    value: 'PLAYOFF'
                 },
             ]
         },
