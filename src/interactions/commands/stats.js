@@ -18,6 +18,7 @@ module.exports = {
     name: `stats`,
 
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
+        return interaction.reply({ content: `This isn't ready for season 6 yet!` });
         await interaction.deferReply();
 
         const { _subcommand, _hoistedOptions } = interaction.options;

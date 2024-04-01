@@ -14,6 +14,7 @@ module.exports = {
     name: `standings`,
 
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
+        return interaction.reply({ content: `This isn't ready for season 6 yet!` });
         await interaction.deferReply();
 
         const tier = interaction.options._hoistedOptions[0].value
