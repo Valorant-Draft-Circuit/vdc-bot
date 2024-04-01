@@ -1,5 +1,6 @@
 const { LeagueStatus } = require("@prisma/client");
 const { Player, Transaction, Flags } = require("../../../prisma");
+const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES, PlayerStatusCode } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
 
