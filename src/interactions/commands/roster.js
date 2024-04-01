@@ -1,7 +1,8 @@
 const { Team, Franchise } = require(`../../../prisma`);
 const { EmbedBuilder, ApplicationCommand, ChatInputCommandInteraction, DiscordAPIError } = require("discord.js");
 
-const { ROLES, PlayerStatusCode, ContractStatus } = require("../../../utils/enums");
+const { ROLES, PlayerStatusCode } = require("../../../utils/enums");
+const { LeagueStatus, ContractStatus } = require("@prisma/client");
 
 const imagesURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
@@ -32,20 +33,24 @@ module.exports = {
 
       // filter by rostered/IR & suvs and format with Riot ID, Tracker link & add emotes
       const rosteredPlayers = refinedRoster
-         .filter(player => player.status === PlayerStatusCode.SIGNED && player.contractStatus !== ContractStatus.INACTIVE_RESERVE)
+         .filter(player => (player.leagueStatus === LeagueStatus.SIGNED || player.leagueStatus === LeagueStatus.GENERAL_MANAGER) && player.contractStatus !== ContractStatus.INACTIVE_RESERVE)
          .map((player) => `${player.captain ? `🪖` : `👤`} | \` ${String(player.mmr).padStart(3)} \` | [${player.riotIDPlain}](${player.trackerURL})`).join(`\n`);
       const inactiveReserve = refinedRoster
-         .filter(player => player.status === PlayerStatusCode.SIGNED && player.contractStatus === ContractStatus.INACTIVE_RESERVE)
+         .filter(player => (player.leagueStatus === LeagueStatus.SIGNED || player.leagueStatus === LeagueStatus.GENERAL_MANAGER) && player.contractStatus === ContractStatus.INACTIVE_RESERVE)
          .map((player) => `🛡️ | \` ${String(player.mmr).padStart(3)} \` | [${player.riotIDPlain}](${player.trackerURL})`).join(`\n`);
       const activeSub = refinedRoster
-         .filter(player => (player.status === PlayerStatusCode.FREE_AGENT || player.status === PlayerStatusCode.RESTRICTED_FREE_AGENT) && player.contractStatus === ContractStatus.ACTIVE_SUB)
+         .filter(player => (player.leagueStatus === LeagueStatus.FREE_AGENT || player.leagueStatus === LeagueStatus.RESTRICTED_FREE_AGENT) && player.contractStatus === ContractStatus.ACTIVE_SUB)
          .map((player) => `📝 | \` ${String(player.mmr).padStart(3)} \` | [${player.riotIDPlain}](${player.trackerURL})`).join(`\n`);
+      const expiringContract = refinedRoster
+         .filter(player => (player.leagueStatus === LeagueStatus.SIGNED || player.leagueStatus === LeagueStatus.GENERAL_MANAGER) && player.contractStatus === ContractStatus.SIGNED && player.contractRemaining === 0)
+         .map((player) => `📤  | \` ${String(player.mmr).padStart(3)} \` | [${player.riotIDPlain}](${player.trackerURL})`).join(`\n`);
 
       // add if the type of sub ONLY IF it has players in it
       const description = [];
       if (rosteredPlayers.length > 0) description.push([`__Rostered Players__`, rosteredPlayers].join(`\n`));
       if (inactiveReserve.length > 0) description.push([`__Inactive Reserve__`, inactiveReserve].join(`\n`));
       if (activeSub.length > 0) description.push([`__Active Substitute(s)__`, activeSub].join(`\n`));
+      if (expiringContract.length > 0) description.push([`__Expiring Contract(s)__`, expiringContract].join(`\n`));
 
       // filter mmr to only include signed players who are not on IR (this ignores FA & RFA)
       const teamMMRArr = refinedRoster
@@ -55,7 +60,7 @@ module.exports = {
 
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
-         author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.logoFileName}` },
+         author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.Brand.logo}` },
          description: `\`     Tier \` : ${team.tier}\n\` Team MMR \` : ${teamMMR} / ${teamMMRAllowance[team.tier.toLowerCase()]}`,
          color: 0xE92929,
          fields: [
@@ -63,7 +68,7 @@ module.exports = {
                name: `\u200B`,
                value: `${description.join(`\n\n`)}`,
                inline: false
-            },
+            }
          ],
          footer: { text: `Valorant Draft Circuit — ${franchise.name}` }
       });
@@ -74,20 +79,21 @@ module.exports = {
 };
 
 
-async function refinedRosterData(/** @type ChatInputCommandInteraction */ interaction, teamRoster) {
+async function refinedRosterData(/** @type ChatInputCommandInteraction */ interaction, teamData) {
    const players = [];
 
-   await teamRoster.forEach(async (player) => {
+   await teamData.roster.forEach(async (player) => {
       const guildMember = await interaction.guild.members.fetch(player.id).catch(err => err);
       players.push({
          id: player.id,
-         riotIDPlain: player.Account.riotID.split(`#`)[0],
-         riotID: player.Account.riotID,
-         trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.Account.riotID)}`,
+         riotIDPlain: player.PrimaryRiotAccount.riotIGN.split(`#`)[0],
+         riotID: player.PrimaryRiotAccount.riotIGN,
+         trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.PrimaryRiotAccount.riotIGN)}`,
          captain: !(guildMember instanceof DiscordAPIError) ? guildMember._roles.includes(ROLES.LEAGUE.CAPTAIN) : undefined,
-         mmr: player.MMR_Player_MMRToMMR.mmr_overall,
-         status: player.status,
-         contractStatus: player.contractStatus,
+         mmr: Math.round(player.PrimaryRiotAccount.MMR.mmrBase),
+         leagueStatus: player.Status.leagueStatus,
+         contractStatus: player.Status.contractStatus,
+         contractRemaining: player.Status.contractRemaining,
          guildMember: guildMember,
       });
    });
