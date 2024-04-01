@@ -4,7 +4,7 @@ const { CHANNELS, ROLES, PlayerStatusCode } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
 
 const validStatusesToDE = [
-    LeagueStatus.APPROVED, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT
+    LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT
 ];
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -65,6 +65,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 
     // renove the viewer role & add the league role
     if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
+    if (guildMember._roles.includes(ROLES.LEAGUE.FORMER_PLAYER)) await guildMember.roles.remove(ROLES.LEAGUE.FORMER_PLAYER);
     await guildMember.roles.add(ROLES.LEAGUE.LEAGUE);
 
     // update the name to match convention
