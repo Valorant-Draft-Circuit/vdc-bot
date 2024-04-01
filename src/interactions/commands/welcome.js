@@ -100,14 +100,15 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 }
 
 async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction) {
-    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED]);
+    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.RESTRICTED_FREE_AGENT]);
 
     const playersToWelcome = approvedPlayers.map((player) => {
         const playerflags = Number(player.flags);
         const welcomeObject = { discordID: player.Accounts[0].providerAccountId }
 
         // Determine if the player is being welcomed as a DE or RFA
-        const welcomeAsRFA = Boolean(playerflags & Flags.REGISTERED_AS_RFA)
+        // const welcomeAsRFA = Boolean(playerflags & Flags.REGISTERED_AS_RFA)
+        const welcomeAsRFA = player.Status.leagueStatus == LeagueStatus.RESTRICTED_FREE_AGENT
         welcomeObject.welcomeAs = welcomeAsRFA ? `RFA` : `DE`;
 
         // return the object
@@ -132,7 +133,7 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     let i = 0;
     const int = setInterval(async () => {
         singleWelcome(interaction, playersToWelcome[i]);
-        console.log(playersToWelcome.length)
+        console.log(playersToWelcome[i], i, playersToWelcome.length)
 
         if (i === playersToWelcome.length - 1) {
             await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed!` })
