@@ -1,5 +1,6 @@
 const { LeagueStatus } = require("@prisma/client");
 const { Player, Transaction, Flags } = require("../../../prisma");
+const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES, PlayerStatusCode } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
 
@@ -62,6 +63,10 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     if (!validStatusesToDE.includes(playerData.Status.leagueStatus)) return await replyFunction({
         content: `${guildMember.user} doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!`
     });
+    
+    const franchises = await prisma.franchise.findMany({ where: { active: true } })
+    const franchiseRoles = franchises.map(f => f.roleID);
+    await guildMember.roles.remove(franchiseRoles);
 
     // renove the viewer role & add the league role
     if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
