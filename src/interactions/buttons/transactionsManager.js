@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require(`discord.js`);
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, swap, retire, } = require(`../subcommands/transactions/index`);
+const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, swap, retire, } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
 
