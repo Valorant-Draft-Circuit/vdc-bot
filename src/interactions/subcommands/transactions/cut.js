@@ -1,33 +1,24 @@
-const { ChatInputCommandInteraction, GuildMember } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
-const {
-	EmbedBuilder,
-	ActionRowBuilder,
-	StringSelectMenuBuilder,
-	UserSelectMenuBuilder,
-} = require("discord.js");
 
-/** Send confirmation to sign a player
+const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
+const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+
+const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+
+/** Request confirmation to cut a player
  * @param {ChatInputCommandInteraction} interaction
  * @param {GuildMember} player
  */
-
 async function requestCut(interaction, player) {
-	await interaction.deferReply();
 	const playerData = await Player.getBy({ discordID: player.value });
 
 	// checks
-	if (playerData == undefined)
-		return interaction.editReply({
-			content: `This player doesn't exist!`,
-			ephemeral: false,
-		});
-	if (playerData.team == null)
-		return interaction.editReply({
-			content: `This player is not on a team!`,
-			ephemeral: false,
-		});
+	if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
+	if (playerData.team == null) return interaction.editReply({ content: `This player is not on a team!`, ephemeral: false });
 
+	// get the player's franchise and team
 	const franchise = await Franchise.getBy({ teamID: playerData.team });
 	const team = await Team.getBy({ id: playerData.team });
 
@@ -52,13 +43,13 @@ async function requestCut(interaction, player) {
 	});
 
 	const cancel = new ButtonBuilder({
-		customId: `transactions_${TransactionsCutOptions.CANCEL}`,
+		customId: `transactions_${TransactionsNavigationOptions.CANCEL}`,
 		label: `Cancel`,
 		style: ButtonStyle.Danger,
 	});
 
 	const confirm = new ButtonBuilder({
-		customId: `transactions_${TransactionsCutOptions.CONFIRM}`,
+		customId: `transactions_${TransactionsNavigationOptions.CUT_CONFIRM}`,
 		label: `Confirm`,
 		style: ButtonStyle.Success,
 	});
@@ -69,33 +60,35 @@ async function requestCut(interaction, player) {
 }
 
 async function confirmCut(interaction) {
-	await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
 	const playerID = interaction.message.embeds[0].fields[1].value
 		.replaceAll(`\``, ``)
 		.split(`\n`)[2];
 
-	const playerData = await Player.getInfoBy({ discordID: playerID });
+	const playerData = await Player.getBy({ discordID: playerID });
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const guildMember = await interaction.guild.members.fetch(playerID);
+	const team = await Team.getBy({ id: playerData.team });
 
-	const playerTag = playerIGN.split(`#`)[0];
-	const accolades = guildMember.nickname?.match(emoteregex);
 
 	// remove the franchise role and update their nickname
-	if (guildMember._roles.includes(playerData.franchise.roleID))
-		await guildMember.roles.remove(playerData.franchise.roleID);
+	const franchiseRoleID = team.Franchise;
+	if (guildMember._roles.includes(franchiseRoleID)) await guildMember.roles.remove(franchiseRoleID);
 	await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
-	guildMember.setNickname(
-		`FA | ${playerTag} ${accolades ? accolades.join(``) : ``}`
-	);
+
+
+	// get player info (IGN, Accolades) & update their nickname
+	const playerTag = playerIGN.split(`#`)[0];
+	const accolades = guildMember.nickname?.match(emoteregex);
+	guildMember.setNickname(`FA | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// cut the player & ensure that the player's team property is now null
 	const player = await Transaction.cut(playerID);
-	if (player.team !== null)
+	if (player.User.team !== null) {
 		return await interaction.editReply({
 			content: `There was an error while attempting to cut the player. The database was not updated.`,
 		});
+	}
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
@@ -106,35 +99,30 @@ async function confirmCut(interaction) {
 	// create the base embed
 	const announcement = new EmbedBuilder({
 		author: { name: `VDC Transactions Manager` },
-		description: `${guildMember} (${playerTag}) was cut from ${playerData.franchise.name}`,
+		description: `${guildMember} (${playerTag}) was cut from ${team.Franchise.name}`,
 		thumbnail: {
-			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${playerData.franchise.logoFileName}`,
+			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}`,
 		},
 		color: 0xe92929,
 		fields: [
 			{
 				name: `Franchise`,
-				value: `<${playerData.franchise.emoteID}> ${playerData.franchise.name}`,
+				value: `<${team.Franchise.Brand.discordEmote}> ${team.Franchise.name}`,
 				inline: true,
 			},
 			{
 				name: `Team`,
-				value: playerData.team.name,
+				value: team.name,
 				inline: true,
 			},
-			/** @TODO Once GM discord IDs are in Franchsie Table, show this block */
-			// {
-			//     name: `General Manager`,
-			//     value: `"\${playerData.franchise.gm}"`,
-			//     inline: true
-			// }
 		],
 		footer: { text: `Transactions — CUT` },
 		timestamp: Date.now(),
 	});
 
 	await interaction.deleteReply();
-	return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
+	return await transactionsChannel.send({ embeds: [announcement] });
 }
 
 module.exports = {
