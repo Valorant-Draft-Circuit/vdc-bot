@@ -132,7 +132,7 @@ async function genSignedReport() {
     ];
     const teams = await Team.getAllActive();
     const filterPending = await Player.filterAllByStatus([LeagueStatus.SIGNED]);
-    output.push(...filterPending.map(fp => `${fp.name.padEnd(25)} | ${fp.PrimaryRiotAccount.riotIGN.padEnd(25)} | ${teams.find(t => t.id === fp.team).name}`));
+    output.push(...filterPending.map(fp => `${fp.name.padEnd(25)} | ${fp.PrimaryRiotAccount.riotIGN.padEnd(25)} | ${teams.find(t => t.id === fp.team)?.name}`));
 
     output.push(`\n\nTOTAL: ${output.length}\n`)
     output.push(``.padStart(56, `#`))
