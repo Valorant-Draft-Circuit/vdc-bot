@@ -7,92 +7,22 @@
  */
 
 /**
- * @enum {TransactionsSubTypes} Enumerations for the sub commands
+ * @enum {TransactionsNavigationOptions} Navigation Enumerations for Transactions commands
  */
-export enum TransactionsSubTypes {
-    CONFIRM_SUB = 101,
-    CONFIRM_UNSUB = 102,
-    CANCEL = 199,
-}
+export enum TransactionsNavigationOptions {
+    CUT_CONFIRM                 = 100,
+    SIGN_COMFIRM                = 101,
+    RENEW_COMFIRM               = 102,
+    DRAFT_SIGN_COMFIRM          = 103,
+    UPDATE_TIER_COMFIRM         = 104,
+    RETIRE_COMFIRM              = 105,
+    SWAP_COMFIRM                = 106,
 
-/**
- * @enum {TransactionsCutOptions} - Enumerations for the cut commands
- */
-export enum TransactionsCutOptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 201,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 202,
-}
+    IR_SET_COMFIRM              = 200,
+    IR_REMOVE_COMFIRM           = 201,
 
-/**
- * @enum {TransactionsSignOptions} - Enumerations for the cut commands
- */
-export enum TransactionsSignOptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 301,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 302,
-}
+    SUB_CONFIRM                 = 210,
+    UNSUB_CONFIRM               = 211,
 
-/**
- * @enum {TransactionsIROptions} - Enumerations for the ir commands
- */
-export enum TransactionsIROptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM_SET = 401,
-    CONFIRM_REMOVE = 402,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 499,
-}
-
-/**
- * @enum {TransactionsDraftSignOptions} - Enumerations for the ir commands
- */
-export enum TransactionsDraftSignOptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 501,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 502,
-}
-
-
-/**
- * @enum {TransactionsRenewOptions} - Enumerations for the ir commands
- */
-export enum TransactionsRenewOptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 601,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 602,
-}
-
-/**
- * @enum {TransactionsUpdateTierOptions} - Enumerations for the ir commands
- */
-export enum TransactionsUpdateTierOptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 701,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 702,
-}
-
-/**
- * @enum {TransactionsSwapOptions} - Enumerations for the ir commands
- */
-export enum TransactionsSwapOptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 801,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 899,
-}
-
-/**
- * @enum {TransactionsRetireOptions} - Enumerations for the ir commands
- */
-export enum TransactionsRetireOptions {
-    /** @param {enum} CONFIRM - Confirm cut enumeration */
-    CONFIRM = 901,
-    /** @param {enum} CANCEL - Cancel cut enumeration */
-    CANCEL = 999,
+    CANCEL                      = 999,
 }
