@@ -15,8 +15,8 @@ async function requestCut(interaction, player) {
 	const playerData = await Player.getBy({ discordID: player.value });
 
 	// checks
-	if (playerData == undefined) return interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
-	if (playerData.team == null) return interaction.editReply({ content: `This player is not on a team!`, ephemeral: false });
+	if (playerData === null) return interaction.editReply(`This player doesn't exist!`);
+	if (playerData.team === null) return interaction.editReply(`This player is not signed to a team and cannot have their contract renewed!`);
 
 	// get the player's franchise and team
 	const franchise = await Franchise.getBy({ teamID: playerData.team });

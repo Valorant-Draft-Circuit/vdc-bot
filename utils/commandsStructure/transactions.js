@@ -181,13 +181,6 @@ module.exports = {
                     type: ApplicationCommandOptionType.User,
                     required: true
                 },
-                {
-                    name: `team`,
-                    description: "The team to sign the renew to",
-                    type: ApplicationCommandOptionType.String,
-                    required: true,
-                    autocomplete: true
-                }
             ]
         },
         {
