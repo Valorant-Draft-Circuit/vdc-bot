@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction } = require(`discord.js`);
 const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, swap, retire, } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
@@ -6,7 +6,7 @@ const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
 module.exports = {
 	id: `transactionsManager`,
 
-	async execute(interaction, args) {
+	async execute(/** @type ChatInputCommandInteraction */ interaction, args) {
 		await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
 		switch (Number(args)) {
@@ -17,8 +17,8 @@ module.exports = {
 			// 	return await sign.confirm(interaction);
 			// case TransactionsDraftSignOptions.CONFIRM:
 			// 	return await draftSign.confirm(interaction);
-			// case TransactionsRenewOptions.CONFIRM:
-			// 	return await renew.confirm(interaction);
+			case TransactionsNavigationOptions.RENEW_COMFIRM:
+				return await renew.confirm(interaction);
 			// case TransactionsUpdateTierOptions.CONFIRM:
 			// 	return await updateTier.confirm(interaction);
 			// case TransactionsSubTypes.CONFIRM_SUB:
@@ -46,7 +46,10 @@ module.exports = {
 	},
 };
 
-async function cancel(interaction) {
+async function cancel(/** @type ChatInputCommandInteraction */ interaction) {
+	// delete the reply and then edit the original embed to show cancellation confirmation
+	await interaction.deleteReply();
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 
