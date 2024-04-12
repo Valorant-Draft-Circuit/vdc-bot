@@ -39,9 +39,12 @@ module.exports = {
 				return cut.cut(interaction, player);
 			}
 
-			// case `sign`:
-			// 	sign.sign(interaction, _hoistedOptions[0], _hoistedOptions[1].value);
-			// 	break;
+			case `sign`: {
+				// Player to sign & team to sign to
+				const player = _hoistedOptions[0];
+				const team = _hoistedOptions[1].value;
+				return sign.sign(interaction, player, team);
+			}
 			// case `draft-sign`:
 			// 	draftSign(
 			// 		interaction,
