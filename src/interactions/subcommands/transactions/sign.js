@@ -1,22 +1,27 @@
-const { ChatInputCommandInteraction, GuildMember } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, UserSelectMenuBuilder } = require("discord.js");
+
+const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
+const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+const { LeagueStatus } = require("@prisma/client");
+
+const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Send confirmation to sign a player
  * @param {ChatInputCommandInteraction} interaction 
  * @param {GuildMember} player 
  * @param {String} team 
  */
-async function requestSign(interaction, player, team) {
-    await interaction.deferReply();
-    const playerData = await Player.getBy({ discordID: player.value });
-    const teamData = await Team.getBy({ name: teamName });
-    const franchiseData = await Franchise.getBy({ id: teamData.franchise });
+async function requestSign(interaction, player, teamName) {
 
+    const playerData = await Player.getBy({ discordID: player.value });
+    const team = await Team.getBy({ name: teamName });
+    const franchise = team.Franchise;
 
     // checks
-    // if (playerData == undefined) return await interaction.editReply({ content: `This player doesn't exist!`, ephemeral: false });
-    // if (playerData.status !== PlayerStatusCode.FREE_AGENT) return await interaction.editReply({ content: `This player is not a Free Agent and cannot be signed to ${teamData.name}!`, ephemeral: false });
+    if (playerData === null) return interaction.editReply(`This player doesn't exist!`);
+    if (playerData.Status.leagueStatus !== LeagueStatus.FREE_AGENT && playerData.Status.leagueStatus !== LeagueStatus.GENERAL_MANAGER) return await interaction.editReply(`This player is not a Free Agent or a GM and cannot be signed to ${team.name}!`);
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -31,7 +36,7 @@ async function requestSign(interaction, player, team) {
             },
             {
                 name: `\u200B`,
-                value: `SIGN\n${player.user}\n\`${player.value}\`\n${teamData.name}\n${franchiseData.name}`,
+                value: `SIGN\n${player.user}\n\`${player.value}\`\n${team.name}\n${franchise.name}`,
                 inline: true
             }
         ],
@@ -39,51 +44,53 @@ async function requestSign(interaction, player, team) {
     });
 
     const cancel = new ButtonBuilder({
-        customId: `transactions_${TransactionsSignOptions.CANCEL}`,
+        customId: `transactions_${TransactionsNavigationOptions.CANCEL}`,
         label: `Cancel`,
         style: ButtonStyle.Danger,
     })
 
     const confirm = new ButtonBuilder({
-        customId: `transactions_${TransactionsSignOptions.CONFIRM}`,
+        customId: `transactions_${TransactionsNavigationOptions.SIGN_COMFIRM}`,
         label: `Confirm`,
         style: ButtonStyle.Success,
     })
 
-    // create the action row, add the component to it & then editReply with all the data
-    const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
-    return await interaction.editReply({ embeds: [embed], components: [subrow] });
+	// create the action row, add the component to it & then reply with all the data
+	const subrow = new ActionRowBuilder({ components: [cancel, confirm] });
+	return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
 /** Confirm signing a player
  * @param {ChatInputCommandInteraction} interaction
  */
 async function confirmSign(interaction) {
-    await interaction.deferReply({ ephemeral: true }); // defer as early as possible
 
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const playerID = data[2];
 
+
     const playerData = await Player.getBy({ discordID: playerID });
     const playerIGN = await Player.getIGNby({ discordID: playerID });
-    const teamData = await Team.getBy({ name: data[3] });
-    const franchiseData = await Franchise.getBy({ name: data[4] });
+    const team = await Team.getBy({ name: data[3] });
+	const franchise = team.Franchise;
 
+
+    // update nickname
     const playerTag = playerIGN.split(`#`)[0];
     const guildMember = await interaction.guild.members.fetch(playerID);
     const accolades = guildMember.nickname?.match(emoteregex);
 
-    // add the franchise role, remove FA/RFA role
-    if (!guildMember._roles.includes(franchiseData.roleID)) await guildMember.roles.add(franchiseData.roleID);
-    if (guildMember._roles.includes(ROLES.LEAGUE.FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.FREE_AGENT);
-    if (guildMember._roles.includes(ROLES.LEAGUE.RESTRICTED_FREE_AGENT)) await guildMember.roles.remove(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
+    guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+    console.log(playerData)
 
-    // update nickname
-    guildMember.setNickname(`${franchiseData.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+    // remove all league roles and then add League & franchise role
+    await guildMember.roles.remove(Object.values(ROLES.LEAGUE));
+    await guildMember.roles.add(ROLES.LEAGUE.LEAGUE, franchise.roleID);
 
     // cut the player & ensure that the player's team property is now null
-    const player = await Transaction.sign({ playerID: playerData.id, teamID: teamData.id });
-    if (player.team !== teamData.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
+    const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
+    const player = await Transaction.sign({ playerID: playerData.id, teamID: team.id, isGM: isGM });
+    if (player.team !== team.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
@@ -94,27 +101,28 @@ async function confirmSign(interaction) {
     // create the base embed
     const announcement = new EmbedBuilder({
         author: { name: `VDC Transactions Manager` },
-        description: `${guildMember} (${playerTag}) was signed to ${franchiseData.name}`,
-        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchiseData.logoFileName}` },
+        description: `${guildMember} (${playerTag}) was signed to ${franchise.name}`,
+        thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}` },
         color: 0xE92929,
         fields: [
-            {
-                name: `Franchise`,
-                value: `<${franchiseData.emoteID}> ${franchiseData.name}`,
-                inline: true
-            },
-            {
-                name: `Team`,
-                value: teamData.name,
-                inline: true
-            },
+			{
+				name: `Franchise`,
+				value: `<${team.Franchise.Brand.discordEmote}> ${team.Franchise.name}`,
+				inline: true,
+			},
+			{
+				name: `Team`,
+				value: team.name,
+				inline: true,
+			},
         ],
         footer: { text: `Transactions — Sign` },
         timestamp: Date.now(),
     });
 
-    await interaction.deleteReply();
-    return await transactionsAnnouncementChannel.send({ embeds: [announcement] });
+	await interaction.deleteReply();
+	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
+	return await transactionsChannel.send({ embeds: [announcement] });
 }
 
 module.exports = {
