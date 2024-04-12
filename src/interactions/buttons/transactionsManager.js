@@ -13,8 +13,8 @@ module.exports = {
 			//  CONFIRM BUTTONS  ###################################
 			case TransactionsNavigationOptions.CUT_CONFIRM:
 				return await cut.confirm(interaction);
-			// case TransactionsSignOptions.CONFIRM:
-			// 	return await sign.confirm(interaction);
+			case TransactionsNavigationOptions.SIGN_COMFIRM:
+				return await sign.confirm(interaction);
 			// case TransactionsDraftSignOptions.CONFIRM:
 			// 	return await draftSign.confirm(interaction);
 			case TransactionsNavigationOptions.RENEW_COMFIRM:
