@@ -3,7 +3,7 @@ const { Player, Transaction, Flags } = require(`../../../prisma`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
 const fs = require(`fs`);
 
-const { debugUser, debugLeagueStatus } = require(`../subcommands/debug`)
+const { debugUser, debugLeagueStatus, forceUpdate } = require(`../subcommands/debug`)
 
 
 module.exports = {
@@ -16,6 +16,7 @@ module.exports = {
         const { _subcommand } = interaction.options;
         if (_subcommand === `user`) return debugUser(interaction);
         if (_subcommand === `report`) return debugLeagueStatus(interaction);
+        if (_subcommand === `force-update`) return forceUpdate(interaction);
     }
 };
 
