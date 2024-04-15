@@ -19,8 +19,8 @@ async function requestCut(interaction, player) {
 	if (playerData.team === null) return interaction.editReply(`This player is not signed to a team and cannot have their contract renewed!`);
 
 	// get the player's franchise and team
-	const franchise = await Franchise.getBy({ teamID: playerData.team });
 	const team = await Team.getBy({ id: playerData.team });
+	const franchise = await Franchise.getBy({ teamID: playerData.team });
 
 	// create the base embed
 	const embed = new EmbedBuilder({
@@ -69,11 +69,11 @@ async function confirmCut(interaction) {
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const guildMember = await interaction.guild.members.fetch(playerID);
 	const team = await Team.getBy({ id: playerData.team });
+	const franchise = await Franchise.getBy({ teamID: team.id });
 
 
 	// remove the franchise role and update their nickname
-	const franchiseRoleID = team.Franchise;
-	if (guildMember._roles.includes(franchiseRoleID)) await guildMember.roles.remove(franchiseRoleID);
+	await guildMember.roles.remove(franchise.roleID); // DOES NOT WORK IN DEV SERVER (ROLE DOES NOT EXIST)
 	await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
 
 
@@ -99,15 +99,15 @@ async function confirmCut(interaction) {
 	// create the base embed
 	const announcement = new EmbedBuilder({
 		author: { name: `VDC Transactions Manager` },
-		description: `${guildMember} (${playerTag}) was cut from ${team.Franchise.name}`,
+		description: `${guildMember} (${playerTag}) was cut from ${franchise.name}`,
 		thumbnail: {
-			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}`,
+			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchise.Brand.logo}`,
 		},
 		color: 0xe92929,
 		fields: [
 			{
 				name: `Franchise`,
-				value: `<${team.Franchise.Brand.discordEmote}> ${team.Franchise.name}`,
+				value: `<${franchise.Brand.discordEmote}> ${franchise.name}`,
 				inline: true,
 			},
 			{
