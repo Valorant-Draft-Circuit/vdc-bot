@@ -5,8 +5,7 @@ const { requestUpdateTier, confirmUpdateTier } = require("./updateTier");
 const { requestRenew, confirmRenew } = require("./renew");
 const { requestSub, confirmSub } = require("./sub");
 const { requestUnsub, confirmUnsub } = require("./unsub");
-const { requestIR, confirmSetIR, confirmRemoveIR } = require("./ir");
-const { requestSwap, confirmSwap } = require("./swap");
+const { requestIR, confirmToggleIR } = require("./ir");
 const { requestRetire, confirmRetire } = require("./retire");
 
 module.exports = {
@@ -40,12 +39,7 @@ module.exports = {
 	},
 	ir: {
 		ir: requestIR,
-		confirmSet: confirmSetIR,
-		confirmRemove: confirmRemoveIR,
-	},
-	swap: {
-		swap: requestSwap,
-		confirm: confirmSwap,
+		confirm: confirmToggleIR,
 	},
 	retire: {
 		retire: requestRetire,
