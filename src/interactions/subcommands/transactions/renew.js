@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Player, Team, Transaction } = require(`../../../../prisma`);
+const { Player, Team, Transaction, Franchise } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
@@ -20,7 +20,7 @@ async function requestRenew(interaction, player) {
 
 
 	const teamData = await Team.getBy({ id: playerData.team });
-	const franchise = teamData.Franchise;
+	const franchise = await Franchise.getBy({ teamID: playerData.team });
 
 	// create the base embed
 	const embed = new EmbedBuilder({
@@ -70,7 +70,7 @@ async function confirmRenew(interaction) {
 	const guildMember = await interaction.guild.members.fetch(playerID);
 	
 	const team = await Team.getBy({ id: playerData.team });
-	const franchise = team.Franchise;
+	const franchise = await Franchise.getBy({ teamID: playerData.team });
 
 	const playerTag = playerIGN.split(`#`)[0];
 
