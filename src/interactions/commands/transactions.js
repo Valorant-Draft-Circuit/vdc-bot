@@ -1,6 +1,6 @@
 "use strict";
 
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, swap, retire, } = require(`../subcommands/transactions`);
+const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, } = require(`../subcommands/transactions`);
 
 
 const teamMMRAllowance = {
@@ -54,13 +54,13 @@ module.exports = {
 			// 		_hoistedOptions[3].value
 			// 	);
 			// 	break;
-			// case `update-tier`:
-			// 	updateTier.updateTier(
-			// 		interaction,
-			// 		_hoistedOptions[0].member,
-			// 		_hoistedOptions[1].value
-			// 	);
-			// 	break;
+			case `update-tier`: {
+				// Player to update & tier to update to
+				const player = _hoistedOptions[0];
+				const tier = _hoistedOptions[1].value;
+
+				return updateTier.updateTier(interaction, player, tier);
+			}
 			case `renew`: {
 				// Player whose contract to renew
 				const player = _hoistedOptions[0];
@@ -76,21 +76,17 @@ module.exports = {
 			// case `unsub`:
 			// 	unsub.unsub(interaction, _hoistedOptions[0].member);
 			// 	break;
-			// case `ir`:
-			// 	ir.ir(interaction, _hoistedOptions[0].member);
-			// 	break;
-			// case `swap`:
-			// 	swap.swap(
-			// 		interaction,
-			// 		_hoistedOptions[0].member,
-			// 		_hoistedOptions[1].member
-			// 	);
-			// 	break;
-			// case `retire`:
-			// 	retire.retire(interaction, _hoistedOptions[0].member);
-			// 	break;
+			case `ir`: {
+				const player = _hoistedOptions[0];
+				return ir.ir(interaction, player);
+			}
+			case `retire`: {
+				// Player to retire
+				const player = _hoistedOptions[0];
+				return retire.retire(interaction, player);
+			}
 			default:
-				return interaction.reply({ content: `That's not a valid subcommand or this command is a work in progress!` });
+				return interaction.editReply(`That's not a valid subcommand or this command is a work in progress!`);
 		}
 	},
 };
