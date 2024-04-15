@@ -1,5 +1,6 @@
 const { Tier, GameType, Agent, LeagueStatus, ContractStatus } = require(`@prisma/client`);
 const { prisma, Player, Team, Flags } = require(`../../../../prisma`)
+const { ChatInputCommandInteraction } = require(`discord.js`);
 const fs = require(`fs`);
 
 console.clear();
@@ -15,7 +16,7 @@ const generate = {
     gm: true,
 };
 
-async function report(interaction) {
+async function report(/** @type ChatInputCommandInteraction */ interaction) {
     let reports = [];
     if (generate.unregistered === true) reports.push(await genUnregisteredReport());
     if (generate.pending === true) reports.push(await genPendingReport());
