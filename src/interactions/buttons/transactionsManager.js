@@ -1,5 +1,5 @@
 const { EmbedBuilder, ChatInputCommandInteraction } = require(`discord.js`);
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, swap, retire, } = require(`../subcommands/transactions`);
+const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
 
@@ -19,27 +19,25 @@ module.exports = {
 			// 	return await draftSign.confirm(interaction);
 			case TransactionsNavigationOptions.RENEW_COMFIRM:
 				return await renew.confirm(interaction);
-			// case TransactionsUpdateTierOptions.CONFIRM:
-			// 	return await updateTier.confirm(interaction);
+			case TransactionsNavigationOptions.UPDATE_TIER_COMFIRM:
+				return await updateTier.confirm(interaction);
 			// case TransactionsSubTypes.CONFIRM_SUB:
 			// 	return await sub.confirm(interaction);
 			// case TransactionsSubTypes.CONFIRM_UNSUB:
 			// 	return await unsub.confirm(interaction);
-			// case TransactionsIROptions.CONFIRM_SET:
-			// 	return await ir.confirmSet(interaction);
-			// case TransactionsIROptions.CONFIRM_REMOVE:
-			// 	return await ir.confirmRemove(interaction);
-			// case TransactionsSwapOptions.CONFIRM:
-			// 	return await swap.confirm(interaction);
-			// case TransactionsRetireOptions.CONFIRM:
-			// 	return await retire.confirm(interaction);
+			case TransactionsNavigationOptions.IR_SET_COMFIRM:
+				return await ir.confirm(interaction, `SET`);
+			case TransactionsNavigationOptions.IR_REMOVE_COMFIRM:
+				return await ir.confirm(interaction, `REMOVE`);
+			case TransactionsNavigationOptions.RETIRE_COMFIRM:
+				return await retire.confirm(interaction);
 
 			//  CANCEL BUTTONS  ####################################
 			case TransactionsNavigationOptions.CANCEL:
 				return await cancel(interaction);
 
 			default:
-				return await interaction.reply({
+				return await interaction.editReply({
 					content: `There was an error. ERR: BTN_TSC_MGR`,
 				});
 		}
