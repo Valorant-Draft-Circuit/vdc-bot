@@ -1,3 +1,5 @@
+const { LeagueStatus } = require("@prisma/client");
+
 const { Franchise, Player, Team, Games } = require("../../../prisma");
 const {
   EmbedBuilder,
@@ -38,6 +40,36 @@ const postPoints = [
   { id: 43, postPoints: 2.5 },
   { id: 6, postPoints: 1 },
 ];
+const teamWinLoss = [
+  { id: 35, win: 11, lose: 9 },
+  { id: 4, win: 11, lose: 9 },
+  { id: 28, win: 11, lose: 9 },
+  { id: 31, win: 10, lose: 10 },
+  { id: 30, win: 10, lose: 10 },
+  { id: 36, win: 7, lose: 13 },
+  { id: 19, win: 22, lose: 6 },
+  { id: 33, win: 17, lose: 11 },
+  { id: 25, win: 17, lose: 11 },
+  { id: 32, win: 15, lose: 13 },
+  { id: 18, win: 14, lose: 14 },
+  { id: 3, win: 11, lose: 17 },
+  { id: 41, win: 10, lose: 16 },
+  { id: 26, win: 4, lose: 22 },
+  { id: 16, win: 19, lose: 9 },
+  { id: 10, win: 17, lose: 11 },
+  { id: 24, win: 16, lose: 12 },
+  { id: 23, win: 15, lose: 13 },
+  { id: 14, win: 14, lose: 15 },
+  { id: 8, win: 12, lose: 16 },
+  { id: 15, win: 11, lose: 17 },
+  { id: 22, win: 9, lose: 19 },
+  { id: 11, win: 14, lose: 4 },
+  { id: 13, win: 12, lose: 6 },
+
+  { id: 43, win: 11, lose: 7 },
+  { id: 12, win: 8, lose: 10 },
+  { id: 6, win: 5, lose: 13 },
+];
 
 module.exports = {
   name: "draft",
@@ -58,42 +90,77 @@ module.exports = {
 async function draft(interaction, tier) {
   console.log(tier);
 
+  const season = 6;
+
+  const tierMMR = [
+    { name: "PROSPECT", high: 89, low: 0 },
+    { name: "APPRENTICE", high: 120, low: 89 },
+    { name: "EXPERT", high: 154, low: 120 },
+    { name: "MYTHIC", high: 500, low: 154 },
+  ];
+  const playerMMR = tierMMR.filter((m) => m.name === tier)[0];
+
   const draftTeams = await Team.getAllActiveByTier(tier);
 
-  //const draftPlayers = Player.filter((p) => p.tier === tier);
+  const draftPlayers = await Player.filterAllByStatus([
+    LeagueStatus.DRAFT_ELIGIBLE,
+    LeagueStatus.FREE_AGENT,
+  ]);
+
+  const tierPlayers = draftPlayers.filter(
+    (p) =>
+      p.PrimaryRiotAccount?.mmr &&
+      p.PrimaryRiotAccount.MMR.mmrEffective < playerMMR.high &&
+      p.PrimaryRiotAccount.MMR.mmrEffective >= playerMMR.low
+  );
+  let amountOfPlayers = tierPlayers.length;
   let teamScore = [];
   let lotteryScore = 0;
 
   const tierGames = await Games.getAllBy({
     tier: tier,
   });
-  let totalWins = 0;
   let teamWins = [];
   draftTeams.forEach((team) => {
-    const win = tierGames.filter((g) => g.winner === team.id).length;
-    totalWins += win;
-    console.log(win);
-    teamWins.push({ ...team, wins: win });
+    //const win = tierGames.filter((g) => g.winner === team.id).length;
+    const winloss = teamWinLoss.filter((g) => g.id === team.id);
+    if (!winloss[0]) {
+      const win = 0;
+      const loss = 0;
+      teamWins.push({ ...team, wins: win, loss: loss });
+      console.log(teamWins);
+    } else {
+      const win = winloss[0].win;
+      const loss = winloss[0].lose;
+      teamWins.push({ ...team, wins: win, loss: loss });
+      console.log(teamWins);
+    }
   });
-  let totalTeamGames;
-  //used because of missing data/different amount of games played should be removed when able to access loses
-  if (tier === "PROSPECT") {
-    totalTeamGames = 18;
-  } else if (tier === "EXPERT") {
-    totalTeamGames = 28;
-  } else {
-    totalTeamGames = (totalWins * 2) / teamWins.length;
-  }
+
   let teamWinPercent = [];
   teamWins.forEach((team) => {
-    const winPercent = team.wins / totalTeamGames;
+    let winPercent = team.wins / (team.wins + team.loss);
     const teamPostPoints = postPoints.filter((p) => team.id === p.id);
 
-    teamWinPercent.push({
-      ...team,
-      winPercent: winPercent,
-      postPoints: teamPostPoints[0].postPoints,
-    });
+    if (!teamPostPoints[0]) {
+      const postPoints = 0;
+      if (!winPercent) {
+        winPercent = 0;
+      }
+      console.log(winPercent);
+      teamWinPercent.push({
+        ...team,
+        winPercent: winPercent,
+        postPoints: postPoints,
+      });
+    } else {
+      const postPoints = teamPostPoints[0].postPoints;
+      teamWinPercent.push({
+        ...team,
+        winPercent: winPercent,
+        postPoints: postPoints,
+      });
+    }
   });
 
   //get score
@@ -116,9 +183,6 @@ async function draft(interaction, tier) {
 
     teamdraftScore.push({ ...team, weight: draftScore });
   });
-  console.log(teamdraftScore);
-
-  let amountOfPlayers = 15;
 
   const rounds = amountOfPlayers / teamdraftScore.length;
   const remainingPicks = amountOfPlayers % teamdraftScore.length;
@@ -144,29 +208,38 @@ async function draft(interaction, tier) {
     snakedTeams.push(team);
     teamLottery = teamLottery.filter((t) => t !== team);
   }
+
+  let pick = 1;
+  let round = 1;
   for (let i = 1; i <= rounds; i++) {
     if (i % 2) {
       //run the picks in normal order
       for (let j = 0; j < snakedTeams.length; j++) {
-        console.log(snakedTeams[j]);
+        console.log(snakedTeams[j].franchise, season, pick, round, tier);
+        pick++;
       }
     } else {
       //run picks in reverse order
       for (let l = snakedTeams.length - 1; l >= 0; l--) {
-        console.log(snakedTeams[l]);
+        console.log(snakedTeams[l].franchise, season, pick, round, tier);
+        pick++;
       }
     }
+    round++;
   }
   //running the remaining picks
+
   if (remainingPicks != 0) {
     if (rounds % 2 == 1) {
       for (let i = 0; i < remainingPicks; i++) {
-        console.log(snakedTeams[i]);
+        console.log(snakedTeams[i].franchise, season, pick, round, tier);
+        pick++;
       }
     } else {
       const stopPicks = snakedTeams.length - remainingPicks - 1;
       for (let l = snakedTeams.length - 1; l > stopPicks; l--) {
-        console.log(snakedTeams[l]);
+        console.log(snakedTeams[l].franchise, season, pick, round, tier);
+        pick++;
       }
     }
   }
@@ -174,7 +247,10 @@ async function draft(interaction, tier) {
   const teamOrder = [];
 
   snakedTeams.forEach((team) => {
-    teamOrder.push({ name: team.Franchise.slug, value: team.name });
+    teamOrder.push({
+      name: team.Franchise.slug,
+      value: team.name,
+    });
   });
   console.log(teamOrder);
 
@@ -182,9 +258,26 @@ async function draft(interaction, tier) {
     author: { name: "VDC Draft Generator" },
     description: `Teams for ${tier} pick in the following order`,
     color: 0xe92929,
-    fields: teamOrder,
+    fields: [
+      ...teamOrder,
+      { name: "Players: ", value: amountOfPlayers, inline: true },
+      { name: "Rounds: ", value: `${Math.ceil(rounds)}`, inline: true },
+    ],
     footer: { text: `Valorant Draft Circuit - Draft` },
   });
 
   return await interaction.editReply({ embeds: [embed] });
+}
+
+async function cancel(interaction) {
+  const embed = interaction.message.embeds[0];
+  const embedEdits = new EmbedBuilder(embed);
+
+  embedEdits.setDescription(`This operation was cancelled.`);
+  embedEdits.setFields([]);
+
+  return await interaction.message.edit({
+    embeds: [embedEdits],
+    components: [],
+  });
 }
