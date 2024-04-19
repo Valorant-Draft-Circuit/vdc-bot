@@ -20,8 +20,6 @@ module.exports = {
             default:
                 return await interaction.reply({ content: `There was an error. ERR: BTN_ACT_CHK_MGR` });
         }
-
-
     }
 };
 
@@ -31,17 +29,17 @@ async function confirm(interaction) {
 
     // get all active players from the Player table and store their ID
     const allActivePlayers = await Player.getAllActive();
-    const allActivePlayerIDs = allActivePlayers.map(p => p.id);
+    const allActivePlayerIDs = allActivePlayers.map(p => p.Accounts.find(a => a.provider === `discord`).providerAccountId);
 
     // get all guild members with the League role & store their ID
     const leagueRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.LEAGUE);
     const leagueRoleMemberIDs = await leagueRole.members.map(m => m.id);
 
-    // get all guild members with the League role & store their ID
+    // get all guild members with the Inactive role & store their ID
     const inactiveRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.INACTIVE);
     const inactiveRoleMemberIDs = await inactiveRole.members.map(m => m.id);
 
-    // filter the users to actually get the Inactive role, by making sure they ARE an active player in the Player table and DO NOT ALREADY have the inactive role
+    // filter the users to actually get the Inactive role, by making sure they ARE a player in the database and DO NOT ALREADY have the inactive role
     const sharedMemberIDs = leagueRoleMemberIDs
         .filter((id) => allActivePlayerIDs.includes(id))
         .filter((id) => !inactiveRoleMemberIDs.includes(id));
