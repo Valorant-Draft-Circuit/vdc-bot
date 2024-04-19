@@ -1,3 +1,4 @@
+const fs = require('fs');
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
 
 const { Franchise, Player, Team, Games } = require("../../../prisma");
@@ -213,6 +214,8 @@ async function draft(interaction, tier) {
 		teamLottery = teamLottery.filter((t) => t !== team);
 	}
 
+	const draftLottery = [];
+
 	let pick = 1;
 	let round = 1;
 	for (let i = 1; i <= rounds; i++) {
@@ -220,12 +223,28 @@ async function draft(interaction, tier) {
 			//run the picks in normal order
 			for (let j = 0; j < snakedTeams.length; j++) {
 				console.log(`Franchise:`, snakedTeams[j].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+				draftLottery.push({
+					season: season,
+					tier: tier,
+					round: round,
+					pick: pick,
+					franchise: snakedTeams[j].franchise,
+					team: draftTeams.find(t => t.Franchise.id === snakedTeams[j].franchise && t.tier === tier).name
+				});
 				pick++;
 			}
 		} else {
 			//run picks in reverse order
 			for (let l = snakedTeams.length - 1; l >= 0; l--) {
 				console.log(`Franchise:`, snakedTeams[l].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+				draftLottery.push({
+					season: season,
+					tier: tier,
+					round: round,
+					pick: pick,
+					franchise: snakedTeams[l].franchise,
+					team: draftTeams.find(t => t.Franchise.id === snakedTeams[l].franchise && t.tier === tier).name
+				});
 				pick++;
 			}
 		}
@@ -236,15 +255,31 @@ async function draft(interaction, tier) {
 	//running the remaining picks
 
 	if (remainingPicks != 0) {
-		if (rounds / 2 == 1) {
+		if (Math.ceil(rounds) % 2 == 1) {
 			for (let i = 0; i < remainingPicks; i++) {
 				console.log(`Franchise:`, snakedTeams[i].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+				draftLottery.push({
+					season: season,
+					tier: tier,
+					round: round,
+					pick: pick,
+					franchise: snakedTeams[i].franchise,
+					team: draftTeams.find(t => t.Franchise.id === snakedTeams[i].franchise && t.tier === tier).name
+				});
 				pick++;
 			}
 		} else {
 			const stopPicks = snakedTeams.length - remainingPicks - 1;
 			for (let l = snakedTeams.length - 1; l > stopPicks; l--) {
 				console.log(`Franchise:`, snakedTeams[l].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+				draftLottery.push({
+					season: season,
+					tier: tier,
+					round: round,
+					pick: pick,
+					franchise: snakedTeams[l].franchise,
+					team: draftTeams.find(t => t.Franchise.id === snakedTeams[l].franchise && t.tier === tier).name
+				});
 				pick++;
 			}
 		}
@@ -260,6 +295,8 @@ async function draft(interaction, tier) {
 			value: team.name,
 		});
 	});
+
+	fs.writeFileSync(`./cache/draft_lottery_${tier}.json`, JSON.stringify(draftLottery, ` `, 2));
 	console.log(teamOrder);
 
 	const embed = new EmbedBuilder({
@@ -274,5 +311,5 @@ async function draft(interaction, tier) {
 		footer: { text: `Valorant Draft Circuit - Draft` },
 	});
 
-	return await interaction.editReply({ embeds: [embed] });
+	return await interaction.editReply({ embeds: [embed], files: [`./cache/draft_lottery_${tier}.json`] });
 }
