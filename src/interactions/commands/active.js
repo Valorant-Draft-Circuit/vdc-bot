@@ -23,7 +23,7 @@ module.exports = {
             return await interaction.editReply(`You cannot complete the activity check. Please open an admin ticket.`);
         }
 
-        switch (activityCheckState.value) {
+        switch (activityCheckState?.value) {
             case `CLOSED`:
                 return await interaction.editReply(`The activity check is closed!`);
 
