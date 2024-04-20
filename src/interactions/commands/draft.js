@@ -70,6 +70,20 @@ const teamWinLoss = [
   { id: 12, win: 8, lose: 10 },
   { id: 6, win: 5, lose: 13 },
 ];
+const newFrachise = [];
+
+const newTeam = [
+  { id: 38 },
+  { id: 44 },
+  { id: 39 },
+  { id: 1 },
+  { id: 2 },
+  { id: 27 },
+  { id: 45 },
+  { id: 20 },
+  { id: 9 },
+  { id: 5 },
+];
 
 module.exports = {
   name: "draft",
@@ -125,15 +139,14 @@ async function draft(interaction, tier) {
     //const win = tierGames.filter((g) => g.winner === team.id).length;
     const winloss = teamWinLoss.filter((g) => g.id === team.id);
     if (!winloss[0]) {
-      const win = 0;
-      const loss = 0;
+      const win = 1;
+      const loss = 1;
       teamWins.push({ ...team, wins: win, loss: loss });
-      console.log(teamWins);
     } else {
       const win = winloss[0].win;
       const loss = winloss[0].lose;
+
       teamWins.push({ ...team, wins: win, loss: loss });
-      console.log(teamWins);
     }
   });
 
@@ -144,10 +157,7 @@ async function draft(interaction, tier) {
 
     if (!teamPostPoints[0]) {
       const postPoints = 0;
-      if (!winPercent) {
-        winPercent = 0;
-      }
-      console.log(winPercent);
+
       teamWinPercent.push({
         ...team,
         winPercent: winPercent,
@@ -164,21 +174,48 @@ async function draft(interaction, tier) {
   });
 
   //get score
+
+  let highest = 0;
   teamWinPercent.forEach((team) => {
     const A = team.winPercent * 0.7;
 
     const B = team.postPoints * 0.3;
+
     const score = 2 - A - B;
 
     teamScore.push({ ...team, score: score });
-    lotteryScore += score;
+
+    if (score > highest) {
+      highest = score;
+    }
+  });
+
+  let teamCheck = [];
+
+  teamScore.forEach((team) => {
+    const newTeamCheck = newTeam.filter((t) => t.id === team.id);
+    if (newTeamCheck[0]?.id === team.id) {
+      const score = highest + 0.02 * (teamWinPercent.length / 12);
+
+      console.log("score" + score, team.name);
+
+      teamCheck.push({ ...team, score: score });
+      lotteryScore += score;
+    } else {
+      const score = team.score;
+
+      console.log("score" + score, team.name);
+      lotteryScore += score;
+
+      teamCheck.push({ ...team, score: score });
+    }
   });
 
   //get team draft %
 
   let teamdraftScore = [];
 
-  teamScore.forEach((team) => {
+  teamCheck.forEach((team) => {
     let draftScore = team.score / lotteryScore;
 
     teamdraftScore.push({ ...team, weight: draftScore });
@@ -215,13 +252,13 @@ async function draft(interaction, tier) {
     if (i % 2) {
       //run the picks in normal order
       for (let j = 0; j < snakedTeams.length; j++) {
-        console.log(snakedTeams[j].franchise, season, pick, round, tier);
+        //console.log(snakedTeams[j].franchise, season, pick, round, tier);
         pick++;
       }
     } else {
       //run picks in reverse order
       for (let l = snakedTeams.length - 1; l >= 0; l--) {
-        console.log(snakedTeams[l].franchise, season, pick, round, tier);
+        //console.log(snakedTeams[l].franchise, season, pick, round, tier);
         pick++;
       }
     }
@@ -232,13 +269,13 @@ async function draft(interaction, tier) {
   if (remainingPicks != 0) {
     if (rounds % 2 == 1) {
       for (let i = 0; i < remainingPicks; i++) {
-        console.log(snakedTeams[i].franchise, season, pick, round, tier);
+        //console.log(snakedTeams[i].franchise, season, pick, round, tier);
         pick++;
       }
     } else {
       const stopPicks = snakedTeams.length - remainingPicks - 1;
       for (let l = snakedTeams.length - 1; l > stopPicks; l--) {
-        console.log(snakedTeams[l].franchise, season, pick, round, tier);
+        //console.log(snakedTeams[l].franchise, season, pick, round, tier);
         pick++;
       }
     }
