@@ -96,10 +96,22 @@ module.exports = {
 			case `fulfill-future-trade`: {
 				const round = _hoistedOptions[0].value;
 				const tier = _hoistedOptions[1].value;
-				const franchise_from = _hoistedOptions[2].value;
-				const franchise_to = _hoistedOptions[3].value;
+				const franchiseFromName = _hoistedOptions[2].value;
+				const franchiseToName = _hoistedOptions[3].value;
 
-				return await fulfillFutureTrade();
+				return await fulfillFutureTrade(interaction, round, tier, franchiseFromName, franchiseToName);
+			}
+			case `view-draft-board`: {
+				const tier = _hoistedOptions[0].value;
+
+				return await viewTierDraftBoard(interaction, tier);
+			}
+			case `set-keeper-pick`: {
+				const round = _hoistedOptions[0].value;
+				const pick = _hoistedOptions[1].value;
+				const discordID = _hoistedOptions[2].value;
+
+				return await setKeeperPick(interaction, round, pick, discordID);
 			}
 		}
 	},
@@ -115,7 +127,7 @@ async function draft(interaction, tier) {
 	// check to make sure the draft hasn't already been generated for this season
 	const draftDoneCheck = await prisma.draft.findMany({ where: { AND: [{ season: season }, { tier: tier }] } });
 	console.log(draftDoneCheck.length)
-	if (draftDoneCheck.length !== 0) return await interaction.editReply(`The ${tier} draft lottery for season ${season} has already been generated.`)
+	if (draftDoneCheck.length !== 0) return await interaction.editReply(`The ${tier} draft lottery for season ${season} has already been generated.`);
 
 	// get MMR tier lines from the database
 	const mmrCapResponse = await prisma.controlPanel.findMany({ where: { name: { contains: `mmr_cap_player` } } });
@@ -381,10 +393,164 @@ async function awardCompPicks(interaction, round, tier, franchiseName) {
 			franchise: franchise.id
 		}
 	});
-	
-	return await interaction.editReply(`The round ${round} ${tier} compensation pick has been successfully awarded to ${franchiseName} and the database has been updated.`)
+
+	return await interaction.editReply(`The round ${round} ${tier} compensation pick has been successfully awarded to ${franchiseName} (${franchise.id}) and the database has been updated.`);
 };
 
-async function fulfillFutureTrade() {
+async function fulfillFutureTrade(interaction, round, tier, franchiseFromName, franchiseToName) {
 
+	if (franchiseFromName === franchiseToName) return await interaction.editReply(`A franchise cannot give a future trade to themselves!`);
+
+	// get current season
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({ where: { name: `current_season` } });
+	const season = Number(currentSeasonResponse.value);
+
+	// get franchise, it's team in the tier (if it exists) & the filtered draft board
+	const franchiseFrom = await Franchise.getBy({ name: franchiseFromName });
+	const franchiseTo = await Franchise.getBy({ name: franchiseToName });
+
+	const franchiseFromTeamInTier = franchiseFrom.Teams.find(t => t.tier === tier);
+	const franchiseToTeamInTier = franchiseTo.Teams.find(t => t.tier === tier);
+	const draftBoard = await prisma.draft.findMany({
+		where: {
+			AND: [
+				{ season: season },
+				{ tier: tier },
+				{ round: round }
+			]
+		}
+	});
+
+	// team exists check
+	if (franchiseFromTeamInTier === undefined) return await interaction.editReply(`The franchise \`${franchiseFromName}\` doesn't have a team in the tier you're trying to trade a future pick from. If you believe this to be an error, please let the tech team know.`);
+	if (franchiseToTeamInTier === undefined) return await interaction.editReply(`The franchise \`${franchiseToName}\` doesn't have a team in the tier you're trying to trade a future pick to. If you believe this to be an error, please let the tech team know.`);
+
+	// active team in tier check
+	if (franchiseFromTeamInTier.active === false) return await interaction.editReply(`The franchise \`${franchiseFromName}\` doesn't have an active team in the tier you're trying to trade a future pick from. If you believe this to be an error, please let the tech team know.`);
+	if (franchiseToTeamInTier.active === false) return await interaction.editReply(`The franchise \`${franchiseToName}\` doesn't have an active team in the tier you're trying to trade a future pick to. If you believe this to be an error, please let the tech team know.`);
+
+	// round exists check
+	if (draftBoard.length === 0) return await interaction.editReply(`There are no picks in the season ${season} ${tier} draft for round ${round}. If you believe this to be an error, please let the tech team know.`);
+
+	const tradedPick = draftBoard.find(db => db.franchise === franchiseFrom.id);
+
+	// player in pick exists
+	if (tradedPick.userID !== null) return await interaction.editReply(`This pick (R: ${tradedPick.round}, pick ${tradedPick.round}) already has a player in this pick`);
+
+	console.log(`Pick being GIVEN`)
+	console.log(tradedPick);
+
+	console.log(`${franchiseFromName} (${franchiseFrom.id}) gives R:${tradedPick.round}, P:${tradedPick.pick} to ${franchiseToName} (${franchiseTo.id})`)
+
+	const updatedPick = await prisma.draft.update({
+		where: { id: tradedPick.id },
+		data: { franchise: franchiseTo.id }
+	});
+
+	if (updatedPick.franchise !== franchiseTo.id) return await interaction.editReply(`There was an error. The database was not updated`);
+	else return await interaction.editReply(`${franchiseFromName} (${franchiseFrom.id}) gives R:${tradedPick.round}, P:${tradedPick.pick} to ${franchiseToName} (${franchiseTo.id}). The database has been updated`);
 };
+
+async function viewTierDraftBoard(interaction, tier) {
+	// get current season from the database
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({ where: { name: `current_season` } });
+	const season = Number(currentSeasonResponse.value);
+
+	// check to make sure the draft hasn't already been generated for this season
+	const draftDoneCheck = await prisma.draft.findMany({ where: { AND: [{ season: season }, { tier: tier }] } });
+	if (draftDoneCheck.length === 0) return await interaction.editReply(`The ${tier} draft lottery for season ${season} has not happened yet, and so there is nothing to display.`);
+
+	// get the draft board for the season and tier
+	const draftBoard = await prisma.draft.findMany({
+		where: {
+			AND: [
+				{ season: season },
+				{ tier: tier },
+			]
+		},
+		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } }
+	});
+
+	// sort the draft board to organize by rounds and picks
+	const sortedDraftBoard = draftBoard
+		.sort((a, b) => a.pick - b.pick)
+		.sort((a, b) => a.round - b.round);
+
+	// generate a line for each pick and format for display
+	let lRound = 0;
+	const output = sortedDraftBoard.map(sdb => {
+		let strArr = []
+		if (sdb.round == lRound + 1) {
+			strArr.push(`\n  Round ${sdb.round} ${`-`.padEnd(90, `-`)} \n\n`)
+			lRound++
+		}
+		strArr.push(
+			// `T: ${sdb.tier}  | ` +     // REMOVING TIER FROM EACH LINE & ADDING TO TOP OF FILE
+			`R: ${String(sdb.round).padEnd(2, ` `)}  |  ` +
+			`P: ${String(sdb.pick).padEnd(2, ` `)}  |  ` +
+			`K: ${String(sdb.keeper).padEnd(5, ` `)}  |  ` +
+			`F: ${sdb.Franchise.name.padEnd(25, ` `)} ` +
+			`${sdb.Player ? `  |  U: ${sdb.Player.PrimaryRiotAccount.riotIGN} (${sdb.Player.name})` : ``}`)
+
+		return strArr.join(``)
+	});
+
+	// write (or overwrite) the draft board file and send it
+	fs.writeFileSync(`./cache/draft_board_${tier}.js`, `${tier} Draft Board\n` + output.join(`\n`));
+	return await interaction.editReply({ content: `The ${tier} tier's draft board is attached!`, files: [`./cache/draft_board_${tier}.js`] })
+};
+
+async function setKeeperPick(interaction, roundNumber, pickNumber, discordID) {
+	// get current season from the database
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({ where: { name: `current_season` } });
+	const season = Number(currentSeasonResponse.value);
+
+	const player = await Player.getBy({ discordID: discordID });
+
+	if (player === null) return await interaction.editReply(`This player doesn't exist!`);
+	if (player.PrimaryRiotAccount.MMR === null) return await interaction.editReply(`This player doesn't have an MMR!`);
+
+
+	// get MMR tier lines from the database
+	const mmrCapResponse = await prisma.controlPanel.findMany({ where: { name: { contains: `mmr_cap_player` } } });
+	const prospectMMRCap = mmrCapResponse.find(r => r.name === `prospect_mmr_cap_player`).value
+	const apprenticeMMRCap = mmrCapResponse.find(r => r.name === `apprentice_mmr_cap_player`).value
+	const expertMMRCap = mmrCapResponse.find(r => r.name === `expert_mmr_cap_player`).value
+
+	// determine a player's MMR
+	const playerEffectiveMMR = player.PrimaryRiotAccount.MMR.mmrEffective;
+	let playerTier;
+	if (playerEffectiveMMR <= prospectMMRCap) playerTier = Tier.PROSPECT;
+	else if (playerEffectiveMMR <= apprenticeMMRCap) playerTier = Tier.APPRENTICE;
+	else if (playerEffectiveMMR <= expertMMRCap) playerTier = Tier.EXPERT;
+	else playerTier = Tier.MYTHIC;
+
+
+	const pick = await prisma.draft.findFirst({
+		where: {
+			AND: [
+				{ season: season },
+				{ tier: playerTier },
+				{ round: roundNumber },
+				{ pick: pickNumber }
+			]
+		},
+		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } }
+	});
+
+	// checks
+	if (pick === null) return await interaction.editReply(`That pick doesn't exist`);
+	if (pick.Player !== null) return await interaction.editReply(`That pick already has a player in that slot!`);
+	if (player.Team === null) return await interaction.editReply(`That player isn't signed to a franchise and cannot be a keeper pick.`);
+	if (player.Team.Franchise.id !== pick.franchise) return await interaction.editReply(`The franchise \`${player.Team.Franchise.name}\` doesn't own the round ${roundNumber}, pick ${pickNumber} in the ${playerTier} tier. The franchise that currently owns this draft pick is \`${pick.Franchise.name}\``);
+
+	// update the draft board with the franchise's keeper pick
+	const updatedPick = await prisma.draft.update({
+		where: { id: pick.id },
+		data: { userID: player.id, keeper: true },
+		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } }
+	});
+
+	if (updatedPick.userID !== player.id) return await interaction.editReply(`There was an error. The database was not updated`);
+	else return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round ${roundNumber}, pick ${pickNumber}`);
+}
