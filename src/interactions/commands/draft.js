@@ -84,8 +84,23 @@ module.exports = {
 			case `generate-lottery`: {
 				const tier = _hoistedOptions[0].value;
 
-				await draft(interaction, tier);
-				break;
+				return await draft(interaction, tier);
+			}
+			case `award-comp-picks`: {
+				const round = _hoistedOptions[0].value;
+				const tier = _hoistedOptions[1].value;
+				const franchiseName = _hoistedOptions[2].value;
+
+				return await awardCompPicks(interaction, round, tier, franchiseName);
+			}
+			case `fulfill-future-trade`: {
+				const round = _hoistedOptions[0].value;
+				const tier = _hoistedOptions[1].value;
+				const franchise_from = _hoistedOptions[2].value;
+				const franchise_to = _hoistedOptions[3].value;
+
+				return await fulfillFutureTrade();
+			}
 		}
 	},
 };
@@ -330,3 +345,46 @@ async function draft(interaction, tier) {
 
 	return await interaction.editReply({ embeds: [embed], files: [`./cache/draft_lottery_${tier}.json`] });
 }
+
+async function awardCompPicks(interaction, round, tier, franchiseName) {
+	// get current season
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({ where: { name: `current_season` } });
+	const season = Number(currentSeasonResponse.value);
+
+	// get franchise, it's team in the tier (if it exists) & the filtered draft board
+	const franchise = await Franchise.getBy({ name: franchiseName });
+	const franchiseTeamInTier = franchise.Teams.find(t => t.tier === tier);
+	const draftBoard = await prisma.draft.findMany({
+		where: {
+			AND: [
+				{ season: season },
+				{ tier: tier },
+				{ round: round }
+			]
+		}
+	});
+
+	// checks
+	if (franchiseTeamInTier === undefined) return await interaction.editReply(`The franchise \`${franchiseName}\` doesn't have a team in the tier you're trying to award a comp pick for. If you believe this to be an error, please let the tech team know.`);
+	if (franchiseTeamInTier.active === false) return await interaction.editReply(`The franchise \`${franchiseName}\` doesn't have an active team in the tier you're trying to award a comp pick for. If you believe this to be an error, please let the tech team know.`);
+	if (draftBoard.length === 0) return await interaction.editReply(`There are no picks in the season ${season} ${tier} draft for round ${round}. If you believe this to be an error, please let the tech team know.`);
+
+	// the new comp pick number will be the last pick in the round + 1
+	const compPickNumber = draftBoard.pop().pick + 1;
+
+	await prisma.draft.create({
+		data: {
+			season: season,
+			tier: tier,
+			round: round,
+			pick: compPickNumber,
+			franchise: franchise.id
+		}
+	});
+	
+	return await interaction.editReply(`The round ${round} ${tier} compensation pick has been successfully awarded to ${franchiseName} and the database has been updated.`)
+};
+
+async function fulfillFutureTrade() {
+
+};
