@@ -207,7 +207,13 @@ module.exports = class BotClient extends Client {
         autocompleteFiles.forEach(autocompleteFile => {
             const autocompleteFilePath = path.resolve(__dirname, `../../${directory}/${autocompleteFile}`);
             const autocomplete = require(autocompleteFilePath);
+
+            // add autocompletes to the collection, including any/all aliases
             this.autocompletes.set(autocomplete.name, autocomplete);
+            if (autocomplete.alias) {
+                autocomplete.alias.forEach(alias => this.autocompletes.set(alias, autocomplete));
+            }
+            
             success++;
         });
 
