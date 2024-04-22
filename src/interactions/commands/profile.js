@@ -1,6 +1,7 @@
 const { EmbedBuilder, GuildMember } = require(`discord.js`);
 const { Player, Franchise } = require(`../../../prisma`);
-const { PlayerStatusCode } = require(`../../../utils/enums`);
+const { prisma } = require(`../../../prisma/prismadb`);
+const { LeagueStatus } = require("@prisma/client");
 
 /** Riot's API endpoint to fetch a user's account by their puuid 
  * @TODO Update to the internal VDC endpoint once it's ready */
@@ -30,10 +31,10 @@ async function update(interaction) {
 
   const userId = interaction.user.id;
   const playerData = await Player.getBy({ discordID: userId });
-  if (!playerData.primaryRiotID) return await interaction.editReply({ content: `I looked through our filing cabinets and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!` });
+  if (!playerData.primaryRiotAccountID) return await interaction.editReply({ content: `I looked through our filing cabinets and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!` });
 
   // get the player's updated IGN from Riot's accountByPuuid endpoint
-  const puuid = playerData.primaryRiotID;
+  const puuid = playerData.primaryRiotAccountID;
   const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
   if (!response.ok) return await interaction.editReply({ content: `There was a problem checking Riot's filing cabinets! Please try again later and/or let a bot developer know!` });
 
@@ -47,18 +48,21 @@ async function update(interaction) {
   const guildMember = await interaction.guild.members.fetch(userId);
 
   // If database value is the exact same from the API call, don't update the database- simply continue & try to update the nickname
-  if (ignFromDB === gameName && guildMember.nickname.includes(gameName)) {
+  if (ignFromDB === gameName && guildMember.nickname?.includes(gameName)) {
     return await interaction.editReply({ content: `Well... This is awkward. The database already has your most up-to-date IGN and upon some super close inspection, your nickname looks like it's correct as well!!` });
   } else {
-    const updatedPlayer = await Player.updateIGN({ puuid: puuid, newRiotID: updatedIGN });
-    if (updatedPlayer.riotID !== updatedIGN) return await interaction.editReply({ content: `Looks like there was an error and the database wasn't updated! Please try again later and/or let a bot developer know!` });
+    const updatedPlayer = await prisma.account.update({
+      where: { providerAccountId: puuid },
+      data: { riotIGN: updatedIGN }
+    });
+    if (updatedPlayer.riotIGN !== updatedIGN) return await interaction.editReply({ content: `Looks like there was an error and the database wasn't updated! Please try again later and/or let a bot developer know!` });
   }
 
   // check to make sure the bot can update the user's nickname
   if (!guildMember.manageable) return await interaction.editReply({ content: `The database was updated to reflect your new IGN: (\`${updatedIGN}\`), but I can't update your nickname- your roles are higher than mine! You will need to update your nickname manually!` });
 
   // update the user's nickname in the server
-  const slug = playerData.team ? (await Franchise.getBy({teamID: playerData.team})).slug : playerData.status == PlayerStatusCode.FREE_AGENT ? `FA` : `RFA`;
+  const slug = playerData.team ? (await Franchise.getBy({ teamID: playerData.team })).slug : playerData.Status.leagueStatus == LeagueStatus.FREE_AGENT ? `FA` : playerData.Status.leagueStatus == LeagueStatus.DRAFT_ELIGIBLE ? `DE` : `RFA`;
   const accolades = guildMember.nickname?.match(emoteregex);
   guildMember.setNickname(`${slug} | ${gameName} ${accolades ? accolades.join(``) : ``}`);
 

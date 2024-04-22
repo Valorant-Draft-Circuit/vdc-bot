@@ -11,6 +11,7 @@
  * @option Number
  * @option Attachment
  */
+const { Tier } = require("@prisma/client");
 const { ApplicationCommandOptionType } = require(`discord.js`);
 
 module.exports = {
@@ -181,13 +182,6 @@ module.exports = {
                     type: ApplicationCommandOptionType.User,
                     required: true
                 },
-                {
-                    name: `team`,
-                    description: "The team to sign the renew to",
-                    type: ApplicationCommandOptionType.String,
-                    required: true,
-                    autocomplete: true
-                }
             ]
         },
         {
@@ -207,31 +201,12 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     choices: [
-                        { name: `Prospect`, value: `Prospect` },
-                        { name: `Apprentice`, value: `Apprentice` },
-                        { name: `Expert`, value: `Expert` },
-                        { name: `Mythic`, value: `Mythic` },
+                        { name: `Prospect`, value: Tier.PROSPECT },
+                        { name: `Apprentice`, value: Tier.APPRENTICE },
+                        { name: `Expert`, value: Tier.EXPERT },
+                        { name: `Mythic`, value: Tier.MYTHIC },
                     ]
                 }
-            ]
-        },
-        {
-            name: "swap",
-            description: "Swap a rostered player for a Free Agent",
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                {
-                    name: "cut",
-                    description: "The player to cut",
-                    type: ApplicationCommandOptionType.User,
-                    required: true
-                },
-                {
-                    name: "sign",
-                    description: "The player to sign",
-                    type: ApplicationCommandOptionType.User,
-                    required: true
-                },
             ]
         },
         {

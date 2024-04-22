@@ -5,50 +5,44 @@ const { requestUpdateTier, confirmUpdateTier } = require("./updateTier");
 const { requestRenew, confirmRenew } = require("./renew");
 const { requestSub, confirmSub } = require("./sub");
 const { requestUnsub, confirmUnsub } = require("./unsub");
-const { requestIR, confirmSetIR, confirmRemoveIR } = require("./ir");
-const { requestSwap, confirmSwap } = require("./swap");
+const { requestIR, confirmToggleIR } = require("./ir");
 const { requestRetire, confirmRetire } = require("./retire");
 
 module.exports = {
-  sign: {
-    sign: requestSign,
-    confirm: confirmSign,
-  },
-  cut: {
-    cut: requestCut,
-    confirm: confirmCut,
-  },
-  draftSign: {
-    draftSign: requestDraftSign,
-    confirm: confirmDraftSign,
-  },
-  updateTier: {
-    updateTier: requestUpdateTier,
-    confirm: confirmUpdateTier,
-  },
-  renew: {
-    renew: requestRenew,
-    confirm: confirmRenew,
-  },
-  sub: {
-    sub: requestSub,
-    confirm: confirmSub,
-  },
-  unsub: {
-    unsub: requestUnsub,
-    confirm: confirmUnsub,
-  },
-  ir: {
-    ir: requestIR,
-    confirmSet: confirmSetIR,
-    confirmRemove: confirmRemoveIR,
-  },
-  swap: {
-    swap: requestSwap,
-    confirm: confirmSwap,
-  },
-  retire: {
-    retire: requestRetire,
-    confirm: confirmRetire,
-  },
+	sign: {
+		sign: requestSign,
+		confirm: confirmSign,
+	},
+	cut: {
+		cut: requestCut,
+		confirm: confirmCut,
+	},
+	draftSign: {
+		draftSign: requestDraftSign,
+		confirm: confirmDraftSign,
+	},
+	updateTier: {
+		updateTier: requestUpdateTier,
+		confirm: confirmUpdateTier,
+	},
+	renew: {
+		renew: requestRenew,
+		confirm: confirmRenew,
+	},
+	sub: {
+		sub: requestSub,
+		confirm: confirmSub,
+	},
+	unsub: {
+		unsub: requestUnsub,
+		confirm: confirmUnsub,
+	},
+	ir: {
+		ir: requestIR,
+		confirm: confirmToggleIR,
+	},
+	retire: {
+		retire: requestRetire,
+		confirm: confirmRetire,
+	},
 };

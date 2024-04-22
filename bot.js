@@ -40,7 +40,7 @@ client.logger.console({
 
 client.loadSlashCommands(`src/interactions/commands`);
 client.loadButtons(`src/interactions/buttons`);
-// client.loadSelectMenus(`src/interactions/selectMenus`);
+client.loadSelectMenus(`src/interactions/selectMenus`);
 client.loadAutocomplete(`src/interactions/autocomplete`);
 client.loadEvents(`src/events`);
 

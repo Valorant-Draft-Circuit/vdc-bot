@@ -1,15 +1,17 @@
 const { LeagueStatus } = require("@prisma/client");
 const { Player, Transaction, Flags } = require("../../../prisma");
+const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES, PlayerStatusCode } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
 
 const validStatusesToDE = [
-    LeagueStatus.APPROVED, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT
+    LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT
 ];
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 const rateLimitinMS = 5000;
 let bulkWelcomeFlag = false;
+
 
 module.exports = {
 
@@ -44,15 +46,31 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     const guildMember = await interaction.guild.members.fetch(discordID);
     const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
 
+    // editreply vs normal message send
+    const replyFunction = (obj) => !bulkWelcomeFlag ?
+        interaction.editReply(obj) :
+        interaction.channel.send(obj);
+
     // status checks
     // check to see if the bot can perform any actions on this user (i.e. if the bot isn't high enough in role hierarchy)
-    const replyFunction = (obj) => !bulkWelcomeFlag ? interaction.editReply(obj) : interaction.channel.send(obj);
-    if (!guildMember.manageable) return await replyFunction({ content: `I can't manage ${guildMember.user}- their roles are higher than mine! You will need to perform this action manually!` });
-    if (playerData == undefined) return await replyFunction({ content: `${guildMember.user} doesn't exist in the database!` });
-    if (!validStatusesToDE.includes(playerData.Status.leagueStatus)) return await replyFunction({ content: `${guildMember.user} doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!` });
+
+    if (!guildMember.manageable) return await replyFunction({
+        content: `I can't manage ${guildMember.user}- their roles are higher than mine! You will need to perform this action manually!`
+    });
+    if (playerData == undefined) return await replyFunction({
+        content: `${guildMember.user} doesn't exist in the database!`
+    });
+    if (!validStatusesToDE.includes(playerData.Status.leagueStatus)) return await replyFunction({
+        content: `${guildMember.user} doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!`
+    });
+    
+    const franchises = await prisma.franchise.findMany({ where: { active: true } })
+    const franchiseRoles = franchises.map(f => f.roleID);
+    await guildMember.roles.remove(franchiseRoles);
 
     // renove the viewer role & add the league role
     if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
+    if (guildMember._roles.includes(ROLES.LEAGUE.FORMER_PLAYER)) await guildMember.roles.remove(ROLES.LEAGUE.FORMER_PLAYER);
     await guildMember.roles.add(ROLES.LEAGUE.LEAGUE);
 
     // update the name to match convention
@@ -65,12 +83,16 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
         case `DE`:
             await guildMember.roles.add(ROLES.LEAGUE.DRAFT_ELIGIBLE);
             await Transaction.updateStatus({ playerID: discordID, status: LeagueStatus.DRAFT_ELIGIBLE });
-            acceptedChannel.send({ content: `Welcome ${guildMember.user} to the league!!` });
+            acceptedChannel.send({
+                content: `Welcome ${guildMember.user} to the league!!`
+            });
             break;
         case `RFA`:
             await guildMember.roles.add(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
             await Transaction.updateStatus({ playerID: discordID, status: LeagueStatus.RESTRICTED_FREE_AGENT });
-            acceptedChannel.send({ content: `Welcome ${guildMember.user} to the league as an RFA!` });
+            acceptedChannel.send({
+                content: `Welcome ${guildMember.user} to the league as an RFA!`
+            });
             break;
         default:
             throw new Error(`INVALID STATUS VALUE. EXPECTED DE or RFA & instead got ${welcomeAs}`);
@@ -83,14 +105,15 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 }
 
 async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction) {
-    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED]);
+    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.RESTRICTED_FREE_AGENT]);
 
     const playersToWelcome = approvedPlayers.map((player) => {
         const playerflags = Number(player.flags);
         const welcomeObject = { discordID: player.Accounts[0].providerAccountId }
 
         // Determine if the player is being welcomed as a DE or RFA
-        const welcomeAsRFA = Boolean(playerflags & Flags.REGISTERED_AS_RFA)
+        // const welcomeAsRFA = Boolean(playerflags & Flags.REGISTERED_AS_RFA)
+        const welcomeAsRFA = player.Status.leagueStatus == LeagueStatus.RESTRICTED_FREE_AGENT
         welcomeObject.welcomeAs = welcomeAsRFA ? `RFA` : `DE`;
 
         // return the object
@@ -114,14 +137,15 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
 
     let i = 0;
     const int = setInterval(async () => {
-        await singleWelcome(interaction, playersToWelcome[i]);
+        singleWelcome(interaction, playersToWelcome[i]);
+        console.log(playersToWelcome[i], i, playersToWelcome.length);
 
-        if (i !== playersToWelcome.length - 1) {
-            await interaction.followUp({content: `Hey there, ${interaction.user}, the players have been welcomed!`})
+        if (i === playersToWelcome.length - 1) {
+            await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed!` });
             return clearInterval(int);
         };
         i++
-    }, rateLimitinMS)
+    }, rateLimitinMS);
 
-    return await interaction.editReply({ embeds: [embed] })
+    return await interaction.editReply({ embeds: [embed] });
 }
