@@ -109,9 +109,15 @@ module.exports = {
 			case `set-keeper-pick`: {
 				const round = _hoistedOptions[0].value;
 				const pick = _hoistedOptions[1].value;
-				const discordID = _hoistedOptions[2].value;
+				const tier = _hoistedOptions[2].value
+				const discordID = _hoistedOptions[3].value;
 
-				return await setKeeperPick(interaction, round, pick, discordID);
+				return await setKeeperPick(interaction, round, pick, tier, discordID);
+			}
+			case `reset-keeper-pick`: {
+				const discordID = _hoistedOptions[0].value;
+
+				return await resetKeeperPick(interaction, discordID);
 			}
 		}
 	},
@@ -500,7 +506,7 @@ async function viewTierDraftBoard(interaction, tier) {
 	return await interaction.editReply({ content: `The ${tier} tier's draft board is attached!`, files: [`./cache/draft_board_${tier}.js`] })
 };
 
-async function setKeeperPick(interaction, roundNumber, pickNumber, discordID) {
+async function setKeeperPick(interaction, roundNumber, pickNumber, tier, discordID) {
 	// get current season from the database
 	const currentSeasonResponse = await prisma.controlPanel.findFirst({ where: { name: `current_season` } });
 	const season = Number(currentSeasonResponse.value);
@@ -510,27 +516,25 @@ async function setKeeperPick(interaction, roundNumber, pickNumber, discordID) {
 	if (player === null) return await interaction.editReply(`This player doesn't exist!`);
 	if (player.PrimaryRiotAccount.MMR === null) return await interaction.editReply(`This player doesn't have an MMR!`);
 
+	// pull the draft board to determine if the player is already set as a keeper pick
+	const draftBoard = await prisma.draft.findMany({
+		where: {
+			AND: [
+				{ season: season },
+				{ tier: tier },
+			]
+		},
+		include: { Player: true }
+	});
 
-	// get MMR tier lines from the database
-	const mmrCapResponse = await prisma.controlPanel.findMany({ where: { name: { contains: `mmr_cap_player` } } });
-	const prospectMMRCap = mmrCapResponse.find(r => r.name === `prospect_mmr_cap_player`).value
-	const apprenticeMMRCap = mmrCapResponse.find(r => r.name === `apprentice_mmr_cap_player`).value
-	const expertMMRCap = mmrCapResponse.find(r => r.name === `expert_mmr_cap_player`).value
-
-	// determine a player's MMR
-	const playerEffectiveMMR = player.PrimaryRiotAccount.MMR.mmrEffective;
-	let playerTier;
-	if (playerEffectiveMMR <= prospectMMRCap) playerTier = Tier.PROSPECT;
-	else if (playerEffectiveMMR <= apprenticeMMRCap) playerTier = Tier.APPRENTICE;
-	else if (playerEffectiveMMR <= expertMMRCap) playerTier = Tier.EXPERT;
-	else playerTier = Tier.MYTHIC;
-
+	const keeperSearch = draftBoard.find(db => db.Player?.id === player.id);
+	if (keeperSearch !== undefined) return await interaction.editReply(`This player is already set as a keeper pick (R:${keeperSearch.round}, P:${keeperSearch.pick})`);
 
 	const pick = await prisma.draft.findFirst({
 		where: {
 			AND: [
 				{ season: season },
-				{ tier: playerTier },
+				{ tier: tier },
 				{ round: roundNumber },
 				{ pick: pickNumber }
 			]
@@ -542,7 +546,7 @@ async function setKeeperPick(interaction, roundNumber, pickNumber, discordID) {
 	if (pick === null) return await interaction.editReply(`That pick doesn't exist`);
 	if (pick.Player !== null) return await interaction.editReply(`That pick already has a player in that slot!`);
 	if (player.Team === null) return await interaction.editReply(`That player isn't signed to a franchise and cannot be a keeper pick.`);
-	if (player.Team.Franchise.id !== pick.franchise) return await interaction.editReply(`The franchise \`${player.Team.Franchise.name}\` doesn't own the round ${roundNumber}, pick ${pickNumber} in the ${playerTier} tier. The franchise that currently owns this draft pick is \`${pick.Franchise.name}\``);
+	if (player.Team.Franchise.id !== pick.franchise) return await interaction.editReply(`The franchise \`${player.Team.Franchise.name}\` doesn't own the round ${roundNumber}, pick ${pickNumber} in the ${tier} tier. The franchise that currently owns this draft pick is \`${pick.Franchise.name}\``);
 
 	// update the draft board with the franchise's keeper pick
 	const updatedPick = await prisma.draft.update({
@@ -553,4 +557,37 @@ async function setKeeperPick(interaction, roundNumber, pickNumber, discordID) {
 
 	if (updatedPick.userID !== player.id) return await interaction.editReply(`There was an error. The database was not updated`);
 	else return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round ${roundNumber}, pick ${pickNumber}`);
+}
+
+async function resetKeeperPick(interaction, discordID) {
+	// get current season from the database
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({ where: { name: `current_season` } });
+	const season = Number(currentSeasonResponse.value);
+
+	const player = await Player.getBy({ discordID: discordID });
+	if (player === null) return await interaction.editReply(`This player doesn't exist!`);
+
+	// pull the draft board to determine if the player is already set as a keeper pick
+	const draftBoard = await prisma.draft.findMany({
+		where: {
+			AND: [
+				{ season: season },
+			]
+		},
+		include: { Player: true }
+	});
+	if (draftBoard.length === 0) return await interaction.editReply(`The ${player.Team.tier} draft lottery for season ${season} has not happened yet, and so there is nothing to display.`);
+
+	const keeperSearch = draftBoard.find(db => db.Player?.id === player.id);
+	if (keeperSearch === undefined) return await interaction.editReply(`This player is not currently set as a keeper pick anywhere in the season ${season} draft.`);
+
+	// update the draft board with the franchise's keeper pick
+	const updatedPick = await prisma.draft.update({
+		where: { id: keeperSearch.id },
+		data: { userID: null, keeper: false },
+		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } }
+	});
+
+	if (updatedPick.userID !== null) return await interaction.editReply(`There was an error. The database was not updated`);
+	else return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been removed from the R:${keeperSearch.round}, P:${keeperSearch.pick} keeper slot.`);
 }

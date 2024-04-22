@@ -40,7 +40,7 @@ module.exports = {
 		},
 		{
 			name: `award-comp-picks`,
-			description: "Award a compensation picks to a franchise",
+			description: "Award a compensation pick to a franchise",
 			type: ApplicationCommandOptionType.Subcommand,
 			default_member_permissions: `0x0000000000002000`,
 			options: [
@@ -134,6 +134,7 @@ module.exports = {
 			name: `set-keeper-pick`,
 			description: "Set a keeper pick for a tier",
 			type: ApplicationCommandOptionType.Subcommand,
+			default_member_permissions: `0x0000000000002000`,
 			options: [
 				{
 					name: "round",
@@ -147,6 +148,32 @@ module.exports = {
 					type: ApplicationCommandOptionType.Number,
 					required: true,
 				},
+				{
+					name: "tier",
+					description: "Select a tier",
+					type: ApplicationCommandOptionType.String,
+					required: true,
+					choices: [
+						{ name: `Prospect`, value: Tier.PROSPECT },
+						{ name: `Apprentice`, value: Tier.APPRENTICE },
+						{ name: `Expert`, value: Tier.EXPERT },
+						{ name: `Mythic`, value: Tier.MYTHIC },
+					],
+				},
+				{
+					name: "user",
+					description: "The user to set as keeper pick",
+					type: ApplicationCommandOptionType.User,
+					required: true,
+				},
+			],
+		},
+		{
+			name: `reset-keeper-pick`,
+			description: "Reset/remove a keeper pick",
+			type: ApplicationCommandOptionType.Subcommand,
+			default_member_permissions: `0x0000000000002000`,
+			options: [
 				{
 					name: "user",
 					description: "The user to set as keeper pick",
