@@ -7,7 +7,7 @@
     "start": "node bot.js",
     "deploy": "npm run cache && npm run start",
 
-    "dev": "nodemon --no-warnings bot.js",
+    "dev": "nodemon --no-warnings --ignore ./cache/ bot.js",
     "compile":"tsc utils/enums/index && tsc prisma/index",
     "cache" : "node ./cache/cache.js",
 
