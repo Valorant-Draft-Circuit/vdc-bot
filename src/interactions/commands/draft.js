@@ -439,6 +439,32 @@ async function draft(interaction, tier) {
     pick = 1;
     console.log(`-----`);
   }
+  snakedTeams.forEach((team) => {
+    console.log(
+      `Franchise:`,
+      team.franchise,
+      `Season:`,
+      season,
+      `Pick:`,
+      pick,
+      `round:`,
+      99,
+      tier,
+      "Keeper:",
+      true
+    );
+
+    draftLottery.push({
+      season: season,
+      tier: tier,
+      round: 99,
+      pick: pick,
+      franchise: teamLottery.franchise,
+      keeper: true,
+      // team: draftTeams.find(t => t.Franchise.id === snakedTeams[l].franchise && t.tier === tier).name
+    });
+    pick++;
+  });
 
   const teamOrder = [];
 
