@@ -22,7 +22,7 @@ module.exports = {
         try {
             if (interaction.isCommand()) return await executeCommand(client, interaction);
             if (interaction.isButton()) return await executeButton(client, interaction);
-            if (interaction.isSelectMenu()) return await executeSelectMenu(client, interaction);
+            if (interaction.isAnySelectMenu()) return await executeSelectMenu(client, interaction);
             if (interaction.isAutocomplete()) return await executeAutocomplete(client, interaction);
         } catch (err) {
             client.logger.console({
