@@ -44,6 +44,8 @@ module.exports = {
 				return await trade.displayFranchiseTradeOptions(interaction, 2, `PLAYER`);
 			case TransactionsNavigationOptions.TRADE_F2DP:
 				return await trade.displayFranchiseTradeOptions(interaction, 2, `DRAFT_PICK`);
+			case TransactionsNavigationOptions.TRADE_CONFIRM:
+				return await trade.confirm(interaction);
 
 
 			//  CANCEL BUTTONS  ####################################
