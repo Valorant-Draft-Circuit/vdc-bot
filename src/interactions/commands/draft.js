@@ -617,9 +617,11 @@ async function resetKeeperPick(interaction, discordID) {
 	if (keeperSearch === undefined) return await interaction.editReply(`This player is not currently set as a keeper pick anywhere in the season ${season} draft.`);
 
 	// update the draft board with the franchise's keeper pick
+	// Round 99 is the base keeper round and ergo, those cannot be traded or changed from being keeper picks
+	const data = keeperSearch.round == 99 ? { userID: null } : { userID: null, keeper: false };
 	const updatedPick = await prisma.draft.update({
 		where: { id: keeperSearch.id },
-		data: { userID: null, keeper: false },
+		data: data,
 		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } },
 	});
 
