@@ -97,18 +97,14 @@ async function executeSelectMenu(client, interaction) {
     const selectMenuIDComponent = interaction.customId.split(`_`);
     let selectMenuID, selectMenu, args;
 
-    switch (selectMenuIDComponent.length) {
-        case 1: // select menu is not part of a managed set
-            selectMenuID = selectMenuIDComponent[0];
-            selectMenu = client.selectMenus.get(selectMenuID);
-            args = [interaction];
-            break;
-
-        case 2: // select menu is part of a managed set (second arg is enum)
-            selectMenuID = `${selectMenuIDComponent[0]}Manager`;
-            selectMenu = client.selectMenus.get(selectMenuID);
-            args = [interaction, selectMenuIDComponent[1]];
-            break;
+    if (selectMenuIDComponent.length == 1) {
+        selectMenuID = selectMenuIDComponent[0];
+        selectMenu = client.selectMenus.get(selectMenuID);
+        args = [interaction];
+    } else {
+        selectMenuID = `${selectMenuIDComponent[0]}Manager`;
+        selectMenu = client.selectMenus.get(selectMenuID);
+        args = [interaction, selectMenuIDComponent[1]];
     }
 
     if (selectMenu) {
