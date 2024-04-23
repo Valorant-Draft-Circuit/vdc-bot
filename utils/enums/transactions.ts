@@ -24,5 +24,12 @@ export enum TransactionsNavigationOptions {
     SUB_CONFIRM                 = 210,
     UNSUB_CONFIRM               = 211,
 
+    TRADE_CONFIRM               = 220,
+    TRADE_RESET                 = 221,
+    TRADE_F1P                   = 222, // Show franchise 1's players
+    TRADE_F2P                   = 223, // Show franchise 2's players
+    TRADE_F1DP                  = 224, // Show franchise 1's draft picks
+    TRADE_F2DP                  = 225, // Show franchise 2's draft picks
+
     CANCEL                      = 999,
 }

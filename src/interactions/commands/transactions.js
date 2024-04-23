@@ -1,6 +1,6 @@
 "use strict";
 
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, } = require(`../subcommands/transactions`);
+const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, trade} = require(`../subcommands/transactions`);
 
 
 const teamMMRAllowance = {
@@ -84,6 +84,12 @@ module.exports = {
 				// Player to retire
 				const player = _hoistedOptions[0];
 				return retire.retire(interaction, player);
+			}
+			case `trade`: {
+				// Player to retire
+				const franchise1 = _hoistedOptions[0].value;
+				const franchise2 = _hoistedOptions[1].value;
+				return trade.trade(interaction, franchise1, franchise2);
 			}
 			default:
 				return interaction.editReply(`That's not a valid subcommand or this command is a work in progress!`);

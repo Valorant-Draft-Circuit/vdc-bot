@@ -116,49 +116,6 @@ module.exports = {
             ]
         },
         {
-            name: "trade",
-            description: "Trade players between teams",
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                {
-                    name: "cut",
-                    description: "The player to cut from the team",
-                    type: ApplicationCommandOptionType.User,
-                    required: true
-                },
-                {
-                    name: "sign",
-                    description: "The player to sign to the team",
-                    type: ApplicationCommandOptionType.User,
-                    required: true
-                },
-                {
-                    name: "optional-cut-1",
-                    description: "The player to cut from the team",
-                    type: ApplicationCommandOptionType.User,
-                    required: false
-                },
-                {
-                    name: "optional-cut-2",
-                    description: "The player to cut from the team",
-                    type: ApplicationCommandOptionType.User,
-                    required: false
-                },
-                {
-                    name: "optional-sign-1",
-                    description: "The player to sign to the team",
-                    type: ApplicationCommandOptionType.User,
-                    required: false
-                },
-                {
-                    name: "optional-sign-2",
-                    description: "The player to sign to the team",
-                    type: ApplicationCommandOptionType.User,
-                    required: false
-                }
-            ]
-        },
-        {
             name: "ir",
             description: "Toggle a rostered player's Inactive Reserve Status",
             type: ApplicationCommandOptionType.Subcommand,
@@ -221,6 +178,41 @@ module.exports = {
                     required: true
                 },
             ]
+        },
+        {
+            name: "trade",
+            description: "Trade picks & players between two franchises",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `franchise-1`,
+                    description: "The first franchise in the trade",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: franchiseChoices()
+                },
+                {
+                    name: `franchise-2`,
+                    description: "The second franchise in the trade",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: franchiseChoices()
+                }
+            ]
         }
     ]
+}
+
+function franchiseChoices() {
+    const franchiseData = require(`../../cache/franchises.json`);
+    const franchiseChoices = [];
+
+    franchiseData.forEach(franchise => {
+        franchiseChoices.push({
+            name: `${franchise.slug} — ${franchise.name}`,
+            value: franchise.name,
+        })
+    });
+
+    return franchiseChoices;
 }
