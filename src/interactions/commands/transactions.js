@@ -1,6 +1,6 @@
 "use strict";
 
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, trade} = require(`../subcommands/transactions`);
+const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, captain, retire, trade} = require(`../subcommands/transactions`);
 
 
 const teamMMRAllowance = {
@@ -79,6 +79,10 @@ module.exports = {
 			case `ir`: {
 				const player = _hoistedOptions[0];
 				return ir.ir(interaction, player);
+			}
+			case `captain`: {
+				const player = _hoistedOptions[0];
+				return captain.captain(interaction, player);
 			}
 			case `retire`: {
 				// Player to retire
