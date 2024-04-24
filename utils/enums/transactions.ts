@@ -21,6 +21,9 @@ export enum TransactionsNavigationOptions {
     IR_SET_COMFIRM              = 200,
     IR_REMOVE_COMFIRM           = 201,
 
+    CAPTAIN_SET_COMFIRM         = 202,
+    CAPTAIN_REMOVE_COMFIRM      = 203,
+
     SUB_CONFIRM                 = 210,
     UNSUB_CONFIRM               = 211,
 

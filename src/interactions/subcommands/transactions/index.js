@@ -6,6 +6,7 @@ const { requestRenew, confirmRenew } = require("./renew");
 const { requestSub, confirmSub } = require("./sub");
 const { requestUnsub, confirmUnsub } = require("./unsub");
 const { requestIR, confirmToggleIR } = require("./ir");
+const { requestCaptain, confirmToggleCaptain } = require("./captain");
 const { requestRetire, confirmRetire } = require("./retire");
 const { requestTrade, resetTrade, confirmTrade, displayFranchiseTradeOptions, playerTradeRequest, draftPickTradeRequest } = require("./trade");
 
@@ -41,6 +42,10 @@ module.exports = {
 	ir: {
 		ir: requestIR,
 		confirm: confirmToggleIR,
+	},
+	captain: {
+		captain: requestCaptain,
+		confirm: confirmToggleCaptain,
 	},
 	retire: {
 		retire: requestRetire,
