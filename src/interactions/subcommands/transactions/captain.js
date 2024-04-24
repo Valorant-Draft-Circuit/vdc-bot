@@ -50,7 +50,7 @@ async function requestCaptain(interaction, player) {
 
 	console.log(playerData.Captain == null)
 	if (teamData.Captain != null) {
-		if (teamData.Captain !== playerData.id) return await interaction.editReply(`This player isn't the captain for their team and cannot be removed!`);
+		if (teamData.captain !== playerData.id) return await interaction.editReply(`This player isn't the captain for their team and cannot be removed!`);
 		// REMOVE A TEAM CAPTAIN
 		embed.addFields({
 			name: `\u200B`,
