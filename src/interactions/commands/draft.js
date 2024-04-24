@@ -116,12 +116,11 @@ module.exports = {
 				return await viewTierDraftBoard(interaction, tier);
 			}
 			case `set-keeper-pick`: {
-				const round = _hoistedOptions[0].value;
-				const pick = _hoistedOptions[1].value;
-				const tier = _hoistedOptions[2].value;
-				const discordID = _hoistedOptions[3].value;
+				const overallPick = _hoistedOptions[0].value;
+				const tier = _hoistedOptions[1].value;
+				const discordID = _hoistedOptions[2].value;
 
-				return await setKeeperPick(interaction, round, pick, tier, discordID);
+				return await setKeeperPick(interaction, overallPick, tier, discordID);
 			}
 			case `reset-keeper-pick`: {
 				const discordID = _hoistedOptions[0].value;
@@ -445,6 +444,7 @@ async function awardCompPicks(interaction, round, tier, franchiseName) {
 			round: round,
 			pick: compPickNumber,
 			franchise: franchise.id,
+			keeper: round == 99
 		},
 	});
 
@@ -522,8 +522,10 @@ async function viewTierDraftBoard(interaction, tier) {
 		.sort((a, b) => a.pick - b.pick)
 		.sort((a, b) => a.round - b.round);
 
+
 	// generate a line for each pick and format for display
 	let lRound = 0;
+	let overallPickNumber = 1;
 	const output = sortedDraftBoard.map((sdb) => {
 		let strArr = [];
 		if (sdb.round == lRound + 1) {
@@ -540,11 +542,12 @@ async function viewTierDraftBoard(interaction, tier) {
 				`R: ${String(sdb.round).padEnd(2, ` `)}  |  ` :
 				`R: ` + `K`.padEnd(2, ` `) + `  |  `) +
 			`P: ${String(sdb.pick).padEnd(2, ` `)}  |  ` +
+			`O: ${String(overallPickNumber).padEnd(3, ` `)}  |  ` +
 			`K: ${String(sdb.keeper).padEnd(5, ` `)}  |  ` +
 			`F: ${sdb.Franchise.name.padEnd(25, ` `)} ` +
 			`${sdb.Player ? `  |  U: ${sdb.Player.PrimaryRiotAccount.riotIGN} (${sdb.Player.name})` : ``}`
 		);
-
+		overallPickNumber++
 		return strArr.join(``);
 	});
 
@@ -553,7 +556,7 @@ async function viewTierDraftBoard(interaction, tier) {
 	return await interaction.editReply({ content: `The ${tier} tier's draft board is attached!`, files: [`./cache/draft_board_${tier}.js`], });
 }
 
-async function setKeeperPick(interaction, roundNumber, pickNumber, tier, discordID) {
+async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 	// get current season from the database
 	const currentSeasonResponse = await prisma.controlPanel.findFirst({
 		where: { name: `current_season` },
@@ -566,24 +569,23 @@ async function setKeeperPick(interaction, roundNumber, pickNumber, tier, discord
 	if (player.PrimaryRiotAccount.MMR === null) return await interaction.editReply(`This player doesn't have an MMR!`);
 
 	// pull the draft board to determine if the player is already set as a keeper pick
-	const draftBoard = await prisma.draft.findMany({
+	const draftBoard = (await prisma.draft.findMany({
 		where: { AND: [{ season: season }, { tier: tier }], },
-		include: { Player: true },
-	});
+		include: { Player: true, Franchise: true },
+	}))
+		.sort((a, b) => a.pick - b.pick)
+		.sort((a, b) => a.round - b.round);
 
 	const keeperSearch = draftBoard.find((db) => db.Player?.id === player.id);
 	if (keeperSearch !== undefined) return await interaction.editReply(`This player is already set as a keeper pick (R:${keeperSearch.round}, P:${keeperSearch.pick})`);
 
-	const pick = await prisma.draft.findFirst({
-		where: { AND: [{ season: season }, { tier: tier }, { round: roundNumber }, { pick: pickNumber },], },
-		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } }, },
-	});
+	const pick = draftBoard[overallPickNumber-1];
 
 	// checks
 	if (pick === null) return await interaction.editReply(`That pick doesn't exist`);
 	if (pick.Player !== null) return await interaction.editReply(`That pick already has a player in that slot!`);
 	if (player.Team === null) return await interaction.editReply(`That player isn't signed to a franchise and cannot be a keeper pick.`);
-	if (player.Team.Franchise.id !== pick.franchise) return await interaction.editReply(`The franchise \`${player.Team.Franchise.name}\` doesn't own the round ${roundNumber}, pick ${pickNumber} in the ${tier} tier. The franchise that currently owns this draft pick is \`${pick.Franchise.name}\``);
+	if (player.Team.Franchise.id !== pick.franchise) return await interaction.editReply(`The franchise \`${player.Team.Franchise.name}\` doesn't own the round ${pick.round}, pick ${pick.pick} (overall pick: ${overallPickNumber}) in the ${tier} tier. The franchise that currently owns this draft pick is \`${pick.Franchise.name}\``);
 
 	// update the draft board with the franchise's keeper pick
 	const updatedPick = await prisma.draft.update({
@@ -593,7 +595,7 @@ async function setKeeperPick(interaction, roundNumber, pickNumber, tier, discord
 	});
 
 	if (updatedPick.userID !== player.id) return await interaction.editReply(`There was an error. The database was not updated`);
-	else return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round ${roundNumber}, pick ${pickNumber}`);
+	else return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round ${pick.round}, pick ${pick.pick} (overall pick: ${overallPickNumber})`);
 }
 
 async function resetKeeperPick(interaction, discordID) {
