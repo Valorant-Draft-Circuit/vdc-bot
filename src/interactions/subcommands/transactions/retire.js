@@ -63,7 +63,7 @@ async function confirmRetire(interaction) {
 		.replaceAll(`\``, ``)
 		.split(`\n`)[2];
 
-	const playerData = await Player.getBy({ discordID: playerID });
+	// const playerData = await Player.getBy({ discordID: playerID });
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const guildMember = await interaction.guild.members.fetch(playerID);
 

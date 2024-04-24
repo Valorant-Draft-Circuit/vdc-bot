@@ -72,9 +72,13 @@ async function confirmCut(interaction) {
 	const team = await Team.getBy({ id: playerData.team });
 	const franchise = await Franchise.getBy({ teamID: team.id });
 
-
-	// remove the franchise role and update their nickname
-	await guildMember.roles.remove(franchise.roleID); // DOES NOT WORK IN DEV SERVER (ROLE DOES NOT EXIST)
+	// remove all league roles and then add League & franchise role
+	const franchiseRoleIDs = (await prisma.franchise.findMany()).map(f => f.roleID);
+	await guildMember.roles.remove([
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+		...franchiseRoleIDs
+	]);
 	await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
 	switch (team.tier) {
 		case Tier.PROSPECT:
