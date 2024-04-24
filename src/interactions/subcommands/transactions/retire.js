@@ -75,11 +75,11 @@ async function confirmRetire(interaction) {
 	guildMember.setNickname(`${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// remove all league roles and then add League & franchise role
-	await guildMember.roles.remove(
+	await guildMember.roles.remove([
 		...Object.values(ROLES.LEAGUE),
 		...Object.values(ROLES.TIER),
 		...franchiseRoleIDs
-	);
+	]);
 	await guildMember.roles.add(ROLES.LEAGUE.FORMER_PLAYER);
 
 	const retiredPlayer = await Transaction.retire(playerID);
