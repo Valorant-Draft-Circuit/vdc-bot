@@ -28,7 +28,6 @@ async function report(/** @type ChatInputCommandInteraction */ interaction) {
             fs.writeFileSync(`./cache/adminTierList.csv`, reportCSV);
             return await interaction.editReply({ files: [`./cache/adminTierList.csv`] });
         };
-
     }
 
     return
