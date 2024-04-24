@@ -50,6 +50,7 @@ async function requestCaptain(interaction, player) {
 
 	console.log(playerData.Captain == null)
 	if (teamData.Captain != null) {
+		if (teamData.Captain !== playerData.id) return await interaction.editReply(`This player isn't the captain for their team and cannot be removed!`);
 		// REMOVE A TEAM CAPTAIN
 		embed.addFields({
 			name: `\u200B`,
@@ -66,7 +67,6 @@ async function requestCaptain(interaction, player) {
 			inline: true,
 		});
 		confirm.setCustomId(`transactions_${TransactionsNavigationOptions.CAPTAIN_SET_COMFIRM}`);
-
 	}
 
 	// create the action row, add the component to it & then reply with all the data
