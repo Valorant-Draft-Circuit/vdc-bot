@@ -5,6 +5,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier } = require("@prisma/client");
+const { prisma } = require("../../../../prisma/prismadb");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -18,6 +19,7 @@ async function requestCut(interaction, player) {
 	// checks
 	if (playerData === null) return interaction.editReply(`This player doesn't exist!`);
 	if (playerData.team === null) return interaction.editReply(`This player is not signed to a team and cannot have their contract renewed!`);
+	if (playerData.Captain !== null) return interaction.editReply(`This player is the team captain. Please remove them as a captain before you cut them.`);
 
 	// get the player's franchise and team
 	const team = await Team.getBy({ id: playerData.team });
