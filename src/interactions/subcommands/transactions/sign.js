@@ -83,7 +83,7 @@ async function confirmSign(interaction) {
 
 	// remove all league roles and then add League & franchise role
 	await guildMember.roles.remove(Object.values(ROLES.LEAGUE));
-	await guildMember.roles.add(ROLES.LEAGUE.LEAGUE, franchise.roleID);
+	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, franchise.roleID]);
 
 	// sign the player & ensure that the player's team property is now null
 	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
