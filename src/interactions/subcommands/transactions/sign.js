@@ -5,6 +5,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { LeagueStatus } = require("@prisma/client");
+const { prisma } = require("../../../../prisma/prismadb");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -82,8 +83,17 @@ async function confirmSign(interaction) {
 	guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// remove all league roles and then add League & franchise role
-	await guildMember.roles.remove(Object.values(ROLES.LEAGUE));
-	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, franchise.roleID]);
+	const franchiseRoleIDs = (await prisma.franchise.findMany()).map(f => f.roleID);
+	await guildMember.roles.remove(
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+		...franchiseRoleIDs
+	);
+	await guildMember.roles.add(
+		ROLES.LEAGUE.LEAGUE,
+		ROLES.TIER[team.tier],
+		franchise.roleID
+	);
 
 	// sign the player & ensure that the player's team property is now null
 	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;

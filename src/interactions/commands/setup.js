@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ChatInputCommandInteraction } = require("discord.js");
 const { ButtonStyle } = require(`discord.js`)
 
 const { Player } = require("../../../prisma");
@@ -10,7 +10,7 @@ module.exports = {
 
     name: `setup`,
 
-    async execute(interaction) {
+    async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
         const { _subcommand } = interaction.options;
@@ -28,7 +28,7 @@ async function activityCheck(interaction) {
 
     // get all active players from the Player table and store their ID
     const allActivePlayers = await Player.getAllActive();
-    const allActivePlayerIDs = allActivePlayers.map(p => p.id);
+    const allActivePlayerIDs = allActivePlayers.map(p => p.Accounts.find(a => a.provider === `discord`).providerAccountId);
 
     // get all guild members with the League role & store their ID
     const leagueRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.LEAGUE);
@@ -38,25 +38,24 @@ async function activityCheck(interaction) {
     const inactiveRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.INACTIVE);
     const inactiveRoleMemberIDs = await inactiveRole.members.map(m => m.id);
 
-    // filter the users to actually get the Inactive role, by making sure they ARE an active player in the Player table and DO NOT ALREADY have the inactive role
+    // filter the users to actually get the Inactive role, by making sure they ARE a player in the database and DO NOT ALREADY have the inactive role
     const sharedMemberIDs = leagueRoleMemberIDs
         .filter((id) => allActivePlayerIDs.includes(id))
         .filter((id) => !inactiveRoleMemberIDs.includes(id));
 
-
     // determine potential warnings/discrepancies
-    const inLeagueNotPlayerTable = leagueRoleMemberIDs.filter(id => !allActivePlayerIDs.includes(id));
-    const inPlayerTableNotLeague = allActivePlayerIDs.filter(id => !leagueRoleMemberIDs.includes(id));
-    const inLeagueANDInactiveANDInPlayerTable = leagueRoleMemberIDs
+    const inLeagueNotDatabase = leagueRoleMemberIDs.filter(id => !allActivePlayerIDs.includes(id));
+    const inDatabaseNotLeague = allActivePlayerIDs.filter(id => !leagueRoleMemberIDs.includes(id));
+    const inLeagueANDInactiveANDInDatabase = leagueRoleMemberIDs
         .filter((id) => allActivePlayerIDs.includes(id))
         .filter((id) => inactiveRoleMemberIDs.includes(id));
 
     // create the warnings portion of the embed message
     const warningMessage = `**Warning(s)**\n` +
-        `\` ${String(inLeagueNotPlayerTable.length).padStart(3, ` `)} \` : # of users w/ <@&${ROLES.LEAGUE.LEAGUE}> role & NOT in database\n` +
-        `\` ${String(inPlayerTableNotLeague.length).padStart(3, ` `)} \` : # of users w/o <@&${ROLES.LEAGUE.LEAGUE}> role but ARE in database\n` +
+        `\` ${String(inLeagueNotDatabase.length).padStart(3, ` `)} \` : # of users w/ <@&${ROLES.LEAGUE.LEAGUE}> role & NOT in database\n` +
+        `\` ${String(inDatabaseNotLeague.length).padStart(3, ` `)} \` : # of users w/o <@&${ROLES.LEAGUE.LEAGUE}> role but ARE in database\n` +
         `\` ${String(inactiveRoleMemberIDs.length).padStart(3, ` `)} \` : # of users who already have the <@&${ROLES.LEAGUE.INACTIVE}> role\n` +
-        `\` ${String(inLeagueANDInactiveANDInPlayerTable.length).padStart(3, ` `)} \` : # of users w/ <@&${ROLES.LEAGUE.LEAGUE}> & <@&${ROLES.LEAGUE.INACTIVE}> roles & ARE in database\n`;
+        `\` ${String(inLeagueANDInactiveANDInDatabase.length).padStart(3, ` `)} \` : # of users w/ <@&${ROLES.LEAGUE.LEAGUE}> & <@&${ROLES.LEAGUE.INACTIVE}> roles & ARE in database\n`;
 
     const expectedRuntime = Math.round((MS_PER_API_CALL * sharedMemberIDs.length / 10)) / 100;
 

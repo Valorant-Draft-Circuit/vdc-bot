@@ -7,6 +7,7 @@ const { requestSub, confirmSub } = require("./sub");
 const { requestUnsub, confirmUnsub } = require("./unsub");
 const { requestIR, confirmToggleIR } = require("./ir");
 const { requestRetire, confirmRetire } = require("./retire");
+const { requestTrade, resetTrade, confirmTrade, displayFranchiseTradeOptions, playerTradeRequest, draftPickTradeRequest } = require("./trade");
 
 module.exports = {
 	sign: {
@@ -44,5 +45,14 @@ module.exports = {
 	retire: {
 		retire: requestRetire,
 		confirm: confirmRetire,
+	},
+	trade: {
+		trade: requestTrade,
+		reset: resetTrade,
+		confirm: confirmTrade,
+		displayFranchiseTradeOptions: displayFranchiseTradeOptions,
+
+		playerTradeRequest: playerTradeRequest,
+		draftPickTradeRequest: draftPickTradeRequest,
 	},
 };

@@ -1,5 +1,5 @@
 const { EmbedBuilder, ChatInputCommandInteraction } = require(`discord.js`);
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, } = require(`../subcommands/transactions`);
+const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, trade } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
 
@@ -31,6 +31,22 @@ module.exports = {
 				return await ir.confirm(interaction, `REMOVE`);
 			case TransactionsNavigationOptions.RETIRE_COMFIRM:
 				return await retire.confirm(interaction);
+
+
+			//  TRADE BUTTONS  #####################################
+			case TransactionsNavigationOptions.TRADE_RESET:
+				return await trade.reset(interaction);
+			case TransactionsNavigationOptions.TRADE_F1P:
+				return await trade.displayFranchiseTradeOptions(interaction, 1, `PLAYER`);
+			case TransactionsNavigationOptions.TRADE_F1DP:
+				return await trade.displayFranchiseTradeOptions(interaction, 1, `DRAFT_PICK`);
+			case TransactionsNavigationOptions.TRADE_F2P:
+				return await trade.displayFranchiseTradeOptions(interaction, 2, `PLAYER`);
+			case TransactionsNavigationOptions.TRADE_F2DP:
+				return await trade.displayFranchiseTradeOptions(interaction, 2, `DRAFT_PICK`);
+			case TransactionsNavigationOptions.TRADE_CONFIRM:
+				return await trade.confirm(interaction);
+
 
 			//  CANCEL BUTTONS  ####################################
 			case TransactionsNavigationOptions.CANCEL:

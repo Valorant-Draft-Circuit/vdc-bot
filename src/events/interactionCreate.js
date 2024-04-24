@@ -22,7 +22,7 @@ module.exports = {
         try {
             if (interaction.isCommand()) return await executeCommand(client, interaction);
             if (interaction.isButton()) return await executeButton(client, interaction);
-            if (interaction.isSelectMenu()) return await executeSelectMenu(client, interaction);
+            if (interaction.isAnySelectMenu()) return await executeSelectMenu(client, interaction);
             if (interaction.isAutocomplete()) return await executeAutocomplete(client, interaction);
         } catch (err) {
             client.logger.console({
@@ -97,18 +97,14 @@ async function executeSelectMenu(client, interaction) {
     const selectMenuIDComponent = interaction.customId.split(`_`);
     let selectMenuID, selectMenu, args;
 
-    switch (selectMenuIDComponent.length) {
-        case 1: // select menu is not part of a managed set
-            selectMenuID = selectMenuIDComponent[0];
-            selectMenu = client.selectMenus.get(selectMenuID);
-            args = [interaction];
-            break;
-
-        case 2: // select menu is part of a managed set (second arg is enum)
-            selectMenuID = `${selectMenuIDComponent[0]}Manager`;
-            selectMenu = client.selectMenus.get(selectMenuID);
-            args = [interaction, selectMenuIDComponent[1]];
-            break;
+    if (selectMenuIDComponent.length == 1) {
+        selectMenuID = selectMenuIDComponent[0];
+        selectMenu = client.selectMenus.get(selectMenuID);
+        args = [interaction];
+    } else {
+        selectMenuID = `${selectMenuIDComponent[0]}Manager`;
+        selectMenu = client.selectMenus.get(selectMenuID);
+        args = [interaction, selectMenuIDComponent[1]];
     }
 
     if (selectMenu) {
