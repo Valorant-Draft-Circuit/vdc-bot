@@ -67,7 +67,7 @@ async function confirmRetire(interaction) {
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const guildMember = await interaction.guild.members.fetch(playerID);
 
-	const franchiseRoleIDs = (await prisma.franchise.findMany()).map(f => f.roleID);
+	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
 
 	// get player info (IGN, Accolades) & update their nickname
 	const playerTag = playerIGN.split(`#`)[0];
