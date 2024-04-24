@@ -83,7 +83,7 @@ async function confirmSign(interaction) {
 	guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// remove all league roles and then add League & franchise role
-	const franchiseRoleIDs = (await prisma.franchise.findMany()).map(f => f.roleID);
+	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
 	await guildMember.roles.remove([
 		...Object.values(ROLES.LEAGUE),
 		...Object.values(ROLES.TIER),

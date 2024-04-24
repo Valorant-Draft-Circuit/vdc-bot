@@ -75,7 +75,7 @@ async function confirmCut(interaction) {
 	const franchise = await Franchise.getBy({ teamID: team.id });
 
 	// remove all league roles and then add League & franchise role
-	const franchiseRoleIDs = (await prisma.franchise.findMany()).map(f => f.roleID);
+	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
 	await guildMember.roles.remove([
 		...Object.values(ROLES.LEAGUE),
 		...Object.values(ROLES.TIER),
