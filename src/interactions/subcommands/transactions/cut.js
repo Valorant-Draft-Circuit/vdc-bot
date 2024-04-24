@@ -4,6 +4,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+const { Tier } = require("@prisma/client");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -75,7 +76,20 @@ async function confirmCut(interaction) {
 	// remove the franchise role and update their nickname
 	await guildMember.roles.remove(franchise.roleID); // DOES NOT WORK IN DEV SERVER (ROLE DOES NOT EXIST)
 	await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
-
+	switch (team.tier) {
+		case Tier.PROSPECT:
+			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
+			break;
+		case Tier.APPRENTICE:
+			await guildMember.roles.add(ROLES.TIER.APPRENTICE_FREE_AGENT);
+			break;
+		case Tier.EXPERT:
+			await guildMember.roles.add(ROLES.TIER.EXPERT_FREE_AGENT);
+			break;
+		case Tier.MYTHIC:
+			await guildMember.roles.add(ROLES.TIER.MYTHIC_FREE_AGENT);
+			break;
+	}
 
 	// get player info (IGN, Accolades) & update their nickname
 	const playerTag = playerIGN.split(`#`)[0];
@@ -84,11 +98,7 @@ async function confirmCut(interaction) {
 
 	// cut the player & ensure that the player's team property is now null
 	const player = await Transaction.cut(playerID);
-	if (player.User.team !== null) {
-		return await interaction.editReply({
-			content: `There was an error while attempting to cut the player. The database was not updated.`,
-		});
-	}
+	if (player.User.team !== null) return await interaction.editReply(`There was an error while attempting to cut the player. The database was not updated.`);
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
