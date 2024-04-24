@@ -137,14 +137,8 @@ module.exports = {
 			default_member_permissions: `0x0000000000002000`,
 			options: [
 				{
-					name: "round",
-					description: "List a round",
-					type: ApplicationCommandOptionType.Number,
-					required: true,
-				},
-				{
-					name: "pick",
-					description: "List a pick",
+					name: "overall-pick",
+					description: "List an overall pick for the tier",
 					type: ApplicationCommandOptionType.Number,
 					required: true,
 				},

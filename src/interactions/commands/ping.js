@@ -1,8 +1,10 @@
+const { ChatInputCommandInteraction } = require(`discord.js`);
+
 module.exports = {
 
     name: `ping`,
 
-    execute(interaction) {
+    async execute(/** @type ChatInputCommandInteraction */ interaction) {
         interaction.reply({ content: `Pong!` });
     }
 };

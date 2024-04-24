@@ -27,6 +27,7 @@ module.exports = {
       const team = await Team.getBy({ name: teamName });
       const teamRoster = await Team.getRosterBy({ name: teamName });
       const franchise = await Franchise.getBy({ teamName: teamName });
+      console.log(teamRoster)
 
       // process db data and organize for display
       const refinedRoster = await refinedRosterData(interaction, teamRoster);
@@ -83,18 +84,16 @@ async function refinedRosterData(/** @type ChatInputCommandInteraction */ intera
    const players = [];
 
    await teamData.roster.forEach(async (player) => {
-      const guildMember = await interaction.guild.members.fetch(player.id).catch(err => err);
       players.push({
          id: player.id,
          riotIDPlain: player.PrimaryRiotAccount.riotIGN.split(`#`)[0],
          riotID: player.PrimaryRiotAccount.riotIGN,
          trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.PrimaryRiotAccount.riotIGN)}`,
-         captain: !(guildMember instanceof DiscordAPIError) ? guildMember._roles.includes(ROLES.LEAGUE.CAPTAIN) : undefined,
-         mmr: Math.round(player.PrimaryRiotAccount.MMR.mmrBase),
+         captain: player.Captain != null,
+         mmr: Math.round(player.PrimaryRiotAccount.MMR.mmrEffective),
          leagueStatus: player.Status.leagueStatus,
          contractStatus: player.Status.contractStatus,
          contractRemaining: player.Status.contractRemaining,
-         guildMember: guildMember,
       });
    });
 

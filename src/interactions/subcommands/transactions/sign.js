@@ -84,16 +84,16 @@ async function confirmSign(interaction) {
 
 	// remove all league roles and then add League & franchise role
 	const franchiseRoleIDs = (await prisma.franchise.findMany()).map(f => f.roleID);
-	await guildMember.roles.remove(
+	await guildMember.roles.remove([
 		...Object.values(ROLES.LEAGUE),
 		...Object.values(ROLES.TIER),
 		...franchiseRoleIDs
-	);
-	await guildMember.roles.add(
+	]);
+	await guildMember.roles.add([
 		ROLES.LEAGUE.LEAGUE,
 		ROLES.TIER[team.tier],
 		franchise.roleID
-	);
+	]);
 
 	// sign the player & ensure that the player's team property is now null
 	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;

@@ -122,7 +122,20 @@ module.exports = {
             options: [
                 {
                     name: "user",
-                    description: "The player to sign",
+                    description: "The player to toggle the IR status for",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                }
+            ]
+        },
+        {
+            name: "captain",
+            description: "Toggle a rostered player's Captain Status",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "user",
+                    description: "The player to toggle the captain status for",
                     type: ApplicationCommandOptionType.User,
                     required: true
                 }

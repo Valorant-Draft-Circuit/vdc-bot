@@ -5,6 +5,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier } = require("@prisma/client");
+const { prisma } = require("../../../../prisma/prismadb");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -18,6 +19,7 @@ async function requestCut(interaction, player) {
 	// checks
 	if (playerData === null) return interaction.editReply(`This player doesn't exist!`);
 	if (playerData.team === null) return interaction.editReply(`This player is not signed to a team and cannot have their contract renewed!`);
+	if (playerData.Captain !== null) return interaction.editReply(`This player is the team captain. Please remove them as a captain before you cut them.`);
 
 	// get the player's franchise and team
 	const team = await Team.getBy({ id: playerData.team });
@@ -72,9 +74,13 @@ async function confirmCut(interaction) {
 	const team = await Team.getBy({ id: playerData.team });
 	const franchise = await Franchise.getBy({ teamID: team.id });
 
-
-	// remove the franchise role and update their nickname
-	await guildMember.roles.remove(franchise.roleID); // DOES NOT WORK IN DEV SERVER (ROLE DOES NOT EXIST)
+	// remove all league roles and then add League & franchise role
+	const franchiseRoleIDs = (await prisma.franchise.findMany()).map(f => f.roleID);
+	await guildMember.roles.remove([
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+		...franchiseRoleIDs
+	]);
 	await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
 	switch (team.tier) {
 		case Tier.PROSPECT:

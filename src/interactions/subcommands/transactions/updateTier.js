@@ -4,6 +4,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+const { Tier } = require("@prisma/client");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -88,6 +89,30 @@ async function confirmUpdateTier(interaction) {
 		teamID: newTeam.id,
 	});
 	if (updatedPlayer.team !== newTeam.id) return await interaction.editReply(`There was an error while attempting to update the player's tier. The database was not updated.`);
+
+	await guildMember.roles.remove([
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+	]);
+	await guildMember.roles.add([
+		ROLES.LEAGUE.LEAGUE,
+		ROLES.TIER[newTeam.tier],
+		franchise.roleID
+	]);
+	switch (newTeam.tier) {
+		case Tier.PROSPECT:
+			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
+			break;
+		case Tier.APPRENTICE:
+			await guildMember.roles.add(ROLES.TIER.APPRENTICE_FREE_AGENT);
+			break;
+		case Tier.EXPERT:
+			await guildMember.roles.add(ROLES.TIER.EXPERT_FREE_AGENT);
+			break;
+		case Tier.MYTHIC:
+			await guildMember.roles.add(ROLES.TIER.MYTHIC_FREE_AGENT);
+			break;
+	}
 
 	// create & send the "successfully completed" embed
 	const embed = interaction.message.embeds[0];
