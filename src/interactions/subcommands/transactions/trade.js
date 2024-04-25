@@ -116,11 +116,11 @@ async function confirmTrade(/** @type ButtonInteraction */ interaction) {
 	await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
 	const f1PA = f1PlayerOffers.map(fp => `\`U\` | [\`${fp.riotIGN}\`](${fp.trackerURL}) - ${fp.name}`)
-	const f1DPA = f1DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}`);
+	const f1DPA = f1DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}, (${fdp.overallPick})`);
 	const f1Gives = [...f1PA, ...f1DPA];
 
 	const f2PA = f2PlayerOffers.map(fp => `\`U\` | [\`${fp.riotIGN}\`](${fp.trackerURL}) - ${fp.name}`)
-	const f2DPA = f2DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}`);
+	const f2DPA = f2DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}, (${fdp.overallPick})`);
 	const f2Gives = [...f2PA, ...f2DPA];
 
 	// create the base embed
@@ -242,6 +242,17 @@ async function draftPickTradeRequest(/** @type StringSelectMenuInteraction */ in
 		return `\`P\` | \`${p.tier}\` - Round ${p.round}, Pick ${p.pick}`
 	});
 
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({
+		where: { name: `current_season` },
+	});
+	const season = Number(currentSeasonResponse.value);
+
+	// get draft board for the season & sort it
+	const draftBoard = (await prisma.draft.findMany({ where: { season: season } }))
+		.sort((a, b) => a.pick - b.pick)
+		.sort((a, b) => a.round - b.round)
+		.sort((a, b) => tierSortWeights[a.tier] - tierSortWeights[b.tier]);
+
 	// sort and update the array
 	const mergedDataArray = [...playerDataUpdate, ...existingDataInRequest];
 	const sortedPlayerArray = mergedDataArray
@@ -252,17 +263,20 @@ async function draftPickTradeRequest(/** @type StringSelectMenuInteraction */ in
 		.map(fdr => {
 			const tier = fdr.split(`\``)[3];
 			const rpArr = fdr.match(/\d+/g);
+			const pick = draftBoard.find(db => db.tier === tier && db.round === Number(rpArr[0]) && db.pick === Number(rpArr[1]));
+			const overallPickNumber = draftBoard.filter(db => db.tier === tier).indexOf(pick) + 1;
 			return {
 				tier: tier,
 				round: rpArr[0],
-				pick: rpArr[1]
+				pick: rpArr[1],
+				overallPick: overallPickNumber
 			};
 		})
 		.sort((a, b) => a.pick - b.pick)
 		.sort((a, b) => a.round - b.round)
 		.sort((a, b) => tierSortWeights[a.tier] - tierSortWeights[b.tier])
-		.map(dp => `\`P\` | \`${dp.tier}\` - Round ${dp.round}, Pick ${dp.pick}`);
-
+		.map(dp => `\`P\` | \`${dp.tier}\` - Round ${dp.round}, Pick ${dp.pick}, (${dp.overallPick})`);
+	// console.log(sortedDraftPickArray)
 	const updatedDataArray = [...sortedPlayerArray, ...sortedDraftPickArray]
 	embedData.fields[fieldToModify].value = updatedDataArray.join(`\n`);
 
@@ -553,25 +567,41 @@ async function getFranchiseTradeParamaters(embed, franchiseSelection) {
 		.filter(edr => edr.includes(`\`U\``))
 		.filter(s => s !== ``)
 		.map(spr => {
-			const arr = spr.split(` `);
-			const riotIGN = arr[2].split(`\``)[1]
+			const ign = spr.match(/(?<= \| \[\`)(.+)(?=`\]\(https:)/)[0];
+			const username = spr.match(/(?<= - )(.+)/)[0];
 			return {
 				type: `PLAYER`,
-				name: arr[4],
-				riotIGN: riotIGN,
-				trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(riotIGN)}`
+				name: username,
+				riotIGN: ign,
+				trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ign)}`
 			}
-		})
+		});
+
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({
+		where: { name: `current_season` },
+	});
+	const season = Number(currentSeasonResponse.value);
+
+	// get draft board for the season & sort it
+	const draftBoard = (await prisma.draft.findMany({ where: { season: season } }))
+		.sort((a, b) => a.pick - b.pick)
+		.sort((a, b) => a.round - b.round)
+		.sort((a, b) => tierSortWeights[a.tier] - tierSortWeights[b.tier]);
 	const filteredDraftPickArray = requestData
 		.filter(edr => edr.includes(`\`P\``))
 		.map(fdr => {
+			// console.log(fdr)
 			const tier = fdr.split(`\``)[3];
 			const rpArr = fdr.match(/\d+/g);
+			const pick = draftBoard.find(db => db.tier === tier && db.round === Number(rpArr[0]) && db.pick === Number(rpArr[1]));
+			const overallPickNumber = draftBoard.filter(db => db.tier === tier).indexOf(pick) + 1;
+
 			return {
 				type: `DRAFT_PICK`,
 				tier: tier,
 				round: rpArr[0],
-				pick: rpArr[1]
+				pick: rpArr[1],
+				overallPick: overallPickNumber
 			};
 		});
 
