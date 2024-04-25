@@ -2,10 +2,12 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelect
 const { ChatInputCommandInteraction, ButtonInteraction, StringSelectMenuInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Franchise, Player } = require(`../../../../prisma`);
+const { Franchise, Player, Transaction } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
-const { CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+const { CHANNELS, ROLES, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier } = require("@prisma/client");
+
+const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 let notAllowedOperation = false;
 
@@ -107,8 +109,8 @@ async function confirmTrade(/** @type ButtonInteraction */ interaction) {
 
 	if (f1DraftPickOffers.length > 0) await executeDraftPickTrade(f1DraftPickOffers, franchise2);
 	if (f2DraftPickOffers.length > 0) await executeDraftPickTrade(f2DraftPickOffers, franchise1);
-	if (f1PlayerOffers.length > 0) await executePlayerTrade(f1PlayerOffers, franchise2);
-	if (f2PlayerOffers.length > 0) await executePlayerTrade(f2PlayerOffers, franchise1);
+	if (f1PlayerOffers.length > 0) await executePlayerTrade(interaction, f1PlayerOffers, franchise2);
+	if (f2PlayerOffers.length > 0) await executePlayerTrade(interaction, f2PlayerOffers, franchise1);
 
 	const embedEdits = new EmbedBuilder(embedData);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -116,11 +118,11 @@ async function confirmTrade(/** @type ButtonInteraction */ interaction) {
 	await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
 	const f1PA = f1PlayerOffers.map(fp => `\`U\` | [\`${fp.riotIGN}\`](${fp.trackerURL}) - ${fp.name}`)
-	const f1DPA = f1DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}`);
+	const f1DPA = f1DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}, (${fdp.overallPick})`);
 	const f1Gives = [...f1PA, ...f1DPA];
 
 	const f2PA = f2PlayerOffers.map(fp => `\`U\` | [\`${fp.riotIGN}\`](${fp.trackerURL}) - ${fp.name}`)
-	const f2DPA = f2DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}`);
+	const f2DPA = f2DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}, (${fdp.overallPick})`);
 	const f2Gives = [...f2PA, ...f2DPA];
 
 	// create the base embed
@@ -242,6 +244,17 @@ async function draftPickTradeRequest(/** @type StringSelectMenuInteraction */ in
 		return `\`P\` | \`${p.tier}\` - Round ${p.round}, Pick ${p.pick}`
 	});
 
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({
+		where: { name: `current_season` },
+	});
+	const season = Number(currentSeasonResponse.value);
+
+	// get draft board for the season & sort it
+	const draftBoard = (await prisma.draft.findMany({ where: { season: season } }))
+		.sort((a, b) => a.pick - b.pick)
+		.sort((a, b) => a.round - b.round)
+		.sort((a, b) => tierSortWeights[a.tier] - tierSortWeights[b.tier]);
+
 	// sort and update the array
 	const mergedDataArray = [...playerDataUpdate, ...existingDataInRequest];
 	const sortedPlayerArray = mergedDataArray
@@ -252,17 +265,20 @@ async function draftPickTradeRequest(/** @type StringSelectMenuInteraction */ in
 		.map(fdr => {
 			const tier = fdr.split(`\``)[3];
 			const rpArr = fdr.match(/\d+/g);
+			const pick = draftBoard.find(db => db.tier === tier && db.round === Number(rpArr[0]) && db.pick === Number(rpArr[1]));
+			const overallPickNumber = draftBoard.filter(db => db.tier === tier).indexOf(pick) + 1;
 			return {
 				tier: tier,
 				round: rpArr[0],
-				pick: rpArr[1]
+				pick: rpArr[1],
+				overallPick: overallPickNumber
 			};
 		})
 		.sort((a, b) => a.pick - b.pick)
 		.sort((a, b) => a.round - b.round)
 		.sort((a, b) => tierSortWeights[a.tier] - tierSortWeights[b.tier])
-		.map(dp => `\`P\` | \`${dp.tier}\` - Round ${dp.round}, Pick ${dp.pick}`);
-
+		.map(dp => `\`P\` | \`${dp.tier}\` - Round ${dp.round}, Pick ${dp.pick}, (${dp.overallPick})`);
+	// console.log(sortedDraftPickArray)
 	const updatedDataArray = [...sortedPlayerArray, ...sortedDraftPickArray]
 	embedData.fields[fieldToModify].value = updatedDataArray.join(`\n`);
 
@@ -553,25 +569,41 @@ async function getFranchiseTradeParamaters(embed, franchiseSelection) {
 		.filter(edr => edr.includes(`\`U\``))
 		.filter(s => s !== ``)
 		.map(spr => {
-			const arr = spr.split(` `);
-			const riotIGN = arr[2].split(`\``)[1]
+			const ign = spr.match(/(?<= \| \[\`)(.+)(?=`\]\(https:)/)[0];
+			const username = spr.match(/(?<= - )(.+)/)[0];
 			return {
 				type: `PLAYER`,
-				name: arr[4],
-				riotIGN: riotIGN,
-				trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(riotIGN)}`
+				name: username,
+				riotIGN: ign,
+				trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ign)}`
 			}
-		})
+		});
+
+	const currentSeasonResponse = await prisma.controlPanel.findFirst({
+		where: { name: `current_season` },
+	});
+	const season = Number(currentSeasonResponse.value);
+
+	// get draft board for the season & sort it
+	const draftBoard = (await prisma.draft.findMany({ where: { season: season } }))
+		.sort((a, b) => a.pick - b.pick)
+		.sort((a, b) => a.round - b.round)
+		.sort((a, b) => tierSortWeights[a.tier] - tierSortWeights[b.tier]);
 	const filteredDraftPickArray = requestData
 		.filter(edr => edr.includes(`\`P\``))
 		.map(fdr => {
+			// console.log(fdr)
 			const tier = fdr.split(`\``)[3];
 			const rpArr = fdr.match(/\d+/g);
+			const pick = draftBoard.find(db => db.tier === tier && db.round === Number(rpArr[0]) && db.pick === Number(rpArr[1]));
+			const overallPickNumber = draftBoard.filter(db => db.tier === tier).indexOf(pick) + 1;
+
 			return {
 				type: `DRAFT_PICK`,
 				tier: tier,
 				round: rpArr[0],
-				pick: rpArr[1]
+				pick: rpArr[1],
+				overallPick: overallPickNumber
 			};
 		});
 
@@ -645,7 +677,7 @@ async function executeDraftPickTrade(draftPicks, recievingFranchise) {
 	});
 }
 
-async function executePlayerTrade(players, recievingFranchise) {
+async function executePlayerTrade(interaction, players, recievingFranchise) {
 	const franchiseTeamsToRecieve = recievingFranchise.Teams;
 
 	const playerDataArray = await prisma.user.findMany({
@@ -687,11 +719,31 @@ async function executePlayerTrade(players, recievingFranchise) {
 	for (let i = 0; i < playersToUpdateArray.length; i++) {
 		const playerToUpdate = playersToUpdateArray[i];
 		if (playerToUpdate == undefined) return;
-		const player = await Player.getBy({ ign: playerToUpdate.riotIGN })
-		await prisma.user.update({
-			where: { id: player.id },
-			data: { team: playerToUpdate.validTeam.id }
-		});
+		const player = await Player.getBy({ ign: playerToUpdate.riotIGN });
+
+		const isGM = player.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
+		await Transaction.sign({ userID: player.id, teamID: playerToUpdate.validTeam.id, isGM: isGM });
+		const franchise = await Franchise.getBy({ teamID: playerToUpdate.validTeam.id });
+
+		// update nickname
+		const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
+		const guildMember = await interaction.guild.members.fetch(player.Accounts.find(a => a.provider == `discord`).providerAccountId);
+		const accolades = guildMember.nickname?.match(emoteregex);
+
+		await guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+
+		// remove all league roles and then add League & franchise role
+		const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
+		await guildMember.roles.remove([
+			...Object.values(ROLES.LEAGUE),
+			...Object.values(ROLES.TIER),
+			...franchiseRoleIDs
+		]);
+		await guildMember.roles.add([
+			ROLES.LEAGUE.LEAGUE,
+			ROLES.TIER[playerToUpdate.tier],
+			franchise.roleID
+		]);
 	}
 
 	return;
