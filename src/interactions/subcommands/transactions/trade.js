@@ -411,7 +411,7 @@ async function createSelectMenuSelections(interaction, franchiseSelection, franc
 			return await interaction.message.components.slice(1, interaction.message.components.length - 1);
 		};
 		// logic to split >25 options into 2 select menus
-		if (franchisePlayersSelectMenuOutput.length < 25) {
+		if (franchisePlayersSelectMenuOutput.length <= 25) {
 			const selectMenu = new StringSelectMenuBuilder({
 				customId: `transactionsTrade_F${franchiseSelection}_P0`,
 				placeholder: `${franchiseName} Players`,
@@ -492,7 +492,7 @@ async function createSelectMenuSelections(interaction, franchiseSelection, franc
 			return await interaction.message.components.slice(1, interaction.message.components.length - 1);
 		};
 		// logic to split >25 options into 2 select menus
-		if (franchiseDraftPicksSelectMenuOutput.length < 25) {
+		if (franchiseDraftPicksSelectMenuOutput.length <= 25) {
 			const selectMenu = new StringSelectMenuBuilder({
 				customId: `transactionsTrade_F${franchiseSelection}_DP0`,
 				placeholder: `${franchiseName} Draft Picks`,
