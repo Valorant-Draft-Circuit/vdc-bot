@@ -1,3 +1,5 @@
+const { Message } = require(`discord.js`);
+
 module.exports = {
 
 	/**
@@ -11,9 +13,13 @@ module.exports = {
 	name: `messageCreate`,
 	once: false,
 
-	execute(client, message) {
+	execute(client, /** @type Message */ message) {
+
 		/** Placeholder - For the time being, ignore ALL messages */
-		return;
+
+		const leeDiscordID = `1126098353676103711`;
+		if (message.author.id == leeDiscordID) return message.react(`🟩`);
+		else return;
 
 
 		/** MessageCreate
