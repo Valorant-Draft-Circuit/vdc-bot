@@ -17,7 +17,7 @@ module.exports = {
 
 		/** Placeholder - For the time being, ignore ALL messages */
 
-		const leeDiscordID = `382893405178691584`;
+		const leeDiscordID = `1126098353676103711`;
 		if (message.author.id == leeDiscordID) return message.react(`🟩`);
 		else return;
 
