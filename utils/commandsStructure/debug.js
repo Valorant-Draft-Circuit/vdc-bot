@@ -107,5 +107,18 @@ module.exports = {
                 }
             ],
         },
+        {
+            name: "process-inactive",
+            description: "Process the inactive state for a user",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "player",
+                    description: "The player to process the inactive state for",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+            ],
+        },
     ]
 }
