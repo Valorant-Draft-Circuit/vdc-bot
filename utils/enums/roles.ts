@@ -33,6 +33,11 @@ export const ROLES = process.env.ENVIRONMENT == "DEV" ?
             APPRENTICE_FREE_AGENT: "1224023553498939493",
             PROSPECT_FREE_AGENT: "1224023630330204303",
         },
+        OPERATIONS: {
+            // in dev, the GM/AGM IDs are just the VDC GM/STAFF role
+            GM: `1189024973017321572`,
+            AGM: `1189024973017321572`
+        }
     } :
     /** @production */
     {
@@ -60,4 +65,9 @@ export const ROLES = process.env.ENVIRONMENT == "DEV" ?
             APPRENTICE_FREE_AGENT: "1028478841611620463",
             PROSPECT_FREE_AGENT: "1028478846753837106",
         },
+        OPERATIONS: {
+            // GM/AGM IDs
+            GM: `963862762881175572`,
+            AGM: `963863601716793384`
+        }
     };
