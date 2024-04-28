@@ -26,6 +26,7 @@ async function processInactive(/** @type ChatInputCommandInteraction */ interact
         ...Object.values(ROLES.TIER),
         ...franchiseRoleIDs
     ]);
+    await guildMember.roles.add(ROLES.LEAGUE.VIEWER)
 
     // get player info (IGN, Accolades) & update their nickname
     const playerTag = playerIGN.split(`#`)[0];
