@@ -3,6 +3,7 @@ const { Player, Transaction, Flags } = require(`../../../../prisma`);
 const fs = require(`fs`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
+const { ROLES } = require("../../../../utils/enums");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -37,9 +38,11 @@ async function processInactive(/** @type ChatInputCommandInteraction */ interact
         data: {
             team: null,
             Status: {
-                leagueStatus: LeagueStatus.UNREGISTERED,
-                contractStatus: null,
-                contractRemaining: null
+                update: {
+                    leagueStatus: LeagueStatus.UNREGISTERED,
+                    contractStatus: null,
+                    contractRemaining: null
+                }
             }
         }
     });
