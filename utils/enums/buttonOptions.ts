@@ -16,4 +16,7 @@ export enum ButtonOptions {
 
     /** @param {Number} ACTIVITY_CONFIRM - Confirm enum for /setup activity-check command */
     ACTIVITY_CONFIRM = 101,
+
+    DRAFT_CANCEL = 110,
+    DRAFT_CONFIRM = 111,
 }
