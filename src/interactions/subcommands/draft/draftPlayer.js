@@ -88,8 +88,7 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
 
     // get tier & bounds
     const tierID = interaction.channelId;
-    // const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
-    const tier = Tier.PROSPECT
+    const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
     const tierBounds = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
     if (!TIER_DRAFT_ENABLE[tier]) return await interaction.editReply(`The ${tier} draft has not begun yet!`);
 
@@ -183,8 +182,7 @@ async function cancelDraft(/** @type ButtonInteraction */ interaction) {
     // get season, tier & bounds
     const season = await ControlPanel.getSeason();
     const tierID = interaction.channelId;
-    // const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
-    const tier = Tier.PROSPECT
+    const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
 
     // get the draft board and the current pick
     const draftBoard = (await prisma.draft.findMany({
@@ -219,8 +217,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     // get season, tier & bounds
     const season = await ControlPanel.getSeason();
     const tierID = interaction.channelId;
-    // const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
-    const tier = Tier.PROSPECT
+    const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
 
     // get the draft board and the current pick
     const draftBoard = (await prisma.draft.findMany({
