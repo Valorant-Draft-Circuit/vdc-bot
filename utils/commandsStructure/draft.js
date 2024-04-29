@@ -22,7 +22,6 @@ module.exports = {
 			name: `generate-lottery`,
 			description: "Generate The draft lottery for a tier",
 			type: ApplicationCommandOptionType.Subcommand,
-			default_member_permissions: `0x0000000000002000`,
 			options: [
 				{
 					name: "tier",
@@ -42,7 +41,6 @@ module.exports = {
 			name: `award-comp-picks`,
 			description: "Award a compensation pick to a franchise",
 			type: ApplicationCommandOptionType.Subcommand,
-			default_member_permissions: `0x0000000000002000`,
 			options: [
 				{
 					name: "round",
@@ -75,7 +73,6 @@ module.exports = {
 			name: `fulfill-future-trade`,
 			description: "Fulfill a draft pick future",
 			type: ApplicationCommandOptionType.Subcommand,
-			default_member_permissions: `0x0000000000002000`,
 			options: [
 				{
 					name: "round",
@@ -134,7 +131,6 @@ module.exports = {
 			name: `set-keeper-pick`,
 			description: "Set a keeper pick for a tier",
 			type: ApplicationCommandOptionType.Subcommand,
-			default_member_permissions: `0x0000000000002000`,
 			options: [
 				{
 					name: "overall-pick",
@@ -166,7 +162,6 @@ module.exports = {
 			name: `reset-keeper-pick`,
 			description: "Reset/remove a keeper pick",
 			type: ApplicationCommandOptionType.Subcommand,
-			default_member_permissions: `0x0000000000002000`,
 			options: [
 				{
 					name: "user",
@@ -174,6 +169,70 @@ module.exports = {
 					type: ApplicationCommandOptionType.User,
 					required: true,
 				},
+			],
+		},
+		{
+			name: `begin-offline-draft`,
+			description: "Begin the offline draft for the selected tier",
+			type: ApplicationCommandOptionType.Subcommand,
+			options: [
+				{
+					name: "tier",
+					description: "Select a tier",
+					type: ApplicationCommandOptionType.String,
+					required: true,
+					choices: [
+						{ name: `Prospect`, value: Tier.PROSPECT },
+						{ name: `Apprentice`, value: Tier.APPRENTICE },
+						{ name: `Expert`, value: Tier.EXPERT },
+						{ name: `Mythic`, value: Tier.MYTHIC },
+					],
+				}
+			],
+		},
+		{
+			name: `player`,
+			description: "Draft a player for the offline draft!",
+			type: ApplicationCommandOptionType.Subcommand,
+			options: [
+				{
+					name: "user",
+					description: "The user to draft",
+					type: ApplicationCommandOptionType.User,
+					required: true,
+				},
+			],
+		},
+		// {
+		// 	name: `set-timer-state`,
+		// 	description: "Set the state of the draft timmer (Toggle on/off)",
+		// 	type: ApplicationCommandOptionType.Subcommand,
+		// 	options: [
+		// 		{
+		// 			name: "state",
+		// 			description: "Enable or disable the timer",
+		// 			type: ApplicationCommandOptionType.Boolean,
+		// 			required: true,
+		// 		},
+		// 	],
+		// },
+		{
+			name: `release-offline-draft-results`,
+			description: "Release the results for the offline draft in the transactions announcements channel",
+			type: ApplicationCommandOptionType.Subcommand,
+			options: [
+				{
+					name: "tier",
+					description: "Select a tier",
+					type: ApplicationCommandOptionType.String,
+					required: true,
+					choices: [
+						{ name: `Prospect`, value: Tier.PROSPECT },
+						{ name: `Apprentice`, value: Tier.APPRENTICE },
+						{ name: `Expert`, value: Tier.EXPERT },
+						{ name: `Mythic`, value: Tier.MYTHIC },
+					],
+				}
 			],
 		},
 	],
