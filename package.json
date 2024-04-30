@@ -11,7 +11,8 @@
     "cache": "node ./cache/cache.js",
     "generate": "prisma generate && (clear || cls)",
     "pull": "prisma db pull --force",
-    "studio": "prisma studio"
+    "studio": "prisma studio",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org valorant-draft-circuit --project vdc-bot ./src && sentry-cli --url https://glitch.unieveth.com/ sourcemaps upload --org valorant-draft-circuit --project vdc-bot ./src"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,7 @@
   "homepage": "https://github.com/Unieveth/vdc-bot#readme",
   "dependencies": {
     "@prisma/client": "^5.2.0",
+    "@sentry/cli": "^2.31.0",
     "@sentry/node": "^7.112.2",
     "chalk": "^4.1.2",
     "discord.js": "^14.13.0",

@@ -24,3 +24,6 @@ package-lock.json
 utils/commandsStructure/test.js
 src/interactions/commands/test.js
 ################################################################
+
+# Sentry Config File
+.sentryclirc
