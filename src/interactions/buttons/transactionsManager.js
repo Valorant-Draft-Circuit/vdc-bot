@@ -1,5 +1,5 @@
 const { EmbedBuilder, ChatInputCommandInteraction } = require(`discord.js`);
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, retire, trade, captain } = require(`../subcommands/transactions`);
+const { cut, sign, renew, updateTier, sub, unsub, ir, retire, trade, captain } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
 

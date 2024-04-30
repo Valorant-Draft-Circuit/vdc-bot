@@ -1,6 +1,6 @@
 "use strict";
 
-const { cut, sign, draftSign, renew, updateTier, sub, unsub, ir, captain, retire, trade} = require(`../subcommands/transactions`);
+const { cut, sign, renew, updateTier, sub, unsub, ir, captain, retire, trade} = require(`../subcommands/transactions`);
 
 
 const teamMMRAllowance = {
@@ -45,15 +45,6 @@ module.exports = {
 				const team = _hoistedOptions[1].value;
 				return sign.sign(interaction, player, team);
 			}
-			// case `draft-sign`:
-			// 	draftSign(
-			// 		interaction,
-			// 		_hoistedOptions[0].value,
-			// 		_hoistedOptions[1].value,
-			// 		_hoistedOptions[2].member,
-			// 		_hoistedOptions[3].value
-			// 	);
-			// 	break;
 			case `update-tier`: {
 				// Player to update & tier to update to
 				const player = _hoistedOptions[0];
