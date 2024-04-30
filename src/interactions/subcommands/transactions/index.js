@@ -1,6 +1,5 @@
 const { requestSign, confirmSign } = require(`./sign`);
 const { requestCut, confirmCut } = require(`./cut`);
-const { requestDraftSign, confirmDraftSign } = require("./draftSign");
 const { requestUpdateTier, confirmUpdateTier } = require("./updateTier");
 const { requestRenew, confirmRenew } = require("./renew");
 const { requestSub, confirmSub } = require("./sub");
@@ -18,10 +17,6 @@ module.exports = {
 	cut: {
 		cut: requestCut,
 		confirm: confirmCut,
-	},
-	draftSign: {
-		draftSign: requestDraftSign,
-		confirm: confirmDraftSign,
 	},
 	updateTier: {
 		updateTier: requestUpdateTier,

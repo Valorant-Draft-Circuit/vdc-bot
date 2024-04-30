@@ -84,38 +84,6 @@ module.exports = {
             ]
         },
         {
-            name: "draft-sign",
-            description: "Sign a player to a franchise from the draft",
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                {
-                    name: "round",
-                    description: "The round the player is being drafted in",
-                    type: ApplicationCommandOptionType.Number,
-                    required: true
-                },
-                {
-                    name: "pick",
-                    description: "The round pick the player was drafted in",
-                    type: ApplicationCommandOptionType.Number,
-                    required: true
-                },
-                {
-                    name: "user",
-                    description: "The player to sign from the draft",
-                    type: ApplicationCommandOptionType.User,
-                    required: true
-                },
-                {
-                    name: `team`,
-                    description: "The team to sign the player to",
-                    type: ApplicationCommandOptionType.String,
-                    required: true,
-                    autocomplete: true
-                }
-            ]
-        },
-        {
             name: "ir",
             description: "Toggle a rostered player's Inactive Reserve Status",
             type: ApplicationCommandOptionType.Subcommand,

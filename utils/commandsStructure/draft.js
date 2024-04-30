@@ -218,7 +218,7 @@ module.exports = {
 		// },
 		{
 			name: `release-offline-draft-results`,
-			description: "Release the results for the offline draft in the transactions announcements channel",
+			description: "Release the results of offline draft for the selected tier",
 			type: ApplicationCommandOptionType.Subcommand,
 			options: [
 				{
