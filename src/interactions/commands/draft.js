@@ -5,7 +5,7 @@ const { Franchise, Player, Team, Games, ControlPanel } = require("../../../prism
 const { EmbedBuilder, ChatInputCommandInteraction, } = require("discord.js");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS } = require("../../../utils/enums");
-const { generateLottery, awardCompPicks, fulfillFutureTrade, viewTierDraftBoard, setKeeperPick, resetKeeperPick, draftPlayer } = require("../subcommands/draft");
+const { generateLottery, awardCompPicks, fulfillFutureTrade, viewTierDraftBoard, setKeeperPick, resetKeeperPick, draftPlayer, releaseOfflineDraftResults } = require("../subcommands/draft");
 const { beginOfflineDraft } = require("../subcommands/draft/draftPlayer");
 
 
@@ -70,6 +70,11 @@ module.exports = {
 				const discordID = _hoistedOptions[0].value;
 
 				return await draftPlayer(interaction, discordID);
+			}
+			case `release-offline-draft-results`: {
+				const tier = _hoistedOptions[0].value;
+
+				return await releaseOfflineDraftResults(interaction, tier);
 			}
 		}
 	},
