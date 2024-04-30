@@ -6,11 +6,9 @@
   "scripts": {
     "start": "node bot.js",
     "deploy": "npm run cache && npm run start",
-
     "dev": "nodemon --no-warnings --ignore ./cache/ bot.js",
-    "compile":"tsc utils/enums/index && tsc prisma/index",
-    "cache" : "node ./cache/cache.js",
-
+    "compile": "tsc utils/enums/index && tsc prisma/index",
+    "cache": "node ./cache/cache.js",
     "generate": "prisma generate && (clear || cls)",
     "pull": "prisma db pull --force",
     "studio": "prisma studio"
@@ -27,6 +25,7 @@
   "homepage": "https://github.com/Unieveth/vdc-bot#readme",
   "dependencies": {
     "@prisma/client": "^5.2.0",
+    "@sentry/node": "^7.112.2",
     "chalk": "^4.1.2",
     "discord.js": "^14.13.0",
     "dotenv": "^16.3.1"

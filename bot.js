@@ -1,7 +1,10 @@
 require(`dotenv`).config();
 
+const Sentry = require(`@sentry/node`);
 const BotClient = require(`./src/core/botClient.js`);
 const Logger = require(`./src/core/logger.js`)
+
+Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 console.clear();
 
