@@ -1,5 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
-const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
+const { ChatInputCommandInteraction, GuildMember, ButtonInteraction } = require(`discord.js`);
 
 
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
@@ -62,7 +62,7 @@ async function requestCut(interaction, player) {
 	return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
-async function confirmCut(interaction) {
+async function confirmCut(/** @type ButtonInteraction */ interaction) {
 
 	const playerID = interaction.message.embeds[0].fields[1].value
 		.replaceAll(`\``, ``)
@@ -81,7 +81,7 @@ async function confirmCut(interaction) {
 		...Object.values(ROLES.TIER),
 		...franchiseRoleIDs
 	]);
-	await guildMember.roles.add(ROLES.LEAGUE.FREE_AGENT);
+	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.FREE_AGENT]);
 	switch (team.tier) {
 		case Tier.PROSPECT:
 			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
