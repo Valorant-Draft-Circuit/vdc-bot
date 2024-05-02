@@ -117,7 +117,7 @@ async function confirmToggleCaptain(interaction, mode) {
 			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}`,
 		},
 		color: 0xe92929,
-		footer: { text: `Transactions — Inactive Reserve` },
+		footer: { text: `Transactions — Team Captain` },
 		timestamp: Date.now(),
 	});
 
