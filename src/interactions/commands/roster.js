@@ -57,7 +57,7 @@ module.exports = {
 
       // filter mmr to only include signed players who are not on IR (this ignores FA & RFA)
       const teamMMRArr = refinedRoster
-         .filter(player => player.leagueStatus === LeagueStatus.SIGNED && player.contractStatus !== ContractStatus.INACTIVE_RESERVE)
+         .filter(player => player.contractStatus !== ContractStatus.INACTIVE_RESERVE)
          .map((player) => player.mmr);
       const teamMMR = sum(teamMMRArr);
 
