@@ -57,13 +57,12 @@ module.exports = {
 				const player = _hoistedOptions[0];
 				return renew.renew(interaction, player);
 			}
-			// case `sub`:
-			// 	sub.sub(
-			// 		interaction,
-			// 		_hoistedOptions[0].member,
-			// 		_hoistedOptions[1].member
-			// 	);
-			// 	break;
+			case `sub`: {
+				const subIn = _hoistedOptions[0].member;
+				const subOut = _hoistedOptions[1].member;
+
+				return await sub.sub(interaction, subIn, subOut)
+			}
 			// case `unsub`:
 			// 	unsub.unsub(interaction, _hoistedOptions[0].member);
 			// 	break;
