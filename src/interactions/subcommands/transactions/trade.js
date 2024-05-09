@@ -5,7 +5,7 @@ const { ChatInputCommandInteraction, ButtonInteraction, StringSelectMenuInteract
 const { Franchise, Player, Transaction } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { CHANNELS, ROLES, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { Tier } = require("@prisma/client");
+const { Tier, LeagueStatus } = require("@prisma/client");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
