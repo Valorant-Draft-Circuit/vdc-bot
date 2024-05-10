@@ -15,18 +15,20 @@ module.exports = {
 				return await cut.confirm(interaction);
 			case TransactionsNavigationOptions.SIGN_COMFIRM:
 				return await sign.confirm(interaction);
-			// case TransactionsDraftSignOptions.CONFIRM:
-			// 	return await draftSign.confirm(interaction);
 			case TransactionsNavigationOptions.RENEW_COMFIRM:
 				return await renew.confirm(interaction);
 			case TransactionsNavigationOptions.UPDATE_TIER_COMFIRM:
 				return await updateTier.confirm(interaction);
-			// case TransactionsSubTypes.CONFIRM_SUB:
-			// 	return await sub.confirm(interaction);
-			// case TransactionsSubTypes.CONFIRM_UNSUB:
-			// 	return await unsub.confirm(interaction);
 			case TransactionsNavigationOptions.RETIRE_COMFIRM:
 				return await retire.confirm(interaction);
+
+
+			//  SUB BUTTONS  #######################################
+			case TransactionsNavigationOptions.SUB_CONFIRM:
+				return await sub.confirm(interaction);
+			case TransactionsNavigationOptions.UNSUB_CONFIRM:
+				return await unsub.confirm(interaction);
+
 
 			//  IR BUTTONS  ########################################
 			case TransactionsNavigationOptions.IR_SET_COMFIRM:
@@ -34,11 +36,13 @@ module.exports = {
 			case TransactionsNavigationOptions.IR_REMOVE_COMFIRM:
 				return await ir.confirm(interaction, `REMOVE`);
 
+				
 			//  CAPTAIN BUTTONS  ###################################
 			case TransactionsNavigationOptions.CAPTAIN_SET_COMFIRM:
 				return await captain.confirm(interaction, `SET`);
 			case TransactionsNavigationOptions.CAPTAIN_REMOVE_COMFIRM:
 				return await captain.confirm(interaction, `REMOVE`);
+
 
 			//  TRADE BUTTONS  #####################################
 			case TransactionsNavigationOptions.TRADE_RESET:
@@ -60,9 +64,7 @@ module.exports = {
 				return await cancel(interaction);
 
 			default:
-				return await interaction.editReply({
-					content: `There was an error. ERR: BTN_TSC_MGR`,
-				});
+				return await interaction.editReply(`There was an error. ERR: BTN_TSC_MGR`);
 		}
 	},
 };
