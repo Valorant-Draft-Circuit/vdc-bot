@@ -126,7 +126,7 @@ async function confirmSub(interaction) {
 		fields: [
 			{
 				name: `Franchise`,
-				value: `<${franchise.emoteID}> ${franchise.name}`,
+				value: `<${franchise.Brand.discordEmote} ${franchise.name}`,
 				inline: true,
 			},
 			{

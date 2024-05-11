@@ -115,7 +115,7 @@ async function confirmSign(interaction) {
 		fields: [
 			{
 				name: `Franchise`,
-				value: `<${team.Franchise.Brand.discordEmote}> ${team.Franchise.name}`,
+				value: `<${franchise.Brand.discordEmote} ${team.Franchise.name}`,
 				inline: true,
 			},
 			{
