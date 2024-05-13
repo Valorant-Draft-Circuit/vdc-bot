@@ -17,7 +17,6 @@ const { ApplicationCommandOptionType } = require(`discord.js`);
 module.exports = {
     name: "media",
     description: "Access media commands here!",
-    default_member_permissions: `0x0000000000002000`,
     options: [
         {
             name: "generate-season-thumbnail",
