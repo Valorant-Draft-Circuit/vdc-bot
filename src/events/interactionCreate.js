@@ -124,7 +124,8 @@ async function executeSelectMenu(client, interaction) {
  */
 async function executeAutocomplete(client, interaction) {
     const focusedFieldName = interaction.options.getFocused(true).name;
-    const autocompleteCommandQuery = client.autocompletes.get(focusedFieldName);
+    const autocompleteCommandQuery = client.autocompletes.get(focusedFieldName) ||
+        client.autocompletes.get(focusedFieldName.split(`-`)[focusedFieldName.split(`-`).length - 1]);
 
     if (autocompleteCommandQuery) {
         client.logger.console({
