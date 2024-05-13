@@ -3,6 +3,7 @@ const fs = require(`fs`);
 const { ChatInputCommandInteraction } = require(`discord.js`);
 const logoBaseLink = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
 const Canvas = require('@napi-rs/canvas');
+const {GlobalFonts} = require('@napi-rs/canvas');
 const { LeagueStatus, ContractStatus } = require('@prisma/client');
 
 
@@ -80,6 +81,9 @@ async function generatePlayoffsImages(
     const length = resolution === `1080P` ? 1080 : 2160;
     const canvas = Canvas.createCanvas(width, length);
     const context = canvas.getContext('2d');
+
+    GlobalFonts.registerFromPath(`./utils/assets/Komu-A.ttf`, `Komu`)
+    GlobalFonts.registerFromPath(`./utils/assets/Lato-Regular.ttf`, `Lato`)
 
     const topographyBKG = await Canvas.loadImage(`./utils/assets/topography_red.png`);
     context.drawImage(topographyBKG, 0, 0, width, length);
