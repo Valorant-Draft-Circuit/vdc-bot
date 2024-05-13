@@ -2,6 +2,7 @@ const { Team, Franchise } = require(`../../../../prisma`);
 const fs = require(`fs`);
 const { ChatInputCommandInteraction } = require(`discord.js`);
 const logoBaseLink = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
+const { GlobalFonts } = require('@napi-rs/canvas');
 const Canvas = require('@napi-rs/canvas');
 
 
@@ -41,6 +42,10 @@ async function generateSeasonThumbnail(
     /** @type Number */ day,
     /** @type String */ time
 ) {
+
+    GlobalFonts.registerFromPath(`./utils/assets/Komu-A.ttf`, `Komu`)
+    GlobalFonts.registerFromPath(`./utils/assets/Lato-Regular.ttf`, `Lato`)
+
     const resolution = `1080P`;
 
     const homeFranchise = await Franchise.getBy({ teamName: homeTeam });
