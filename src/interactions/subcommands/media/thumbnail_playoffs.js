@@ -252,9 +252,9 @@ async function generatePlayoffsImages(
 
     /*  ---------------------------------- EXPORT ----------------------------------  */
     const image = await canvas.encode('png');
-    fs.writeFileSync(`./bin/playoffs.png`, image)
+    fs.writeFileSync(`./cache/playoffs.png`, image)
     /*  ----------------------------------------------------------------------------  */
-    interaction.editReply({ files: [`./bin/playoffs.png`] });
+    interaction.editReply({ files: [`./cache/playoffs.png`] });
 }
 
 module.exports = { generatePlayoffsImages };

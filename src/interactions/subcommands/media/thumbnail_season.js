@@ -178,8 +178,8 @@ async function generateSeasonThumbnail(
 
     // Use the helpful Attachment class structure to process the file
     const expimg = await canvas.encode('png');
-    fs.writeFileSync(`./bin/season.png`, expimg);
-    interaction.editReply({ files: [`./bin/season.png`] });
+    fs.writeFileSync(`./cache/season.png`, expimg);
+    interaction.editReply({ files: [`./cache/season.png`] });
 }
 
 module.exports = { generateSeasonThumbnail };
