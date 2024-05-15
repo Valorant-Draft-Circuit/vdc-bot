@@ -16,7 +16,7 @@ const { ApplicationCommandOptionType } = require(`discord.js`);
 
 module.exports = {
     name: "sub",
-    description: "Access transactions commands here!",
+    description: "View FA/RFAs here!",
     options: [
         {
             name: `tier`,
