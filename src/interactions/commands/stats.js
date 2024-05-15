@@ -1,24 +1,18 @@
 const { ChatInputCommandInteraction, GuildMember, EmbedBuilder } = require("discord.js");
 
-const { Games, Team, Player } = require("../../../prisma");
+const { Games, Team, Player, ControlPanel } = require("../../../prisma");
 const { AgentEmotes, PlayerStatusCode } = require("../../../utils/enums");
+const { GameType, LeagueStatus } = require("@prisma/client");
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 const avg = (array) => array.reduce((s, v) => s += v, 0) / array.length;
-
-const tiercaps = {
-    prospect: 93,
-    apprentice: 118,
-    expert: 160,
-    mythic: 999,
-}; // max MMR for these tiers (mythic has no max MMR)
 
 module.exports = {
 
     name: `stats`,
 
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
-        return interaction.reply({ content: `This isn't ready for season 6 yet!` });
+        // return interaction.reply({ content: `This isn't ready for season 6 yet!` });
         await interaction.deferReply();
 
         const { _subcommand, _hoistedOptions } = interaction.options;
@@ -47,22 +41,23 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 
     // checks
     const exists = await Games.exists({ id: id });
-    if (!exists) return interaction.editReply({ content: `Looks like this match doesn't exist in out database!` });
+    if (!exists) return interaction.editReply(`Looks like this match doesn't exist in our database!`);
     const game = await Games.getMatchData({ id: id });
-    if (!game.type.includes(`Season`)) return await interaction.editReply({ content: `You can only get match stats for a season game!` });
+    if (!game.gameType.includes(GameType.SEASON)) return await interaction.editReply(`You can only get match stats for a season game!`);
 
+    // console.log(game)
     // get teams
-    const team1 = await Team.getBy({ id: game.team1 });
-    const team2 = await Team.getBy({ id: game.team2 });
+    const home = await Team.getBy({ id: game.Match.home });
+    const away = await Team.getBy({ id: game.Match.away });
 
     // create outputs
     const roundsWonBar = createRoundsWonBar((({ PlayerStats, ...o }) => o)(game));
-    const dataOutput = game.PlayerStats.map(p => createMatchPlayerStats(p, game.team1, p.Player.team));
-    const date = new Date(game.date_played).toLocaleString("en-US", { dateZone: `CST`, month: `short`, day: `2-digit` });
+    const dataOutput = game.PlayerStats.map(p => createMatchPlayerStats(p, game.Match.home, p.Player.team));
+    const date = new Date(game.datePlayed).toLocaleString("en-US", { dateZone: `CST`, month: `short`, day: `2-digit` });
 
     // create the base embed
     const embed = new EmbedBuilder({
-        author: { name: `${team1.tier} - ${team1.name} vs. ${team2.name} - ${date}`, url: matchURL },
+        author: { name: `${home.tier} - ${home.name} vs. ${away.name} - ${date}`, url: matchURL },
         description: `${roundsWonBar}\n${dataOutput.join(`\n`)}`,
         color: 0xE92929,
         footer: { text: `Stats — Match` }
@@ -74,13 +69,15 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interaction, /** @type GuildMember */ guildMember) {
 
     const player = await Player.getBy({ discordID: guildMember.user.id });
-    const playerStats = await Player.getStatsBy({ discordID: guildMember.user.id });
+    // console.log(player)
+    const playerStats = await Player.getStatsBy(player.id);
 
-    const mmr = player.MMR_Player_MMRToMMR.mmr_overall;
+    const mmr = Math.round(player.PrimaryRiotAccount.MMR.mmrEffective);
     const team = player.Team;
     const processedPlayerStats = playerStats.map(s => {
-        const rounds = Math.round(s.total_kills / s.pr_kills);
-        return { ...s, rounds: rounds, total_damage: rounds * s.pr_damage }
+        console.log(s)
+        const rounds = s.Game.rounds;
+        return { ...s, rounds: rounds, totalDamage: s.damage }
     });
 
     // get agent pool & save as emotes
@@ -93,42 +90,41 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     const associatedData = team ? await createFranchiseStatsModule(player) : await createSubOverview(player);
 
     const summedStats = {
-        total_kills: sum(processedPlayerStats.map(ps => ps.total_kills)),
-        total_assists: sum(processedPlayerStats.map(ps => ps.total_assists)),
-        total_deaths: sum(processedPlayerStats.map(ps => ps.total_deaths)),
-        total_first_kills: sum(processedPlayerStats.map(ps => ps.total_first_kills)),
-        total_first_deaths: sum(processedPlayerStats.map(ps => ps.total_first_deaths)),
-        total_damage: sum(processedPlayerStats.map(ps => ps.total_damage)),
+        totalKills: sum(processedPlayerStats.map(ps => ps.kills)),
+        totalAssists: sum(processedPlayerStats.map(ps => ps.assists)),
+        totalDeaths: sum(processedPlayerStats.map(ps => ps.deaths)),
+        firstKills: sum(processedPlayerStats.map(ps => ps.firstKills)),
+        firstDeaths: sum(processedPlayerStats.map(ps => ps.firstDeaths)),
+        totalDamage: sum(processedPlayerStats.map(ps => ps.totalDamage)),
         rounds: sum(processedPlayerStats.map(ps => ps.rounds)),
         avgkast: avg(processedPlayerStats.map(ps => ps.kast)),
-        total_plants: sum(processedPlayerStats.map(ps => ps.total_plants)),
-        total_plants: sum(processedPlayerStats.map(ps => ps.total_plants)),
-        total_clutches: sum(processedPlayerStats.map(ps => ps.total_clutches)),
-        rating_atk: avg(processedPlayerStats.map(ps => ps.rating_atk)),
-        rating_def: avg(processedPlayerStats.map(ps => ps.rating_def)),
+        totalPlants: sum(processedPlayerStats.map(ps => ps.plants)),
+        clutches: sum(processedPlayerStats.map(ps => ps.clutches)),
+        ratingAttack: avg(processedPlayerStats.map(ps => ps.ratingAttack)),
+        ratingDefense: avg(processedPlayerStats.map(ps => ps.ratingDefense)),
     }
 
     // do calculations and formatting
-    const rating_atk = summedStats.rating_atk.toFixed(2)
-    const rating_def = summedStats.rating_def.toFixed(2)
-    const kpr = (summedStats.total_kills / summedStats.rounds).toFixed(2);
-    const apr = (summedStats.total_assists / summedStats.rounds).toFixed(2);
-    const dpr = (summedStats.total_deaths / summedStats.rounds).toFixed(2);
-    const dmgpr = (summedStats.total_damage / summedStats.rounds).toFixed(2);
-    const fkpr = (summedStats.total_first_kills * 100 / summedStats.rounds).toFixed(2);
-    const fdpr = (summedStats.total_first_deaths * 100 / summedStats.rounds).toFixed(2);
-    const plants = summedStats.total_plants;
-    const clutches = summedStats.total_clutches;
+    const ratingAttack = summedStats.ratingAttack.toFixed(2)
+    const ratingDefense = summedStats.ratingDefense.toFixed(2)
+    const kpr = (summedStats.totalKills / summedStats.rounds).toFixed(2);
+    const apr = (summedStats.totalAssists / summedStats.rounds).toFixed(2);
+    const dpr = (summedStats.totalAssists / summedStats.rounds).toFixed(2);
+    const dmgpr = (summedStats.totalDamage / summedStats.rounds).toFixed(2);
+    const fkpr = (summedStats.firstKills * 100 / summedStats.rounds).toFixed(2);
+    const fdpr = (summedStats.firstDeaths * 100 / summedStats.rounds).toFixed(2);
+    const plants = summedStats.totalPlants;
+    const clutches = summedStats.clutches;
     const avgkast = (summedStats.avgkast).toFixed(2);
 
-    const riotID = player.Account.riotID;
-    const trackerURL = `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(riotID)}`
+    const riotIGN = player.PrimaryRiotAccount.riotIGN;
+    const trackerURL = `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(riotIGN)}`
 
     // prefix for user
-    const prefix = player.Team?.Franchise ? player.Team.Franchise.slug : player.status == PlayerStatusCode.FREE_AGENT ? `FA` : `RFA`;
+    const prefix = player.Team?.Franchise ? player.Team.Franchise.slug : player.Status == LeagueStatus.FREE_AGENT ? `FA` : `RFA`;
 
     const description = [
-        `ATK : \` ${rating_atk} \` // DEF : \` ${rating_def} \``,
+        `ATK : \` ${ratingAttack} \` // DEF : \` ${ratingDefense} \``,
         [
             `MMR: \` ${String(mmr).padStart(3, ` `)} \``,
             `Games: \` ${String(processedPlayerStats.length).padStart(3, ` `)} \``,
@@ -139,7 +135,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
 
     // create the embed
     const embed = new EmbedBuilder({
-        author: { name: [prefix, riotID.split(`#`)[0]].join(` | `), url: trackerURL },
+        author: { name: [prefix, riotIGN.split(`#`)[0]].join(` | `), url: trackerURL },
         description: description.join(`\n`),
         color: 0xE92929,
         fields: [
@@ -165,29 +161,33 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
 
 /** Dynamically create the bar for rounds won by each team */
 function createRoundsWonBar(match) {
-    const totalRounds = match.rounds_played;
-    const t1RoundPercent = (match.rounds_won_t1 / totalRounds);
+    const totalRounds = match.rounds;
+    const t1RoundPercent = (match.roundsWonHome / totalRounds);
 
-    const barlen = 44;
-    const filled = `■`;
+    const barlen = 48;
+    const filled = `█`;
 
     const filledBoxes = Math.floor((t1RoundPercent) * barlen)
-    const t1bar = `\u001b[0;31m${String(match.rounds_won_t1).padEnd(3, ` `)}` + ``.padStart(filledBoxes, filled);
-    const t2bar = `\u001b[0;34m` + ``.padStart(barlen - filledBoxes, filled) + `${String(match.rounds_won_t2).padStart(3, ` `)}`;
+    const t1bar = ` \u001b[0;31m${String(match.roundsWonHome).padEnd(3, ` `)}` + ``.padStart(filledBoxes, filled);
+    const t2bar = `\u001b[0;34m` + ``.padStart(barlen - filledBoxes, filled) + `${String(match.roundsWonAway).padStart(3, ` `)} `;
 
     // return the bar with correct color formatting
     return `\`\`\`ansi\n${t1bar + t2bar}\n\`\`\``;
 }
 
 /** Create the stats "module" for a player */
-function createMatchPlayerStats(player, team1, team) {
+function createMatchPlayerStats(player, home, team) {
+    // console.log(team, home)
+
+    const ign = player.Player.PrimaryRiotAccount.riotIGN;
+
     // collect & organize data for outputs
-    const trackerLink = `[${player.Player.Account.riotID.split(`#`)[0]}](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.Player.Account.riotID)})`
-    const color = team === null ? `[0;30m` : team === team1 ? `[0;31m` : `[0;34m`; // gray > red > blue
+    const trackerLink = `[${ign.split(`#`)[0]}](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ign)})`
+    const color = team === null ? `[0;30m` : team === home ? `[0;31m` : `[0;34m`; // gray > red > blue
     const agentSatatized = player.agent.toLowerCase().replace(/[^a-z]/, ``);
     const agentEmote = `<:${agentSatatized}:${AgentEmotes[agentSatatized]}>`;
     const teamName = player.Player.Team ? player.Player.Team.name : `Substitute`;
-    const rating = `ATK : \`${player.rating_atk}\` / DEF : \`${player.rating_def}\``;
+    const rating = `ATK : \`${player.ratingAttack}\` / DEF : \`${player.ratingDefense}\``;
 
     // create table headers
     const headings = [
@@ -204,15 +204,15 @@ function createMatchPlayerStats(player, team1, team) {
 
     // store table data
     const data = [
-        (player.total_kills / player.total_deaths).toFixed(2).padStart(5, ` `),
-        String(player.total_kills).padStart(3, ` `),
-        String(player.total_deaths).padStart(3, ` `),
-        String(player.total_assists).padStart(3, ` `),
-        player.hs_percent.toFixed(2).padStart(6, ` `),
+        (player.kills / player.deaths).toFixed(2).padStart(5, ` `),
+        String(player.kills).padStart(3, ` `),
+        String(player.deaths).padStart(3, ` `),
+        String(player.assists).padStart(3, ` `),
+        player.hsPercent.toFixed(2).padStart(6, ` `),
         String(player.acs).padStart(4, ` `),
         String(player.kast).padStart(5, ` `),
-        String(player.total_first_kills).padStart(3, ` `),
-        String(player.total_first_deaths).padStart(3, ` `),
+        String(player.firstKills).padStart(3, ` `),
+        String(player.firstDeaths).padStart(3, ` `),
     ];
 
     // return a stats "module" for the specified player
@@ -225,17 +225,18 @@ async function createFranchiseStatsModule(player) {
     const team = player.Team;
     const franchise = team.Franchise;
 
-    const emote = `<${franchise.emoteID}>`;
+    const emote = `<${franchise.Brand.discordEmote}>`;
     const slug = franchise.slug;
     const franchiseName = franchise.name;
     const teamName = team.name;
 
     const allTeamGames = await Games.getAllBy({ team: team.id });
+    console.log(allTeamGames)
     const teamStats = {
         wins: allTeamGames.filter(atg => atg.winner === team.id).length,
         loss: allTeamGames.filter(atg => atg.winner !== team.id).length,
-        roundsWon: sum(allTeamGames.map(atg => atg.team1 === team.id ? atg.rounds_won_t1 : atg.rounds_won_t2)),
-        totalRounds: sum(allTeamGames.map(atg => atg.rounds_played))
+        roundsWon: sum(allTeamGames.map(atg => atg.home === team.id ? atg.roundsWonHome : atg.roundsWonAway)),
+        totalRounds: sum(allTeamGames.map(atg => atg.rounds))
     }
 
 
@@ -268,11 +269,14 @@ async function createFranchiseStatsModule(player) {
 async function createSubOverview(player) {
     /** @todo When we have extra sub data, we can return sub stats here */
 
-    const subtype = player.status === PlayerStatusCode.FREE_AGENT ? `Free Agent` : `Restricted Free Agent`;
+    const subtype = player.Status.leagueStatus === LeagueStatus.FREE_AGENT ? `Free Agent` : `Restricted Free Agent`;
     let tier;
-    if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.prospect) tier = `Prospect`;
-    else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.apprentice) tier = `Apprentice`;
-    else if (player.MMR_Player_MMRToMMR.mmr_overall < tiercaps.expert) tier = `Expert`;
+
+    const mmrCaps = await ControlPanel.getMMRCaps(`PLAYER`);
+
+    if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.PROSPECT.max) tier = `Prospect`;
+    else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.APPRENTICE.max) tier = `Apprentice`;
+    else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.EXPERT.max) tier = `Expert`;
     else tier = `Mythic`;
 
     const string = `Substitute - ${subtype} - ${tier}`;
