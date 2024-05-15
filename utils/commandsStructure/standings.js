@@ -11,6 +11,7 @@
  * @option Number
  * @option Attachment
  */
+const { Tier } = require("@prisma/client");
 const { ApplicationCommandOptionType } = require(`discord.js`);
 
 module.exports = {
@@ -23,10 +24,10 @@ module.exports = {
             type: ApplicationCommandOptionType.String,
             required: true,
             choices: [
-                { name: `Prospect`, value: `Prospect` },
-                { name: `Apprentice`, value: `Apprentice` },
-                { name: `Expert`, value: `Expert` },
-                { name: `Mythic`, value: `Mythic` },
+                { name: `Prospect`, value: Tier.PROSPECT },
+                { name: `Apprentice`, value: Tier.APPRENTICE },
+                { name: `Expert`, value: Tier.EXPERT },
+                { name: `Mythic`, value: Tier.MYTHIC },
             ]
         },
     ]

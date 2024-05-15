@@ -7,13 +7,6 @@ const { GameType, LeagueStatus } = require("@prisma/client");
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 const avg = (array) => array.reduce((s, v) => s += v, 0) / array.length;
 
-const tiercaps = {
-    prospect: 93,
-    apprentice: 118,
-    expert: 160,
-    mythic: 999,
-}; // max MMR for these tiers (mythic has no max MMR)
-
 module.exports = {
 
     name: `stats`,
