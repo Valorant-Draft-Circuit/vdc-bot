@@ -1,6 +1,6 @@
 const { ChatInputCommandInteraction, GuildMember, EmbedBuilder } = require("discord.js");
 
-const { Games, Team, Player } = require("../../../prisma");
+const { Games, Team, Player, ControlPanel } = require("../../../prisma");
 const { AgentEmotes, PlayerStatusCode } = require("../../../utils/enums");
 const { GameType, LeagueStatus } = require("@prisma/client");
 
@@ -48,7 +48,7 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 
     // checks
     const exists = await Games.exists({ id: id });
-    if (!exists) return interaction.editReply(`Looks like this match doesn't exist in out database!`);
+    if (!exists) return interaction.editReply(`Looks like this match doesn't exist in our database!`);
     const game = await Games.getMatchData({ id: id });
     if (!game.gameType.includes(GameType.SEASON)) return await interaction.editReply(`You can only get match stats for a season game!`);
 
@@ -278,9 +278,12 @@ async function createSubOverview(player) {
 
     const subtype = player.Status.leagueStatus === LeagueStatus.FREE_AGENT ? `Free Agent` : `Restricted Free Agent`;
     let tier;
-    if (player.PrimaryRiotAccount.MMR.mmrEffective < tiercaps.prospect) tier = `Prospect`;
-    else if (player.PrimaryRiotAccount.MMR.mmrEffective < tiercaps.apprentice) tier = `Apprentice`;
-    else if (player.PrimaryRiotAccount.MMR.mmrEffective < tiercaps.expert) tier = `Expert`;
+
+    const mmrCaps = await ControlPanel.getMMRCaps(`PLAYER`);
+
+    if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.PROSPECT.max) tier = `Prospect`;
+    else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.APPRENTICE.max) tier = `Apprentice`;
+    else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.EXPERT.max) tier = `Expert`;
     else tier = `Mythic`;
 
     const string = `Substitute - ${subtype} - ${tier}`;
