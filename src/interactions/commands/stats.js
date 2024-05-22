@@ -1,4 +1,4 @@
-const { ChatInputCommandInteraction, GuildMember, EmbedBuilder } = require("discord.js");
+const { ChatInputCommandInteraction, GuildMember, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 
 const { Games, Team, Player, ControlPanel } = require("../../../prisma");
 const { AgentEmotes, PlayerStatusCode } = require("../../../utils/enums");
@@ -45,7 +45,6 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
     const game = await Games.getMatchData({ id: id });
     if (!game.gameType.includes(GameType.SEASON)) return await interaction.editReply(`You can only get match stats for a season game!`);
 
-    // console.log(game)
     // get teams
     const home = await Team.getBy({ id: game.Match.home });
     const away = await Team.getBy({ id: game.Match.away });
@@ -69,13 +68,11 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interaction, /** @type GuildMember */ guildMember) {
 
     const player = await Player.getBy({ discordID: guildMember.user.id });
-    // console.log(player)
     const playerStats = await Player.getStatsBy(player.id);
 
     const mmr = Math.round(player.PrimaryRiotAccount.MMR.mmrEffective);
     const team = player.Team;
     const processedPlayerStats = playerStats.map(s => {
-        console.log(s)
         const rounds = s.Game.rounds;
         return { ...s, rounds: rounds, totalDamage: s.damage }
     });
@@ -133,6 +130,12 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         associatedData
     ];
 
+    const trackerButton = new ButtonBuilder({
+        style: ButtonStyle.Link,
+        label: `Tracker`,
+        url: trackerURL
+    })
+
     // create the embed
     const embed = new EmbedBuilder({
         author: { name: [prefix, riotIGN.split(`#`)[0]].join(` | `), url: trackerURL },
@@ -152,7 +155,8 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         ],
         footer: { text: `Stats — Player` }
     });
-    return await interaction.editReply({ embeds: [embed] })
+    const components = new ActionRowBuilder({ components: [trackerButton] })
+    return await interaction.editReply({ embeds: [embed], components: [components] })
 }
 
 // HELPER FUNCTIONS
@@ -176,9 +180,7 @@ function createRoundsWonBar(match) {
 }
 
 /** Create the stats "module" for a player */
-function createMatchPlayerStats(player, home, team) {
-    // console.log(team, home)
-
+function createMatchPlayerStats(player, home, team) {   
     const ign = player.Player.PrimaryRiotAccount.riotIGN;
 
     // collect & organize data for outputs
@@ -231,14 +233,12 @@ async function createFranchiseStatsModule(player) {
     const teamName = team.name;
 
     const allTeamGames = await Games.getAllBy({ team: team.id });
-    console.log(allTeamGames)
     const teamStats = {
-        wins: allTeamGames.filter(atg => atg.winner === team.id).length,
-        loss: allTeamGames.filter(atg => atg.winner !== team.id).length,
-        roundsWon: sum(allTeamGames.map(atg => atg.home === team.id ? atg.roundsWonHome : atg.roundsWonAway)),
-        totalRounds: sum(allTeamGames.map(atg => atg.rounds))
+        wins: allTeamGames.filter(g => g.winner == team.id).length,
+        loss: allTeamGames.filter(g => g.winner !== team.id).length,
+        roundsWon: sum(allTeamGames.map(g => g.Match.home === team.id ? g.roundsWonHome : g.roundsWonAway)),
+        totalRounds: sum(allTeamGames.map(g => g.rounds))
     }
-
 
     // text coloring
     const color = `\u001b[0;30m`;

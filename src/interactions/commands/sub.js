@@ -53,26 +53,43 @@ module.exports = {
             .filter(player => player.contractStatus == ContractStatus.ACTIVE_SUB)
             .map(p => `${showMMR ? `\` ${String(p.mmr).padStart(3)} \` | ` : ``}[${p.ignPlain}](${p.trackerURL})`);
 
-
         // add if the type of sub ONLY IF it has players in it
-        const description = [];
-        if (descriptionFA.length > 0) description.push([`__Free Agents__`, ...descriptionFA].join(`\n`));
-        if (descriptionRFA.length > 0) description.push([`__Restricted Free Agents__`, ...descriptionRFA].join(`\n`));
-        if (subInUseDescription.length > 0) description.push([`__Active Substitute(s)__`, ...subInUseDescription].join(`\n`));
+        const d1 = [];
+        const d2 = [];
+        const d3 = [];
+        if (descriptionFA.length > 0) d1.push([`__Free Agents__`, ...descriptionFA].join(`\n`));
+        if (descriptionRFA.length > 0) d2.push([`__Restricted Free Agents__`, ...descriptionRFA].join(`\n`));
+        if (subInUseDescription.length > 0) d3.push([`__Active Substitute(s)__`, ...subInUseDescription].join(`\n`));
 
         // and then create the embed
-        const embed = new EmbedBuilder({
+        const headerEmbed = new EmbedBuilder({
             author: { name: `${tier} Substitutes` },
-            description: description.join(`\n\n`),
+            color: COLORS[tier],
+        });
+
+        const dataEmbeds = [
+            d1.length > 0 ? new EmbedBuilder({
+                color: COLORS[tier],
+                description: d1.join(`\n`)
+            }) : undefined,
+            d2.length > 0 ? new EmbedBuilder({
+                color: COLORS[tier],
+                description: d2.join(`\n`)
+            }) : undefined,
+            d3.length > 0 ? new EmbedBuilder({
+                color: COLORS[tier],
+                description: d3.join(`\n`)
+            }) : undefined,
+        ].filter(v => v !== undefined);
+
+        // and then create the embed
+        const footerEmbed = new EmbedBuilder({
             color: COLORS[tier],
             footer: { text: `Valorant Draft Circuit - ${tier} Substitutes` }
         });
+        if (showMMR) footerEmbed.setDescription(`MMR: ${capMin} - ${capMax == 999 ? `∞` : capMax}`);
 
-        if (showMMR) embed.addFields({
-            name: `\u200B`,
-            value: `MMR: ${capMin} - ${capMax}`
-        });
 
-        return await interaction.editReply({ embeds: [embed] })
+        return await interaction.editReply({ embeds: [headerEmbed, ...dataEmbeds, footerEmbed] })
     }
 };
