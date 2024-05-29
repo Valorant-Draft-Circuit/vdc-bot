@@ -8,8 +8,7 @@ const COLORS = {
     APPRENTICE: 0x72C357,
     EXPERT: 0x04AEE4,
     MYTHIC: 0xA657A6,
-}
-
+};
 
 module.exports = {
 
@@ -63,7 +62,7 @@ module.exports = {
 
         // and then create the embed
         const headerEmbed = new EmbedBuilder({
-            author: { name: `${tier} Substitutes` },
+            author: { name: `${tier[0].toUpperCase() + tier.substring(1).toLowerCase()} Substitutes` },
             color: COLORS[tier],
         });
 
@@ -85,7 +84,7 @@ module.exports = {
         // and then create the embed
         const footerEmbed = new EmbedBuilder({
             color: COLORS[tier],
-            footer: { text: `Valorant Draft Circuit - ${tier} Substitutes` }
+            footer: { text: `Valorant Draft Circuit - ${tier[0].toUpperCase() + tier.substring(1).toLowerCase()} Substitutes` }
         });
         if (showMMR) footerEmbed.setDescription(`MMR: ${capMin} - ${capMax == 999 ? `∞` : capMax}`);
 
