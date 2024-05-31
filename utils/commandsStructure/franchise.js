@@ -14,12 +14,12 @@
 const { ApplicationCommandOptionType } = require(`discord.js`);
 
 module.exports = {
-    name: "teams",
-    description: "Get a franchise's teams",
+    name: `franchise`,
+    description: `Get info about a franchise`,
     options: [
         {
             name: `franchise`,
-            description: "The franchise to get teams for",
+            description: `The franchise to get teams for`,
             type: ApplicationCommandOptionType.String,
             required: true,
             choices: franchiseChoices()
@@ -29,14 +29,14 @@ module.exports = {
 
 function franchiseChoices() {
     const franchiseData = require(`../../cache/franchises.json`);
-    const signOptions = [];
+    const franchiseOptions = [];
 
     franchiseData.forEach(franchise => {
-        signOptions.push({
+        franchiseOptions.push({
             name: `${franchise.slug} — ${franchise.name}`,
             value: franchise.name,
         })
     });
 
-    return signOptions;
+    return franchiseOptions;
 }

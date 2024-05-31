@@ -66,10 +66,10 @@ module.exports = {
 
         // create the base embed
         const embed = new EmbedBuilder({
-            author: { name: `${tier} | Franchise Standings`, iconURL: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png` },
+            author: { name: `${tier[0].toUpperCase() + tier.substring(1).toLowerCase()} | Franchise Standings`, iconURL: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png` },
             description: `\`\`\`${legend.join(`   `)}\`\`\`\n${standingsOutput.join(`\n`)}`,
             color: COLORS[tier],
-            footer: { text: `Standings — ${tier}` }
+            footer: { text: `Standings — ${tier[0].toUpperCase() + tier.substring(1).toLowerCase()}` }
         });
 
         return await interaction.editReply({ embeds: [embed] });

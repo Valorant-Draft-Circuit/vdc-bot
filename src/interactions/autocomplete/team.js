@@ -19,16 +19,13 @@ module.exports = {
 
 function teamChoices() {
     const teamCache = require(`../../../cache/teams.json`);
-    // console.log(teamCache)
-
     const teamOptions = [];
-    // console.log(teamCache)
 
     teamCache.forEach(team => {
         teamOptions.push({
-            name: `${team.slug} — ${team.name}`,
+            name: `${team.slug} — ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()} — ${team.name}`,
             value: team.name,
-        })
+        });
     });
 
     return teamOptions;

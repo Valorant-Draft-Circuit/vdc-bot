@@ -6,6 +6,13 @@ const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const imagesURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 
+const COLORS = {
+   PROSPECT: 0xFEC335,
+   APPRENTICE: 0x72C357,
+   EXPERT: 0x04AEE4,
+   MYTHIC: 0xA657A6,
+}
+
 module.exports = {
 
    name: `roster`,
@@ -33,7 +40,7 @@ module.exports = {
 
       // process db data and organize for display
       const refinedRoster = await refinedRosterData(interaction, teamRoster);
-
+      refinedRoster.sort((a, b) => a.mmr - b.mmr)
       // filter by rostered/IR & suvs and format with Riot ID, Tracker link & add emotes
       const rosteredPlayers = refinedRoster
          .filter(player => (player.leagueStatus === LeagueStatus.SIGNED || player.leagueStatus === LeagueStatus.GENERAL_MANAGER) && player.contractStatus !== ContractStatus.INACTIVE_RESERVE)
@@ -64,8 +71,8 @@ module.exports = {
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
          author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.Brand.logo}` },
-         description: `\`   Managers \` : ${gmIDs.map(gm => `<@${gm}>`)}\n\`       Tier \` : ${team.tier}${showMMR ? `\n\`   Team MMR \` : ${teamMMR} / ${teamMMRCap}` : ``}`,
-         color: 0xE92929,
+         description: `\`   Managers \` : ${gmIDs.map(gm => `<@${gm}>`)}\n\`       Tier \` : ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()}${showMMR ? `\n\`   Team MMR \` : ${teamMMR} / ${teamMMRCap} (Δ${teamMMRCap - teamMMR})` : ``}`,
+         color: COLORS[team.tier],
          fields: [
             {
                name: `\u200B`,
