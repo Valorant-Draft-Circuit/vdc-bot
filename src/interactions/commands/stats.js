@@ -7,6 +7,13 @@ const { GameType, LeagueStatus } = require("@prisma/client");
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 const avg = (array) => array.reduce((s, v) => s += v, 0) / array.length;
 
+const COLORS = {
+    PROSPECT: 0xFEC335,
+    APPRENTICE: 0x72C357,
+    EXPERT: 0x04AEE4,
+    MYTHIC: 0xA657A6,
+};
+
 module.exports = {
 
     name: `stats`,
@@ -19,6 +26,7 @@ module.exports = {
         switch (_subcommand) {
             case `match`:
                 const matchURL = _hoistedOptions[0].value;
+                console.log(matchURL)
                 return await sendMatchStats(interaction, matchURL);
             case `player`:
                 const guildMember = _hoistedOptions[0].member;
@@ -56,9 +64,9 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 
     // create the base embed
     const embed = new EmbedBuilder({
-        author: { name: `${home.tier} - ${home.name} vs. ${away.name} - ${date}`, url: matchURL },
+        author: { name: `${home.tier} - ${home.name} vs. ${away.name} - ${date}`, url: `https://tracker.gg/valorant/match/${id}` },
         description: `${roundsWonBar}\n${dataOutput.join(`\n`)}`,
-        color: 0xE92929,
+        color: COLORS[home.tier],
         footer: { text: `Stats — Match` }
     });
 
@@ -130,6 +138,27 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         associatedData
     ];
 
+    const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
+    let embedcolor;
+    switch (true) {
+        case tierLines.PROSPECT.min < mmr && mmr < tierLines.PROSPECT.max:
+            embedcolor = COLORS.PROSPECT
+            break;
+        case tierLines.APPRENTICE.min < mmr && mmr < tierLines.APPRENTICE.max:
+            embedcolor = COLORS.APPRENTICE
+            break;
+        case tierLines.EXPERT.min < mmr && mmr < tierLines.EXPERT.max:
+            embedcolor = COLORS.EXPERT
+            break;
+        case tierLines.MYTHIC.min < mmr && mmr < tierLines.MYTHIC.max:
+            embedcolor = COLORS.MYTHIC
+            break;
+
+        default:
+            embedcolor = 0xE92929;
+            break;
+    }
+    
     const trackerButton = new ButtonBuilder({
         style: ButtonStyle.Link,
         label: `Tracker`,
@@ -140,7 +169,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     const embed = new EmbedBuilder({
         author: { name: [prefix, riotIGN.split(`#`)[0]].join(` | `), url: trackerURL },
         description: description.join(`\n`),
-        color: 0xE92929,
+        color: embedcolor,
         fields: [
             { name: `Kills/Round`, value: `\`\`\`ansi\n\u001b[0;36m${kpr}\`\`\``, inline: true },
             { name: `Damage/Round`, value: `\`\`\`ansi\n\u001b[0;36m${dmgpr}\`\`\``, inline: true },
@@ -180,7 +209,7 @@ function createRoundsWonBar(match) {
 }
 
 /** Create the stats "module" for a player */
-function createMatchPlayerStats(player, home, team) {   
+function createMatchPlayerStats(player, home, team) {
     const ign = player.Player.PrimaryRiotAccount.riotIGN;
 
     // collect & organize data for outputs
@@ -261,7 +290,7 @@ async function createFranchiseStatsModule(player) {
     ];
 
     // and then format & return the "module"
-    return `\n${emote} **${franchiseName}** - ${team.tier}` + `\n` +
+    return `\n${emote} **${franchiseName}** - ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()}` + `\n` +
         `\`\`\`ansi\n${color}${data.join(`${color} | `)}\n\`\`\``;
 }
 
