@@ -114,7 +114,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     const ratingDefense = summedStats.ratingDefense.toFixed(2)
     const kpr = (summedStats.totalKills / summedStats.rounds).toFixed(2);
     const apr = (summedStats.totalAssists / summedStats.rounds).toFixed(2);
-    const dpr = (summedStats.totalAssists / summedStats.rounds).toFixed(2);
+    const dpr = (summedStats.totalDeaths / summedStats.rounds).toFixed(2);
     const dmgpr = (summedStats.totalDamage / summedStats.rounds).toFixed(2);
     const fkpr = (summedStats.firstKills * 100 / summedStats.rounds).toFixed(2);
     const fdpr = (summedStats.firstDeaths * 100 / summedStats.rounds).toFixed(2);
