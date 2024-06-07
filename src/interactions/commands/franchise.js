@@ -43,7 +43,7 @@ module.exports = {
                 {
                     name: `\u200B`,
                     // name: `Team Name`,
-                    value:  `**Team\n**` + franchiseTeams.map(ft => ft.name).join(`\n`),
+                    value: `**Team\n**` + franchiseTeams.map(ft => ft.name).join(`\n`),
                     inline: true
                 },
                 {
@@ -55,7 +55,7 @@ module.exports = {
                 {
                     name: `\u200B`,
                     // name: `Tier`,
-                    value:  `\u200B`,
+                    value: `\u200B`,
                     inline: true
                 },
                 {
@@ -70,13 +70,12 @@ module.exports = {
         });
 
         if (franchise.Brand.description) {
-            embed.addFields({
-                name: `\u200B`,
-                value: franchise.Brand.description
+            const descriptionArray = franchise.Brand.description.split(`\n`).filter(e => e !== ``);
+
+            descriptionArray.forEach((paragraph) => {
+                embed.addFields({ name: `\u200B`, value: paragraph });
             })
         }
-
-        franchise.Brand.description
 
         const replyObject = { embeds: [embed] };
         let buttons = []
