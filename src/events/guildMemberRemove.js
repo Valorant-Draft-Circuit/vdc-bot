@@ -1,3 +1,6 @@
+const { LeagueStatus, ContractStatus } = require("@prisma/client");
+const { Player, Transaction } = require("../../prisma");
+const { prisma } = require("../../prisma/prismadb");
 const { CHANNELS, GUILD } = require(`../../utils/enums`);
 const { EmbedBuilder } = require(`discord.js`);
 
@@ -16,9 +19,9 @@ module.exports = {
 
     async execute(client, member) {
         try {
-       
+
             const guild = await client.guilds.fetch(GUILD);
-            
+
             const farewellChannel = await guild.channels.fetch(CHANNELS.MEMBER_LOGS);
             const embed = new EmbedBuilder({
                 title: `${member.displayName} has left the server`,
@@ -26,9 +29,22 @@ module.exports = {
                 color: 0x7e383a,
                 timestamp: Date.now(),
             });
-            if (farewellChannel) {
-                farewellChannel.send({ embeds: [embed] });
-            }
+
+            if (farewellChannel) farewellChannel.send({ embeds: [embed] });
+
+            const player = await Player.getBy({ discordID: member.id });
+            if (player) {
+                prisma.status.update({
+                    where: { userID: player.id },
+                    data: {
+                        leagueStatus: LeagueStatus.SUSPENDED,
+                        contractStatus: null,
+                        contractRemaining: null,
+                        Player: { update: { data: { team: null } } }
+                    }
+                });
+            };
+
         } catch (err) {
             client.logger.console({
                 level: 'ERROR',
