@@ -38,7 +38,8 @@ module.exports = {
         const embed = new EmbedBuilder({
             author: { name: franchiseName, iconURL: `${imagepath}${franchise.Brand.logo}` },
             // title: franchise.name,
-            description: `**General Manager** : ${gmIDs.map(gm => `<@${gm}>`)}\n**AGMs** : ${agmIDs.map(agm => `<@${agm}>`)}\n${pst}`,
+            description: `**General Manager** : ${gmIDs.map(gm => `<@${gm}>`)}\n**AGMs** : ${agmIDs.map(agm => `<@${agm}>`)}`,
+            // description: `**General Manager** : ${gmIDs.map(gm => `<@${gm}>`)}\n**AGMs** : ${agmIDs.map(agm => `<@${agm}>`)}\n${pst}`,
             fields: [
                 {
                     name: `\u200B`,
@@ -58,11 +59,11 @@ module.exports = {
                     value: `\u200B`,
                     inline: true
                 },
-                {
-                    name: `\u200B`,
-                    value: pst,
-                    inline: false
-                },
+                // {
+                //     name: `\u200B`,
+                //     value: pst,
+                //     inline: false
+                // },
             ],
             color: embedAccentColor,
             thumbnail: { url: `${imagepath}${franchise.logoFileName}?size=1080` },
