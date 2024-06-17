@@ -1,5 +1,5 @@
 const { LeagueStatus } = require("@prisma/client");
-const { Player, Transaction, Flags } = require("../../../prisma");
+const { Player, Transaction, Flags, ControlPanel } = require("../../../prisma");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES, PlayerStatusCode } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
@@ -63,15 +63,39 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     if (!validStatusesToDE.includes(playerData.Status.leagueStatus)) return await replyFunction({
         content: `${guildMember.user} doesn't have a player status of Pending, FA or RFA and cannot become Draft Eligible!`
     });
-    
-    const franchises = await prisma.franchise.findMany({ where: { active: true } })
-    const franchiseRoles = franchises.map(f => f.roleID);
-    await guildMember.roles.remove(franchiseRoles);
 
-    // renove the viewer role & add the league role
-    if (guildMember._roles.includes(ROLES.LEAGUE.VIEWER)) await guildMember.roles.remove(ROLES.LEAGUE.VIEWER);
-    if (guildMember._roles.includes(ROLES.LEAGUE.FORMER_PLAYER)) await guildMember.roles.remove(ROLES.LEAGUE.FORMER_PLAYER);
-    await guildMember.roles.add(ROLES.LEAGUE.LEAGUE);
+	// remove all league roles and then add League & franchise role
+	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
+	await guildMember.roles.remove([
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+		...franchiseRoleIDs
+	]);
+
+    const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
+    const mmrBase = playerData.PrimaryRiotAccount.MMR.mmrBase;
+
+    await prisma.user.update({
+        where: { id: playerData.id },
+        data: {
+            PrimaryRiotAccount: { update: { data: { MMR: { update: { data: { mmrEffective: mmrBase } } } } } },
+        }
+    })
+
+    switch (true) {
+        case tierLines.PROSPECT.min < mmrBase && mmrBase < tierLines.PROSPECT.max:
+			await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
+            break;
+        case tierLines.APPRENTICE.min < mmrBase && mmrBase < tierLines.APPRENTICE.max:
+			await guildMember.roles.add([ROLES.TIER.APPRENTICE, ROLES.TIER.APPRENTICE_FREE_AGENT]);
+            break;
+        case tierLines.EXPERT.min < mmrBase && mmrBase < tierLines.EXPERT.max:
+			await guildMember.roles.add([ROLES.TIER.EXPERT, ROLES.TIER.EXPERT_FREE_AGENT]);
+            break;
+        case tierLines.MYTHIC.min < mmrBase && mmrBase < tierLines.MYTHIC.max:
+			await guildMember.roles.add([ROLES.TIER.MYTHIC, ROLES.TIER.MYTHIC_FREE_AGENT]);
+            break;
+    }
 
     // update the name to match convention
     const ign = playerData.PrimaryRiotAccount.riotIGN.split(`#`)[0];
