@@ -60,6 +60,7 @@ async function generatePlayoffsImages(
     const { homeName, awayName, resolution, time, type, style } = options;
 
     console.log(type)
+    console.log(options)
     
     const homeTeam = await Team.getBy({ name: homeName });
     const awayTeam = await Team.getBy({ name: awayName });
@@ -196,7 +197,7 @@ async function generatePlayoffsImages(
     /*  ----------------------------------- TEXT -----------------------------------  */
     context.fillStyle = COLORS.RED;
     context.font = `700 35px Lato`;
-    const boXtext = `Best of ${type === `Grand Finals` ? 5 : 3} Series  |  ${time}`.toUpperCase().split(``).join(` `);
+    const boXtext = `Best of ${style === `grand-finals` ? 5 : 3} Series  |  ${time}`.toUpperCase().split(``).join(` `);
     const boXtextMeasurements = context.measureText(boXtext)
     context.fillText(
         boXtext,
