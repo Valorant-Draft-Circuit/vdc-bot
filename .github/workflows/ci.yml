@@ -50,5 +50,5 @@ jobs:
         with:
           url: ${{ secrets.COOLIFY_WEBHOOK }}
           method: 'GET'
-          customHeaders: '{"Authorization": "Bearer ${{ secrets.COOLIFY_WEBHOOK }}"}'
+          customHeaders: '{"Authorization": "Bearer ${{ secrets.COOLIFY_TOKEN }}"}'
           preventFailureOnNoResponse: true
