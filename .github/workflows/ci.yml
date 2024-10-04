@@ -44,3 +44,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: DATABASE_URL=${{ secrets.DATABASE_URL }}
+          
+      - name: Send POST request to auto-refresh
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: ${{ secrets.COOLIFY_WEBHOOK }}
+          method: 'GET'
+          customHeaders: '{"Authorization": "Bearer ${{ secrets.COOLIFY_WEBHOOK }}"}'
+          preventFailureOnNoResponse: true
