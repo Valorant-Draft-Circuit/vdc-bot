@@ -243,7 +243,6 @@ async function generateExpiringContractReport() {
         where: {
             Status: {
                 is: {
-                    leagueStatus: LeagueStatus.SIGNED,
                     contractStatus: ContractStatus.SIGNED,
                     contractRemaining: 0,
                 }}
