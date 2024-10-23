@@ -12,12 +12,12 @@ const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[
  * @param {GuildMember} player
  * @param {String} teamName
  */
-async function requestRenew(interaction, player) {
+async function requestExpire(interaction, player) {
 
 	const playerData = await Player.getBy({ discordID: player.value });
 	if (playerData === null) return interaction.editReply(`This player doesn't exist!`);
-	if (playerData.team === null) return interaction.editReply(`This player is not signed to a team and cannot have their contract renewed!`);
-	if (playerData.Status.contractRemaining !== 0) return interaction.editReply(`This player's contract isn't expiring and cannot have their contract renewed!`);
+	if (playerData.team === null) return interaction.editReply(`This player is not signed to a team and cannot have their contract expiration finalized!`);
+	if (playerData.Status.contractRemaining !== 0) return interaction.editReply(`This player's contract isn't expiring and cannot have their contract expiration finalized!`);
 
 
 	const teamData = await Team.getBy({ id: playerData.team });
@@ -36,11 +36,11 @@ async function requestRenew(interaction, player) {
 			},
 			{
 				name: `\u200B`,
-				value: `RENEW\n${player.user}\n\`${player.value}\`\n${teamData.name}\n${franchise.name}`,
+				value: `FINALIZE EXPIRATION\n${player.user}\n\`${player.value}\`\n${teamData.name}\n${franchise.name}`,
 				inline: true,
 			},
 		],
-		footer: { text: `Transactions — Renew` },
+		footer: { text: `Transactions — Expire` },
 	});
 
 	const cancel = new ButtonBuilder({
@@ -50,7 +50,7 @@ async function requestRenew(interaction, player) {
 	});
 
 	const confirm = new ButtonBuilder({
-		customId: `transactions_${TransactionsNavigationOptions.RENEW_COMFIRM}`,
+		customId: `transactions_${TransactionsNavigationOptions.EXPIRE_COMFIRM}`,
 		label: `Confirm`,
 		style: ButtonStyle.Success,
 	});
@@ -60,7 +60,7 @@ async function requestRenew(interaction, player) {
 	return await interaction.editReply({ embeds: [embed], components: [subrow] });
 }
 
-async function confirmRenew(interaction) {
+async function confirmExpire(interaction) {
 
 	const playerID = interaction.message.embeds[0].fields[1].value
 		.replaceAll(`\``, ``)
@@ -76,8 +76,8 @@ async function confirmRenew(interaction) {
 	const playerTag = playerIGN.split(`#`)[0];
 
 	// cut the player & ensure that the player's team property is now null
-	const status = await Transaction.renew(playerData.id);
-	if (status.contractRemaining !== 1) return await interaction.editReply(`There was an error while attempting to renew the player's contract. The database was not updated.`);
+	const status = await Transaction.cut(playerID);
+	if (status.contractRemaining != null) return await interaction.editReply(`There was an error while attempting to finalize the expiration of the player's contract. The database was not updated.`);
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
@@ -88,7 +88,7 @@ async function confirmRenew(interaction) {
 	// create the base embed
 	const announcement = new EmbedBuilder({
 		author: { name: `VDC Transactions Manager` },
-		description: `${guildMember} (${playerTag})'s contract was renewed by ${franchise.name}`,
+		description: `${guildMember} (${playerTag})'s contract on ${franchise.name} has expired`,
 		thumbnail: {
 			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchise.Brand.logo}`,
 		},
@@ -105,7 +105,7 @@ async function confirmRenew(interaction) {
 				inline: true,
 			},
 		],
-		footer: { text: `Transactions — Renew` },
+		footer: { text: `Transactions — Expire` },
 		timestamp: Date.now(),
 	});
 
@@ -114,6 +114,6 @@ async function confirmRenew(interaction) {
 	return await transactionsChannel.send({ embeds: [announcement] });
 }
 module.exports = {
-	requestRenew: requestRenew,
-	confirmRenew: confirmRenew,
+	requestExpire: requestExpire,
+	confirmExpire: confirmExpire,
 };

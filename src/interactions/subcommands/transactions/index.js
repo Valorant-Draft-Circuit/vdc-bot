@@ -1,13 +1,14 @@
 const { requestSign, confirmSign } = require(`./sign`);
 const { requestCut, confirmCut } = require(`./cut`);
-const { requestUpdateTier, confirmUpdateTier } = require("./updateTier");
-const { requestRenew, confirmRenew } = require("./renew");
-const { requestSub, confirmSub } = require("./sub");
-const { requestUnsub, confirmUnsub } = require("./unsub");
-const { requestIR, confirmToggleIR } = require("./ir");
-const { requestCaptain, confirmToggleCaptain } = require("./captain");
-const { requestRetire, confirmRetire } = require("./retire");
-const { requestTrade, resetTrade, confirmTrade, displayFranchiseTradeOptions, playerTradeRequest, draftPickTradeRequest } = require("./trade");
+const { requestUpdateTier, confirmUpdateTier } = require(`./updateTier`);
+const { requestRenew, confirmRenew } = require(`./renew`);
+const { requestExpire, confirmExpire } = require(`./expire`);
+const { requestSub, confirmSub } = require(`./sub`);
+const { requestUnsub, confirmUnsub } = require(`./unsub`);
+const { requestIR, confirmToggleIR } = require(`./ir`);
+const { requestCaptain, confirmToggleCaptain } = require(`./captain`);
+const { requestRetire, confirmRetire } = require(`./retire`);
+const { requestTrade, resetTrade, confirmTrade, displayFranchiseTradeOptions, playerTradeRequest, draftPickTradeRequest } = require(`./trade`);
 
 module.exports = {
 	sign: {
@@ -25,6 +26,10 @@ module.exports = {
 	renew: {
 		renew: requestRenew,
 		confirm: confirmRenew,
+	},
+	expire: {
+		expire: requestExpire,
+		confirm: confirmExpire,
 	},
 	sub: {
 		sub: requestSub,
