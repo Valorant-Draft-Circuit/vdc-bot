@@ -46,6 +46,7 @@ module.exports = {
                         { name: `Player League Status`, value: `PLAYER_LEAGUE_STATUS` },
                         { name: `Franchise Information`, value: `FRANCHISE_INFORMATION` },
                         { name: `Admin Tier List`, value: `ADMIN_TIER_LIST` },
+                        { name: `Expiring Contracts`, value: `EXPIRING_CONTRACTS` },
                     ]
                 },
             ]

@@ -6,8 +6,6 @@ const { prisma } = require("../../../../prisma/prismadb");
 
 
 async function report(/** @type ChatInputCommandInteraction */ interaction) {
-
-    // console.log(interaction.options)
     const reportType = interaction.options._hoistedOptions[0].value;
 
     switch (reportType) {
@@ -28,15 +26,13 @@ async function report(/** @type ChatInputCommandInteraction */ interaction) {
             fs.writeFileSync(`./cache/adminTierList.csv`, reportCSV);
             return await interaction.editReply({ files: [`./cache/adminTierList.csv`] });
         };
+        case `EXPIRING_CONTRACTS`: {
+            const reportsArray = await generateExpiringContractReport();
+            fs.writeFileSync(`./cache/expiringContracts.csv`, reportsArray.join(`\n`));
+            return await interaction.editReply({ files: [`./cache/expiringContracts.csv`] });
+        };
     }
-
     return
-
-
-
-
-
-
 }
 
 module.exports = { report };
@@ -240,4 +236,28 @@ async function generateAdminTierList() {
         return `${Math.round(p.PrimaryRiotAccount.MMR.mmrEffective)},${p.PrimaryRiotAccount.riotIGN},${p.name},${p.Status.leagueStatus},${p.Status.contractStatus},${p.Status.contractRemaining}`
     }).join(`\n`)
     return `MMR_EFFECTIVE,RIOT_IGN,NAME,LEAGUE_STATUS,CONTRACT_STATUS,CONTRACT_REMAINING\n` + data
+}
+
+async function generateExpiringContractReport() {
+    const expiringContracts = (await prisma.user.findMany({
+        where: {
+            Status: {
+                is: {
+                    leagueStatus: LeagueStatus.SIGNED,
+                    contractStatus: ContractStatus.SIGNED,
+                    contractRemaining: 0,
+                }}
+            },
+        include: {Team: {include: {Franchise: true}}}
+    })).sort((a, b) => b.team - a.team).sort((a, b) => b.Team.franchise - a.Team.franchise);
+
+    const firstFranchise =  expiringContracts[0].Team.Franchise.name
+    let franciseLastSlug = expiringContracts[0].Team.Franchise.slug;
+    return [firstFranchise, ...expiringContracts.map((c) => {
+        const out = `${c.Team.Franchise.slug.padEnd(4, ` `)}  |  ${c.Team.name.padStart(20, ` `)} | ${c.name}`
+        if (c.Team.Franchise.slug != franciseLastSlug) {
+            franciseLastSlug = c.Team.Franchise.slug;
+            return [`\n`, c.Team.Franchise.name, out]
+        } else return out;
+    }).flat()];
 }
