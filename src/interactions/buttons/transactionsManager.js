@@ -1,5 +1,5 @@
 const { EmbedBuilder, ChatInputCommandInteraction } = require(`discord.js`);
-const { cut, sign, renew, updateTier, sub, unsub, ir, retire, trade, captain } = require(`../subcommands/transactions`);
+const { cut, sign, renew, expire, updateTier, sub, unsub, ir, retire, trade, captain } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
 
@@ -17,6 +17,8 @@ module.exports = {
 				return await sign.confirm(interaction);
 			case TransactionsNavigationOptions.RENEW_COMFIRM:
 				return await renew.confirm(interaction);
+			case TransactionsNavigationOptions.EXPIRE_COMFIRM:
+        		return await expire.confirm(interaction);
 			case TransactionsNavigationOptions.UPDATE_TIER_COMFIRM:
 				return await updateTier.confirm(interaction);
 			case TransactionsNavigationOptions.RETIRE_COMFIRM:
@@ -36,7 +38,7 @@ module.exports = {
 			case TransactionsNavigationOptions.IR_REMOVE_COMFIRM:
 				return await ir.confirm(interaction, `REMOVE`);
 
-				
+
 			//  CAPTAIN BUTTONS  ###################################
 			case TransactionsNavigationOptions.CAPTAIN_SET_COMFIRM:
 				return await captain.confirm(interaction, `SET`);
