@@ -4,6 +4,8 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Player, Team, Transaction, Franchise } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+const { prisma } = require("../../../../prisma/prismadb");
+const { Tier } = require("@prisma/client");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -74,6 +76,33 @@ async function confirmExpire(interaction) {
 	const franchise = await Franchise.getBy({ teamID: playerData.team });
 
 	const playerTag = playerIGN.split(`#`)[0];
+
+	// remove all league roles and then add League & franchise role
+	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
+	await guildMember.roles.remove([
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+		...franchiseRoleIDs
+	]);
+	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.FREE_AGENT]);
+	switch (team.tier) {
+		case Tier.PROSPECT:
+			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
+			break;
+		case Tier.APPRENTICE:
+			await guildMember.roles.add(ROLES.TIER.APPRENTICE_FREE_AGENT);
+			break;
+		case Tier.EXPERT:
+			await guildMember.roles.add(ROLES.TIER.EXPERT_FREE_AGENT);
+			break;
+		case Tier.MYTHIC:
+			await guildMember.roles.add(ROLES.TIER.MYTHIC_FREE_AGENT);
+			break;
+	}
+
+	// get player info (IGN, Accolades) & update their nickname
+	const accolades = guildMember.nickname?.match(emoteregex);
+	guildMember.setNickname(`FA | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// cut the player & ensure that the player's team property is now null
 	const status = await Transaction.cut(playerID);
