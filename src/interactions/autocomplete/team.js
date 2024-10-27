@@ -6,7 +6,6 @@ module.exports = {
 
     async execute(/** @type AutocompleteInteraction */ interaction) {
         const focusedValue = interaction.options.getFocused();
-        console.log(focusedValue)
         const choices = teamChoices();
         const query = focusedValue.toLowerCase();
 

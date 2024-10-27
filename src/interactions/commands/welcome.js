@@ -80,8 +80,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
         const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
         switch (true) {
             case (tierLines.PROSPECT.min < mmrBase && mmrBase < tierLines.PROSPECT.max):
-                await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
-                console.log(`here`)
+                await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]); 
                 break;
             case tierLines.APPRENTICE.min < mmrBase && mmrBase < tierLines.APPRENTICE.max:
                 await guildMember.roles.add([ROLES.TIER.APPRENTICE, ROLES.TIER.APPRENTICE_FREE_AGENT]);
@@ -202,10 +201,10 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     let i = 0;
     const int = setInterval(async () => {
         singleWelcome(interaction, playersToWelcome[i], true);
-        console.log(playersToWelcome[i], i, playersToWelcome.length);
+        console.log(`${playersToWelcome[i]}, ${i}/${playersToWelcome.length}`);
 
         if (i === playersToWelcome.length - 1) {
-            await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed!` });
+            await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed to the league!` });
             return clearInterval(int);
         };
         i++

@@ -1,7 +1,7 @@
 const { EmbedBuilder, GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
-const { Player, Franchise } = require(`../../../prisma`);
+const { Player, Franchise, ControlPanel } = require(`../../../prisma`);
 const { prisma } = require(`../../../prisma/prismadb`);
-const { LeagueStatus } = require("@prisma/client");
+const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { StatusEmotes } = require("../../../utils/enums");
 
 /** Riot's API endpoint to fetch a user's account by their puuid 
@@ -35,8 +35,6 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 
 	const player = await Player.getBy({ discordID: discordID });
 	// const stats = awa
-
-	console.log(player)
 
 	// if there is a tagged user, use that, otherwise use the interaction author
 	const guildMember = interaction.options._hoistedOptions.length > 0 ? interaction.guild.members.cache.get(interaction.options._hoistedOptions[0].value) : interaction.member;
@@ -122,12 +120,12 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	const userId = interaction.user.id;
 	const playerData = await Player.getBy({ discordID: userId });
-	if (!playerData.primaryRiotAccountID) return await interaction.editReply({ content: `I looked through our filing cabinets and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!` });
+	if (!playerData.primaryRiotAccountID) return await interaction.editReply({ content: `I looked through our data and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!` });
 
 	// get the player's updated IGN from Riot's accountByPuuid endpoint
 	const puuid = playerData.primaryRiotAccountID;
 	const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
-	if (!response.ok) return await interaction.editReply({ content: `There was a problem checking Riot's filing cabinets! Please try again later and/or let a bot developer know!` });
+	if (!response.ok) return await interaction.editReply({ content: `There was a problem checking Riot's API! Please try again later and/or let a bot developer know!` });
 
 	const { gameName, tagLine } = await response.json();
 	const updatedIGN = `${gameName}#${tagLine}`;
@@ -137,17 +135,11 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	/** @type GuildMember */
 	const guildMember = await interaction.guild.members.fetch(userId);
-
-	// If database value is the exact same from the API call, don't update the database- simply continue & try to update the nickname
-	if (ignFromDB === gameName && guildMember.nickname?.includes(gameName)) {
-		return await interaction.editReply({ content: `Well... This is awkward. The database already has your most up-to-date IGN and upon some super close inspection, your nickname looks like it's correct as well!!` });
-	} else {
-		const updatedPlayer = await prisma.account.update({
-			where: { providerAccountId: puuid },
-			data: { riotIGN: updatedIGN }
-		});
-		if (updatedPlayer.riotIGN !== updatedIGN) return await interaction.editReply({ content: `Looks like there was an error and the database wasn't updated! Please try again later and/or let a bot developer know!` });
-	}
+	const updatedPlayer = await prisma.account.update({
+		where: { providerAccountId: puuid },
+		data: { riotIGN: updatedIGN }
+	});
+	if (updatedPlayer.riotIGN !== updatedIGN) return await interaction.editReply({ content: `Looks like there was an error and the database wasn't updated! Please try again later and/or let a bot developer know!` });
 
 	// check to make sure the bot can update the user's nickname
 	if (!guildMember.manageable) return await interaction.editReply({ content: `The database was updated to reflect your new IGN: (\`${updatedIGN}\`), but I can't update your nickname- your roles are higher than mine! You will need to update your nickname manually!` });
@@ -156,6 +148,44 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	const slug = playerData.team ? (await Franchise.getBy({ teamID: playerData.team })).slug : playerData.Status.leagueStatus == LeagueStatus.FREE_AGENT ? `FA` : playerData.Status.leagueStatus == LeagueStatus.DRAFT_ELIGIBLE ? `DE` : `RFA`;
 	const accolades = guildMember.nickname?.match(emoteregex);
 	guildMember.setNickname(`${slug} | ${gameName} ${accolades ? accolades.join(``) : ``}`);
+
+	const mmrShow = await ControlPanel.getMMRDisplayState();
+
+	// remove all league roles and then add League & franchise role
+	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
+	await guildMember.roles.remove([
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+		...franchiseRoleIDs
+	]);
+	if (playerData.Status.contractStatus == ContractStatus.SIGNED) {
+		await guildMember.roles.add([
+			ROLES.LEAGUE.LEAGUE,
+			mmrShow ? ROLES.TIER[team.tier] : null,
+			playerData.Team.Franchise.roleID
+		].filter(rid => rid != null));
+	} else {
+		// update league roles
+		if (mmrShow) {
+			const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
+			const mmrEffective = Math.round(playerData.PrimaryRiotAccount.MMR.mmrEffective);
+			switch (true) {
+				case (tierLines.PROSPECT.min < mmrEffective && mmrEffective < tierLines.PROSPECT.max):
+					await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
+					break;
+				case tierLines.APPRENTICE.min < mmrEffective && mmrEffective < tierLines.APPRENTICE.max:
+					await guildMember.roles.add([ROLES.TIER.APPRENTICE, ROLES.TIER.APPRENTICE_FREE_AGENT]);
+					break;
+				case tierLines.EXPERT.min < mmrEffective && mmrEffective < tierLines.EXPERT.max:
+					await guildMember.roles.add([ROLES.TIER.EXPERT, ROLES.TIER.EXPERT_FREE_AGENT]);
+					break;
+				case tierLines.MYTHIC.min < mmrEffective && mmrEffective < tierLines.MYTHIC.max:
+					await guildMember.roles.add([ROLES.TIER.MYTHIC, ROLES.TIER.MYTHIC_FREE_AGENT]);
+					break;
+			}
+		}
+
+	}
 
 	// create the success update "announcement"
 	const embed = new EmbedBuilder({
@@ -169,6 +199,6 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	});
 
 	// ephemerally update status and then exit with the announcement
-	await interaction.editReply({ content: `Success! The database, your nickname & your Riot IGN are all in sync!` });
+	await interaction.editReply({ content: `Success! The database, your roles, your nickname & your Riot IGN are all in sync!` });
 	return await interaction.channel.send({ embeds: [embed] });
 }
