@@ -17,7 +17,7 @@ const { ApplicationCommandOptionType } = require(`discord.js`);
 module.exports = {
     name: "debug",
     description: "Access debug commands here!",
-    default_member_permissions: `0x0000000000002000`,
+    default_member_permissions: process.env.ENVIRONMENT == `DEV` ? `0x0` : `0x0000000000002000`,
     options: [
         {
             name: "user",
@@ -68,11 +68,13 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     choices: [
+                        { name: `Approved`, value: LeagueStatus.APPROVED },
                         { name: `Draft Eligible`, value: LeagueStatus.DRAFT_ELIGIBLE },
                         { name: `Free Agent`, value: LeagueStatus.FREE_AGENT },
                         { name: `Restricted Free Agent`, value: LeagueStatus.RESTRICTED_FREE_AGENT },
                         { name: `Signed`, value: LeagueStatus.SIGNED },
                         { name: `General Manager`, value: LeagueStatus.GENERAL_MANAGER },
+                        { name: `Retired`, value: LeagueStatus.RETIRED },
                         { name: `Suspended`, value: LeagueStatus.SUSPENDED },
                     ]
                 },
