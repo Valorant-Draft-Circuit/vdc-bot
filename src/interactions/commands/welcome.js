@@ -119,7 +119,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
         } else if (playerData.Status.contractRemaining === 0) {
             // expiring contract
             await acceptedChannel.send({
-                content: `Welcome ${guildMember.user} back to the league as the renegoiate their contract with ${playerTeam.Franchise.name}!`
+                content: `Welcome ${guildMember.user} back to the league as they renegotiate their contract with ${playerTeam.Franchise.name}!`
             });
 
         } else {
