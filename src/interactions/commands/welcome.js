@@ -141,7 +141,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
             await guildMember.roles.add(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
             await Transaction.updateStatus({ playerID: discordID, status: LeagueStatus.RESTRICTED_FREE_AGENT });
             await acceptedChannel.send({
-                content: `Welcome ${guildMember.user} to league as a Restricted Free Agent!`
+                content: `Welcome ${guildMember.user} to the league as a Restricted Free Agent!`
             });
 
         } else if (playerFlags & Flags.ACTIVE_LAST_SEASON) {
