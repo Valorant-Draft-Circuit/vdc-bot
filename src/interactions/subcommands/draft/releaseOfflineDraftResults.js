@@ -80,7 +80,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
         // sign the player in the db
         const isGM = player.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
-        await Transaction.sign({ userID: player.id, teamID: team.id, isGM: isGM });
+        await Transaction.draftSign({ userID: player.id, teamID: team.id, isGM: isGM });
 
         // create the embed
         const pickEmbed = new EmbedBuilder({
