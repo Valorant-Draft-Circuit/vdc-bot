@@ -170,7 +170,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     // update the name to match convention
     const ign = playerData.PrimaryRiotAccount.riotIGN.split(`#`)[0];
     const accolades = guildMember.nickname?.match(emoteregex);
-    guildMember.setNickname(`${welcomeSlug} | ${ign} ${accolades ? accolades.join(``)`` : ``}`);
+    guildMember.setNickname(`${welcomeSlug} | ${ign} ${accolades ? accolades.join(``) : ``}`);
 
 
     // log player and where they get updated
