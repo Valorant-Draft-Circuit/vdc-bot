@@ -182,7 +182,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 }
 
 async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction) {
-    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.RESTRICTED_FREE_AGENT]);
+    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED]);
 
     const playersToWelcome = approvedPlayers.map(p => {
         return p.Accounts.find((a) => a.provider == `discord`).providerAccountId;
