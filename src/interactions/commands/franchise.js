@@ -25,7 +25,8 @@ module.exports = {
 
         const agmIDs = [
             franchise.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-            franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId
+            franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+            franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
         ].filter(v => v !== undefined);
 
         // const gm = franchise.GM.name;
