@@ -1,5 +1,5 @@
 const { ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } = require(`discord.js`);
-const { Franchise, Player } = require(`../../../../prisma`);
+const { Franchise, Player, Flags, Roles } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
 const { refresh } = require("./refreshFranchisesChannel");
@@ -41,6 +41,8 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await updateTransactionsPerms(interaction, guildMember, franchise, `REMOVE`);
             await guildMember.roles.remove([ROLES.OPERATIONS.GM]);
 
+            await Player.modifyRoles({userID: player.id}, `REMOVE`, Roles.LEAGUE_GM);
+
             // create the base embed
             const announcement = new EmbedBuilder({
                 author: { name: `Franchise Management Update` },
@@ -64,11 +66,12 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             else if (franchise.agm3ID == player.id) agmNumber = 3;
             else return await interaction.editReply(`This player is not an AGM of this franchise`);
 
-
             await prisma.franchise.update({ where: { id: franchise.id }, data: { [`agm${agmNumber}ID`]: null } });
 
             await updateTransactionsPerms(interaction, guildMember, franchise, `REMOVE`);
             await guildMember.roles.remove([ROLES.OPERATIONS.AGM]);
+
+            await Player.modifyRoles({userID: player.id}, `REMOVE`, Roles.LEAGUE_AGM);
 
             // create the base embed
             const announcement = new EmbedBuilder({
@@ -103,6 +106,8 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
 
             await updateTransactionsPerms(interaction, guildMember, franchise, `ADD`);
             await guildMember.roles.add([ROLES.OPERATIONS.GM]);
+
+            await Player.modifyRoles({userID: player.id}, `ADD`, Roles.LEAGUE_GM);
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
@@ -139,6 +144,8 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
 
             await updateTransactionsPerms(interaction, guildMember, franchise, `ADD`);
             await guildMember.roles.add([ROLES.OPERATIONS.AGM]);
+
+            await Player.modifyRoles({userID: player.id}, `ADD`, Roles.LEAGUE_AGM);
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
