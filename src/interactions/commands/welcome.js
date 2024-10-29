@@ -1,5 +1,5 @@
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
-const { Player, Transaction, Flags, ControlPanel } = require("../../../prisma");
+const { Player, Transaction, Flags, ControlPanel, Roles } = require("../../../prisma");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
@@ -80,7 +80,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
         const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
         switch (true) {
             case (tierLines.PROSPECT.min < mmrBase && mmrBase < tierLines.PROSPECT.max):
-                await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]); 
+                await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
                 break;
             case tierLines.APPRENTICE.min < mmrBase && mmrBase < tierLines.APPRENTICE.max:
                 await guildMember.roles.add([ROLES.TIER.APPRENTICE, ROLES.TIER.APPRENTICE_FREE_AGENT]);
@@ -97,20 +97,57 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     // initalize welcome slug
     let welcomeSlug = ``;
 
-    if (playerData.Status.contractStatus == ContractStatus.SIGNED) {
+    if (playerData.Status.contractStatus == ContractStatus.SIGNED || Number(playerData.roles) & Roles.LEAGUE_GM || Number(playerData.roles) & Roles.LEAGUE_AGM) {
         // get team and if captain
         const playerTeam = playerData.Team;
-        const isCaptain = playerTeam.captain == playerData.id;
+        const isCaptain = playerTeam?.captain == playerData.id;
 
         // get franchise and if GM
-        const playerFranchise = playerTeam.Franchise;
-        const franchiseRoleID = playerFranchise.roleID;
-        const isGM = [playerFranchise.gmID, playerFranchise.agm1ID, playerFranchise.agm2ID].filter(id => id != null).includes(playerData.id);
+        const playerFranchise = playerTeam?.Franchise;
+        const franchiseRoleID = playerFranchise?.roleID;
 
         // set welcomeslug
-        welcomeSlug = playerFranchise.slug;
+        welcomeSlug = playerFranchise?.slug;
 
-        if (playerData.Status.contractRemaining === 1) {
+        if (Number(playerData.roles) & Roles.LEAGUE_GM) {
+            const franchise = await prisma.franchise.findFirst({
+                where: {
+                    OR: [
+                        { gmID: playerData.id },
+                        { agm1ID: playerData.id },
+                        { agm2ID: playerData.id },
+                        { agm3ID: playerData.id },
+                    ]
+                }
+            });
+
+            welcomeSlug = franchise.slug;
+
+            await guildMember.roles.add(ROLES.OPERATIONS.GM);
+            await acceptedChannel.send({
+                content: `Welcome ${guildMember.user} back as a General Manager for ${franchise.name}!`
+            });
+
+        } else if (Number(playerData.roles) & Roles.LEAGUE_AGM) {
+            const franchise = await prisma.franchise.findFirst({
+                where: {
+                    OR: [
+                        { gmID: playerData.id },
+                        { agm1ID: playerData.id },
+                        { agm2ID: playerData.id },
+                        { agm3ID: playerData.id },
+                    ]
+                }
+            });
+
+            welcomeSlug = franchise.slug;
+            
+            await guildMember.roles.add(ROLES.OPERATIONS.AGM);
+            await acceptedChannel.send({
+                content: `Welcome ${guildMember.user} back as an Assistant General Manager for ${franchise.name}!`
+            });
+
+        } else if (playerData.Status.contractRemaining === 1) {
             // continuing with franchise with 1 season remaining on contract
             await acceptedChannel.send({
                 content: `Welcome ${guildMember.user} back to the league on their team, ${playerTeam.name} on ${playerTeam.Franchise.name}!`
@@ -141,7 +178,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
             await guildMember.roles.add(ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
             await Transaction.updateStatus({ playerID: discordID, status: LeagueStatus.RESTRICTED_FREE_AGENT });
             await acceptedChannel.send({
-                content: `Welcome ${guildMember.user} to league as a Restricted Free Agent!`
+                content: `Welcome ${guildMember.user} to the league as a Restricted Free Agent!`
             });
 
         } else if (playerFlags & Flags.ACTIVE_LAST_SEASON) {
@@ -182,7 +219,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 }
 
 async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction) {
-    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.RESTRICTED_FREE_AGENT]);
+    const approvedPlayers = await Player.filterAllByStatus([LeagueStatus.APPROVED]);
 
     const playersToWelcome = approvedPlayers.map(p => {
         return p.Accounts.find((a) => a.provider == `discord`).providerAccountId;
