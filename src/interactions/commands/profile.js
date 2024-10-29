@@ -2,7 +2,7 @@ const { EmbedBuilder, GuildMember, ChatInputCommandInteraction } = require(`disc
 const { Player, Franchise, ControlPanel } = require(`../../../prisma`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
-const { StatusEmotes } = require("../../../utils/enums");
+const { StatusEmotes, ROLES } = require("../../../utils/enums");
 
 /** Riot's API endpoint to fetch a user's account by their puuid 
  * @TODO Update to the internal VDC endpoint once it's ready */
@@ -158,6 +158,41 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		...Object.values(ROLES.TIER),
 		...franchiseRoleIDs
 	]);
+
+	switch (playerData.Status.leagueStatus) {
+		case LeagueStatus.DRAFT_ELIGIBLE:
+			await guildMember.roles.add([
+				ROLES.LEAGUE.LEAGUE,
+				mmrShow ? ROLES.TIER[team.tier] : null,
+				ROLES.LEAGUE.DRAFT_ELIGIBLE
+			].filter(rid => rid != null));
+			break;
+		case LeagueStatus.FREE_AGENT:
+			await guildMember.roles.add([
+				ROLES.LEAGUE.LEAGUE, ,
+				ROLES.LEAGUE.FREE_AGENT,
+				mmrShow ? ROLES.TIER[team.tier] : null
+			].filter(rid => rid != null));
+			break;
+		case LeagueStatus.RESTRICTED_FREE_AGENT:
+			await guildMember.roles.add([
+				ROLES.LEAGUE.LEAGUE,
+				ROLES.LEAGUE.RESTRICTED_FREE_AGENT,
+				mmrShow ? ROLES.TIER[team.tier] : null
+			].filter(rid => rid != null));
+			break;
+		case LeagueStatus.GENERAL_MANAGER:
+			const playerFranchise = playerData.Team.Franchise;
+			await guildMember.roles.add([
+				ROLES.LEAGUE.LEAGUE,
+				playerFranchise.gmID == playerData.id ? ROLES.OPERATIONS.GM : ROLES.OPERATIONS.AGM,
+				mmrShow ? ROLES.TIER[team.tier] : null,
+				playerData.Team.Franchise.roleID
+			].filter(rid => rid != null));
+			break;
+	}
+
+
 	if (playerData.Status.contractStatus == ContractStatus.SIGNED) {
 		await guildMember.roles.add([
 			ROLES.LEAGUE.LEAGUE,
@@ -184,12 +219,11 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 					break;
 			}
 		}
-
 	}
 
 	// create the success update "announcement"
 	const embed = new EmbedBuilder({
-		description: `${guildMember}'s nickname has been updated!`,
+		description: `${guildMember}'s has updated & synced their profile!`,
 		color: 0x008000,
 		fields: [
 			{ name: `From:`, value: riotNameFromDB, inline: true },
