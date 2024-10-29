@@ -80,7 +80,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
         const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
         switch (true) {
             case (tierLines.PROSPECT.min < mmrBase && mmrBase < tierLines.PROSPECT.max):
-                await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]); 
+                await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
                 break;
             case tierLines.APPRENTICE.min < mmrBase && mmrBase < tierLines.APPRENTICE.max:
                 await guildMember.roles.add([ROLES.TIER.APPRENTICE, ROLES.TIER.APPRENTICE_FREE_AGENT]);
@@ -97,26 +97,54 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     // initalize welcome slug
     let welcomeSlug = ``;
 
-    if (playerData.Status.contractStatus == ContractStatus.SIGNED) {
+    if (playerData.Status.contractStatus == ContractStatus.SIGNED || Number(playerData.roles) & Roles.LEAGUE_GM || Number(playerData.roles) & Roles.LEAGUE_AGM) {
         // get team and if captain
         const playerTeam = playerData.Team;
-        const isCaptain = playerTeam.captain == playerData.id;
+        const isCaptain = playerTeam?.captain == playerData.id;
 
         // get franchise and if GM
-        const playerFranchise = playerTeam.Franchise;
-        const franchiseRoleID = playerFranchise.roleID;
+        const playerFranchise = playerTeam?.Franchise;
+        const franchiseRoleID = playerFranchise?.roleID;
 
         // set welcomeslug
-        welcomeSlug = playerFranchise.slug;
+        welcomeSlug = playerFranchise?.slug;
 
         if (Number(playerData.roles) & Roles.LEAGUE_GM) {
+            const franchise = await prisma.franchise.findFirst({
+                where: {
+                    OR: [
+                        { gmID: playerData.id },
+                        { agm1ID: playerData.id },
+                        { agm2ID: playerData.id },
+                        { agm3ID: playerData.id },
+                    ]
+                }
+            });
+
+            welcomeSlug = franchise.slug;
+
+            await guildMember.roles.add(ROLES.OPERATIONS.GM);
             await acceptedChannel.send({
-                content: `Welcome ${guildMember.user} back as a General Manager for ${playerTeam.Franchise.name}!`
+                content: `Welcome ${guildMember.user} back as a General Manager for ${franchise.name}!`
             });
 
         } else if (Number(playerData.roles) & Roles.LEAGUE_AGM) {
+            const franchise = await prisma.franchise.findFirst({
+                where: {
+                    OR: [
+                        { gmID: playerData.id },
+                        { agm1ID: playerData.id },
+                        { agm2ID: playerData.id },
+                        { agm3ID: playerData.id },
+                    ]
+                }
+            });
+
+            welcomeSlug = franchise.slug;
+            
+            await guildMember.roles.add(ROLES.OPERATIONS.AGM);
             await acceptedChannel.send({
-                content: `Welcome ${guildMember.user} back as an Assistant General Manager for ${playerTeam.Franchise.name}!`
+                content: `Welcome ${guildMember.user} back as an Assistant General Manager for ${franchise.name}!`
             });
 
         } else if (playerData.Status.contractRemaining === 1) {
