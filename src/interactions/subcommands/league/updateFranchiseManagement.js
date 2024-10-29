@@ -41,7 +41,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await updateTransactionsPerms(interaction, guildMember, franchise, `REMOVE`);
             await guildMember.roles.remove([ROLES.OPERATIONS.GM]);
 
-            await Player.modifyRoles({userID: player.id}, `REMOVE`, Roles.LEAGUE_GM);
+            await Player.modifyRoles({userID: player.id}, `REMOVE`, [Roles.LEAGUE_GM]);
 
             // create the base embed
             const announcement = new EmbedBuilder({
@@ -71,7 +71,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await updateTransactionsPerms(interaction, guildMember, franchise, `REMOVE`);
             await guildMember.roles.remove([ROLES.OPERATIONS.AGM]);
 
-            await Player.modifyRoles({userID: player.id}, `REMOVE`, Roles.LEAGUE_AGM);
+            await Player.modifyRoles({userID: player.id}, `REMOVE`, [Roles.LEAGUE_AGM]);
 
             // create the base embed
             const announcement = new EmbedBuilder({
@@ -107,7 +107,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await updateTransactionsPerms(interaction, guildMember, franchise, `ADD`);
             await guildMember.roles.add([ROLES.OPERATIONS.GM]);
 
-            await Player.modifyRoles({userID: player.id}, `ADD`, Roles.LEAGUE_GM);
+            await Player.modifyRoles({userID: player.id}, `ADD`, [Roles.LEAGUE_GM]);
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
@@ -145,7 +145,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await updateTransactionsPerms(interaction, guildMember, franchise, `ADD`);
             await guildMember.roles.add([ROLES.OPERATIONS.AGM]);
 
-            await Player.modifyRoles({userID: player.id}, `ADD`, Roles.LEAGUE_AGM);
+            await Player.modifyRoles({userID: player.id}, `ADD`, [Roles.LEAGUE_AGM]);
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
