@@ -1,5 +1,5 @@
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
-const { Player, Transaction, Flags, ControlPanel } = require("../../../prisma");
+const { Player, Transaction, Flags, ControlPanel, Roles } = require("../../../prisma");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
@@ -105,12 +105,21 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
         // get franchise and if GM
         const playerFranchise = playerTeam.Franchise;
         const franchiseRoleID = playerFranchise.roleID;
-        const isGM = [playerFranchise.gmID, playerFranchise.agm1ID, playerFranchise.agm2ID].filter(id => id != null).includes(playerData.id);
 
         // set welcomeslug
         welcomeSlug = playerFranchise.slug;
 
-        if (playerData.Status.contractRemaining === 1) {
+        if (Number(playerData.roles) & Roles.LEAGUE_GM) {
+            await acceptedChannel.send({
+                content: `Welcome ${guildMember.user} back as a General Manager for ${playerTeam.Franchise.name}!`
+            });
+
+        } else if (Number(playerData.roles) & Roles.LEAGUE_AGM) {
+            await acceptedChannel.send({
+                content: `Welcome ${guildMember.user} back as an Assistant General Manager for ${playerTeam.Franchise.name}!`
+            });
+
+        } else if (playerData.Status.contractRemaining === 1) {
             // continuing with franchise with 1 season remaining on contract
             await acceptedChannel.send({
                 content: `Welcome ${guildMember.user} back to the league on their team, ${playerTeam.name} on ${playerTeam.Franchise.name}!`
