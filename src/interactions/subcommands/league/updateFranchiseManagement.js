@@ -2,6 +2,7 @@ const { ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } = requi
 const { Franchise, Player } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
+const { refresh } = require("./refreshFranchisesChannel");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -53,6 +54,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
             await transactionsChannel.send({ embeds: [announcement] });
 
+            await refresh(interaction);
 
             return await interaction.editReply(`This operation is complete. ${guildMember} is no longer the general manager for ${franchise.name}!`);
         } else {
@@ -81,6 +83,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
             await transactionsChannel.send({ embeds: [announcement] });
 
+            await refresh(interaction);
 
             return await interaction.editReply(`This operation is complete. ${guildMember} is no longer an assistant general manager for ${franchise.name}!`);
         }
@@ -119,6 +122,8 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
             await transactionsChannel.send({ embeds: [announcement] });
 
+            await refresh(interaction);
+
             return await interaction.editReply(`This operation is complete. ${guildMember} was set as the general manager for ${franchise.name}!`);
 
         } else {
@@ -152,6 +157,8 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
 
             const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
             await transactionsChannel.send({ embeds: [announcement] });
+
+            await refresh(interaction);
 
             return await interaction.editReply(`This operation is complete. ${guildMember} is now an assistant general manager for ${franchise.name}!`);
         }

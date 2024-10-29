@@ -58,6 +58,11 @@ module.exports = {
                     required: true
                 }
             ]
+        },
+        {
+            name: `refresh-franchises-channel`,
+            description: `Force a refresh of the franchises channel`,
+            type: ApplicationCommandOptionType.Subcommand
         }
     ]
 }

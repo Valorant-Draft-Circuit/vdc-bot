@@ -1,6 +1,7 @@
 const { ChatInputCommandInteraction } = require(`discord.js`);
 
-const { updateFranchiseManagement } = require(`../subcommands/league`);
+const { updateFranchiseManagement,refreshFranchisesChannel } = require(`../subcommands/league`);
+const { CHANNELS } = require("../../../utils/enums");
 
 
 module.exports = {
@@ -15,6 +16,9 @@ module.exports = {
         switch (_subcommand) {
             case `update-franchise-management`:
                 return await updateFranchiseManagement(interaction);
+            case `refresh-franchises-channel`:
+                await refreshFranchisesChannel(interaction);
+                return await interaction.editReply(`The <#${CHANNELS.FRANCHISES}> channel has been updated!`)
         }
     }
 };
