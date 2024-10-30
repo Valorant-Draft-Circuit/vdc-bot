@@ -37,7 +37,7 @@ module.exports = {
                 trackerURL: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ign)}`,
                 leagueStatus: player.Status.leagueStatus,
                 contractStatus: player.Status.contractStatus,
-                mmr: Math.round(player.PrimaryRiotAccount?.MMR.mmrEffective)
+                mmr: Math.round(player.PrimaryRiotAccount?.MMR?.mmrEffective || 0)
             }
         }).filter(player => player.mmr >= capMin && player.mmr <= capMax).sort((a, b) => a.mmr - b.mmr);
 
