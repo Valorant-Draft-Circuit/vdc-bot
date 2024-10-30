@@ -166,7 +166,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
             });
         }
         await guildMember.roles.add(isCaptain ? [franchiseRoleID, ROLES.LEAGUE.CAPTAIN] : franchiseRoleID);
-        await Transaction.updateStatus({ playerID: discordID, status: isGM ? LeagueStatus.GENERAL_MANAGER : LeagueStatus.SIGNED });
+        await Transaction.updateStatus({ playerID: discordID, status: Number(playerData.roles) & Roles.LEAGUE_GM ? LeagueStatus.GENERAL_MANAGER : LeagueStatus.SIGNED });
 
         // FAs, RFAs and DEs
     } else {
