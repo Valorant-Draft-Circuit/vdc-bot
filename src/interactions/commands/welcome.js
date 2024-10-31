@@ -104,7 +104,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 
         // get franchise and if GM
         const playerFranchise = playerTeam?.Franchise;
-        const franchiseRoleID = playerFranchise?.roleID;
+        let franchiseRoleID = playerFranchise?.roleID;
 
         // set welcomeslug
         welcomeSlug = playerFranchise?.slug;
@@ -122,6 +122,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
             });
 
             welcomeSlug = franchise.slug;
+            franchiseRoleID = franchise.roleID;
 
             await guildMember.roles.add(ROLES.OPERATIONS.GM);
             await acceptedChannel.send({
@@ -141,6 +142,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
             });
 
             welcomeSlug = franchise.slug;
+            franchiseRoleID = franchise.roleID;
             
             await guildMember.roles.add(ROLES.OPERATIONS.AGM);
             await acceptedChannel.send({
