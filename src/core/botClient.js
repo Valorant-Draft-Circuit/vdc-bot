@@ -1,12 +1,12 @@
 const fs = require(`fs`);
 
-const { Client, Collection, EmbedBuilder } = require("discord.js");
+const { Client, Collection, EmbedBuilder, IntentsBitField } = require("discord.js");
 const path = require("path");
 
 const {
     Guilds, GuildMessages,
     GuildVoiceStates, GuildMembers,
-    GuildPresences, DirectMessages
+    GuildPresences, DirectMessages, MessageContent
 } = require("discord.js").GatewayIntentBits;
 const { Channel } = require("discord.js").Partials;
 
@@ -17,7 +17,7 @@ module.exports = class BotClient extends Client {
             intents: [
                 Guilds, GuildMessages,
                 GuildVoiceStates, GuildMembers,
-                GuildPresences, DirectMessages
+                GuildPresences, DirectMessages, MessageContent
             ],
             partials: [Channel],
         });
