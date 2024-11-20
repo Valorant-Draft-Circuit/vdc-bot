@@ -80,57 +80,57 @@ async function confirmSign(interaction) {
 
 
 	// update nickname
-	// const playerTag = playerIGN.split(`#`)[0];
+	const playerTag = playerIGN.split(`#`)[0];
 	const guildMember = await interaction.guild.members.fetch(playerID);
-	// const accolades = guildMember.nickname?.match(emoteregex);
+	const accolades = guildMember.nickname?.match(emoteregex);
 
-	// guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+	guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// remove all league roles and then add League & franchise role
-	// const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
-	// await guildMember.roles.remove([
-	// 	...Object.values(ROLES.LEAGUE),
-	// 	...Object.values(ROLES.TIER),
-	// 	...franchiseRoleIDs
-	// ]);
-	// await guildMember.roles.add([
-	// 	ROLES.LEAGUE.LEAGUE,
-	// 	ROLES.TIER[team.tier],
-	// 	franchise.roleID
-	// ]);
+	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
+	await guildMember.roles.remove([
+		...Object.values(ROLES.LEAGUE),
+		...Object.values(ROLES.TIER),
+		...franchiseRoleIDs
+	]);
+	await guildMember.roles.add([
+		ROLES.LEAGUE.LEAGUE,
+		ROLES.TIER[team.tier],
+		franchise.roleID
+	]);
 
 	// sign the player & ensure that the player's team property is now null
-	// const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
-	// const player = await Transaction.sign({ userID: playerData.id, teamID: team.id, isGM: isGM });
-	// if (player.team !== team.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
+	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
+	const player = await Transaction.sign({ userID: playerData.id, teamID: team.id, isGM: isGM });
+	if (player.team !== team.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
 
-	// const embed = interaction.message.embeds[0];
-	// const embedEdits = new EmbedBuilder(embed);
-	// embedEdits.setDescription(`This operation was successfully completed.`);
-	// embedEdits.setFields([]);
-	// await interaction.message.edit({ embeds: [embedEdits], components: [] });
+	const embed = interaction.message.embeds[0];
+	const embedEdits = new EmbedBuilder(embed);
+	embedEdits.setDescription(`This operation was successfully completed.`);
+	embedEdits.setFields([]);
+	await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
 	// create the base embed
-	// const announcement = new EmbedBuilder({
-	// 	author: { name: `VDC Transactions Manager` },
-	// 	description: `${guildMember} (${playerTag}) has been signed to ${franchise.name}`,
-	// 	thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}` },
-	// 	color: 0xE92929,
-	// 	fields: [
-	// 		{
-	// 			name: `Franchise`,
-	// 			value: `<${franchise.Brand.discordEmote}> ${team.Franchise.name}`,
-	// 			inline: true,
-	// 		},
-	// 		{
-	// 			name: `Team`,
-	// 			value: team.name,
-	// 			inline: true,
-	// 		},
-	// 	],
-	// 	footer: { text: `Transactions — Sign` },
-	// 	timestamp: Date.now(),
-	// });
+	const announcement = new EmbedBuilder({
+		author: { name: `VDC Transactions Manager` },
+		description: `${guildMember} (${playerTag}) has been signed to ${franchise.name}`,
+		thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}` },
+		color: 0xE92929,
+		fields: [
+			{
+				name: `Franchise`,
+				value: `<${franchise.Brand.discordEmote}> ${team.Franchise.name}`,
+				inline: true,
+			},
+			{
+				name: `Team`,
+				value: team.name,
+				inline: true,
+			},
+		],
+		footer: { text: `Transactions — Sign` },
+		timestamp: Date.now(),
+	});
 
 	// Attempt to send a message to the user once they are cut
 	try {
@@ -175,13 +175,12 @@ async function confirmSign(interaction) {
 		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
 	} catch (e) {
-		console.log(e)
 		logger.console({ level: `WARNING`, title: `User ${playerData.name} does not have DMs open` })
 	}
 
-	// await interaction.deleteReply();
-	// const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
-	// return await transactionsChannel.send({ embeds: [announcement] });
+	await interaction.deleteReply();
+	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
+	return await transactionsChannel.send({ embeds: [announcement] });
 }
 
 module.exports = {
