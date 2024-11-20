@@ -7,6 +7,10 @@ const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../
 const { LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
+const Logger = require("../../../core/logger");
+const logger = new Logger();
+
+const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Send confirmation to sign a player
@@ -127,6 +131,52 @@ async function confirmSign(interaction) {
 		footer: { text: `Transactions — Sign` },
 		timestamp: Date.now(),
 	});
+
+	// Attempt to send a message to the user once they are cut
+	try {
+		const fchse = await prisma.franchise.findFirst({
+			where: { id: franchise.id },
+			include: {
+				Teams: true, Brand: true,
+				GM: { include: { Accounts: true } },
+				AGM1: { include: { Accounts: true } },
+				AGM2: { include: { Accounts: true } },
+				AGM3: { include: { Accounts: true } },
+			}
+		});
+
+		const gmIDs = [
+            fchse.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+        ].filter(v => v !== undefined);
+
+        const agmIDs = [
+            fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+            fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+            fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+        ].filter(v => v !== undefined);
+
+
+		const dmEmbed = new EmbedBuilder({
+			description: `Congratulations, you've been signed to ${franchise.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)} & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}. Feel free to reach out to them if you have any more questions!`,
+			thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
+			color: Number(franchise.Brand.colorPrimary)
+		});
+
+		// create the action row and add the button to it
+		const dmRow = new ActionRowBuilder({
+			components: [
+				new ButtonBuilder({
+					label: `${franchise.name} Discord`,
+					style: ButtonStyle.Link,
+					url: franchise.Brand.urlDiscord
+				})
+			]
+		});
+		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
+
+	} catch (e) {
+		logger.console({ level: `WARNING`, title: `User ${playerData.name} does not have DMs open` })
+	}
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);

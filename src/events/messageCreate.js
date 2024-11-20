@@ -15,7 +15,11 @@ module.exports = {
 
 	execute(client, /** @type Message */ message) {
 
-		/** Placeholder - For the time being, ignore ALL messages */
+		/** allow me to message via the bot */
+		if (message.author.id == `382893405178691584` && message.content.startsWith(`$say`)) {
+			message.delete();
+			return message.channel.send(message.content.replace(`$say `, ``))
+		}
 
 		return;
 

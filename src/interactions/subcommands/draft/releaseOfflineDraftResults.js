@@ -1,7 +1,7 @@
-const { LeagueStatus, Tier } = require("@prisma/client");
+const { LeagueStatus, Tier, ContractStatus } = require("@prisma/client");
 
 const { ControlPanel, Transaction } = require("../../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction } = require("discord.js");
+const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { prisma } = require("../../../../prisma/prismadb");
 const { CHANNELS, ROLES } = require("../../../../utils/enums");
 
@@ -12,6 +12,10 @@ const COLORS = {
     MYTHIC: 0xA657A6,
 }
 
+const Logger = require("../../../core/logger");
+const logger = new Logger();
+
+const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 const releaseInterval = 5 * 1000; // in ms
 
@@ -24,7 +28,11 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
         include: {
             Franchise: {
                 include: {
-                    Brand: true, Teams: true, GM: { include: { Accounts: true } }
+                    Brand: true, Teams: true,
+                    GM: { include: { Accounts: true } },
+                    AGM1: { include: { Accounts: true } },
+                    AGM2: { include: { Accounts: true } },
+                    AGM3: { include: { Accounts: true } },
                 }
             },
             Player: { include: { PrimaryRiotAccount: true, Accounts: true, Status: true } }
@@ -80,7 +88,8 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
         // sign the player in the db
         const isGM = player.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
-        await Transaction.draftSign({ userID: player.id, teamID: team.id, isGM: isGM });
+        const isNewContract = player.Status.contractStatus !== ContractStatus.SIGNED
+        await Transaction.draftSign({ userID: player.id, teamID: team.id, isGM: isGM, isNewContract: isNewContract });
 
         // create the embed
         const pickEmbed = new EmbedBuilder({
@@ -97,6 +106,40 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             footer: { text: `Valorant Draft Circuit Draft` }
         })
 
+        // Attempt to send a message to the user once they are cut
+        try {
+            const gmIDs = [
+                franchise.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+            ].filter(v => v !== undefined);
+
+            const agmIDs = [
+                franchise.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+                franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+                franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+            ].filter(v => v !== undefined);
+
+            const dmEmbed = new EmbedBuilder({
+                description: `Congratulations, you've been drafted to ${franchise.name}'s **${team.tier}** team, ${team.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)} & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}. Feel free to reach out to them if you have any more questions!`,
+                thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
+                color: Number(franchise.Brand.colorPrimary)
+            });
+
+            // create the action row and add the button to it
+            const dmRow = new ActionRowBuilder({
+                components: [
+                    new ButtonBuilder({
+                        label: `${franchise.name} Discord`,
+                        style: ButtonStyle.Link,
+                        url: franchise.Brand.urlDiscord
+                    })
+                ]
+            });
+            await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
+
+        } catch (e) {
+            logger.console({ level: `WARNING`, title: `User ${player.name} does not have DMs open` });
+        }
+
         // send the update
         await transactionsChannel.send({ embeds: [pickEmbed] });
         console.log(`REL: R: ${draftPick.round}, P: ${draftPick.pick}, ${playerIGN}`)
@@ -104,18 +147,20 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
     /** Callback function to update the embed once the entire queue is finished processing */
     const finishProcessingMessage = async () => {
-        const embed = (await interaction.fetchReply()).embeds[0];
-        const debugEmbed = new EmbedBuilder(embed);
+        return setTimeout(async () => {
+            const embed = (await interaction.fetchReply()).embeds[0];
+            const debugEmbed = new EmbedBuilder(embed);
 
-        debugEmbed.setDescription(`The season ${season} ${tier} draft has been released!`);
+            debugEmbed.setDescription(`The season ${season} ${tier} draft has been released!`);
 
-        const tierEndEmbed = new EmbedBuilder({
-            author: { name: `The Season ${season} ${tier} Draft has concluded!` },
-            color: COLORS[tier]
-        })
+            const tierEndEmbed = new EmbedBuilder({
+                author: { name: `The Season ${season} ${tier} Draft has concluded!` },
+                color: COLORS[tier]
+            })
 
-        await transactionsChannel.send({ embeds: [tierEndEmbed] });
-        return await interaction.editReply({ embeds: [debugEmbed] });
+            await transactionsChannel.send({ embeds: [tierEndEmbed] });
+            await interaction.editReply({ embeds: [debugEmbed] });
+        }, releaseInterval * 3);
     }
 
     // ##################################################################################################

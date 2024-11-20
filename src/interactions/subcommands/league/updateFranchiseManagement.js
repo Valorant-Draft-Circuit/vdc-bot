@@ -1,8 +1,9 @@
-const { ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } = require(`discord.js`);
-const { Franchise, Player, Flags, Roles } = require(`../../../../prisma`);
+const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const { Franchise, Player, Roles, Transaction } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
 const { refreshFranchisesChannel } = require("./refreshFranchisesChannel");
+const { LeagueStatus } = require("@prisma/client");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -108,6 +109,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await guildMember.roles.add([ROLES.OPERATIONS.GM]);
 
             await Player.modifyRoles({userID: player.id}, `ADD`, [Roles.LEAGUE_GM]);
+            await Transaction.updateStatus({playerID: player.id, status: LeagueStatus.GENERAL_MANAGER});
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
@@ -146,6 +148,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await guildMember.roles.add([ROLES.OPERATIONS.AGM]);
 
             await Player.modifyRoles({userID: player.id}, `ADD`, [Roles.LEAGUE_AGM]);
+            await Transaction.updateStatus({playerID: player.id, status: LeagueStatus.GENERAL_MANAGER});
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
