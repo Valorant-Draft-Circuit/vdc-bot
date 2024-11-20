@@ -7,6 +7,10 @@ const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../
 const { LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
+const Logger = require("../../../core/logger");
+const logger = new Logger();
+
+const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Send confirmation to sign a player
@@ -76,61 +80,108 @@ async function confirmSign(interaction) {
 
 
 	// update nickname
-	const playerTag = playerIGN.split(`#`)[0];
+	// const playerTag = playerIGN.split(`#`)[0];
 	const guildMember = await interaction.guild.members.fetch(playerID);
-	const accolades = guildMember.nickname?.match(emoteregex);
+	// const accolades = guildMember.nickname?.match(emoteregex);
 
-	guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+	// guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// remove all league roles and then add League & franchise role
-	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
-	await guildMember.roles.remove([
-		...Object.values(ROLES.LEAGUE),
-		...Object.values(ROLES.TIER),
-		...franchiseRoleIDs
-	]);
-	await guildMember.roles.add([
-		ROLES.LEAGUE.LEAGUE,
-		ROLES.TIER[team.tier],
-		franchise.roleID
-	]);
+	// const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
+	// await guildMember.roles.remove([
+	// 	...Object.values(ROLES.LEAGUE),
+	// 	...Object.values(ROLES.TIER),
+	// 	...franchiseRoleIDs
+	// ]);
+	// await guildMember.roles.add([
+	// 	ROLES.LEAGUE.LEAGUE,
+	// 	ROLES.TIER[team.tier],
+	// 	franchise.roleID
+	// ]);
 
 	// sign the player & ensure that the player's team property is now null
-	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
-	const player = await Transaction.sign({ userID: playerData.id, teamID: team.id, isGM: isGM });
-	if (player.team !== team.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
+	// const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
+	// const player = await Transaction.sign({ userID: playerData.id, teamID: team.id, isGM: isGM });
+	// if (player.team !== team.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
 
-	const embed = interaction.message.embeds[0];
-	const embedEdits = new EmbedBuilder(embed);
-	embedEdits.setDescription(`This operation was successfully completed.`);
-	embedEdits.setFields([]);
-	await interaction.message.edit({ embeds: [embedEdits], components: [] });
+	// const embed = interaction.message.embeds[0];
+	// const embedEdits = new EmbedBuilder(embed);
+	// embedEdits.setDescription(`This operation was successfully completed.`);
+	// embedEdits.setFields([]);
+	// await interaction.message.edit({ embeds: [embedEdits], components: [] });
 
 	// create the base embed
-	const announcement = new EmbedBuilder({
-		author: { name: `VDC Transactions Manager` },
-		description: `${guildMember} (${playerTag}) has been signed to ${franchise.name}`,
-		thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}` },
-		color: 0xE92929,
-		fields: [
-			{
-				name: `Franchise`,
-				value: `<${franchise.Brand.discordEmote}> ${team.Franchise.name}`,
-				inline: true,
-			},
-			{
-				name: `Team`,
-				value: team.name,
-				inline: true,
-			},
-		],
-		footer: { text: `Transactions — Sign` },
-		timestamp: Date.now(),
-	});
+	// const announcement = new EmbedBuilder({
+	// 	author: { name: `VDC Transactions Manager` },
+	// 	description: `${guildMember} (${playerTag}) has been signed to ${franchise.name}`,
+	// 	thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}` },
+	// 	color: 0xE92929,
+	// 	fields: [
+	// 		{
+	// 			name: `Franchise`,
+	// 			value: `<${franchise.Brand.discordEmote}> ${team.Franchise.name}`,
+	// 			inline: true,
+	// 		},
+	// 		{
+	// 			name: `Team`,
+	// 			value: team.name,
+	// 			inline: true,
+	// 		},
+	// 	],
+	// 	footer: { text: `Transactions — Sign` },
+	// 	timestamp: Date.now(),
+	// });
 
-	await interaction.deleteReply();
-	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
-	return await transactionsChannel.send({ embeds: [announcement] });
+	// Attempt to send a message to the user once they are cut
+	try {
+		const fchse = await prisma.franchise.findFirst({
+			where: { id: franchise.id },
+			include: {
+				Teams: true, Brand: true,
+				GM: { include: { Accounts: true } },
+				AGM1: { include: { Accounts: true } },
+				AGM2: { include: { Accounts: true } },
+				AGM3: { include: { Accounts: true } },
+			}
+		});
+
+		const gmIDs = [
+            fchse.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+        ].filter(v => v !== undefined);
+
+        const agmIDs = [
+            fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+            fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+            fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+        ].filter(v => v !== undefined);
+
+
+		const dmEmbed = new EmbedBuilder({
+			description: `Congratulations, you've been signed to ${franchise.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)} & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}. Feel free to reach out to them if you have any more questions!`,
+			thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
+			color: Number(franchise.Brand.colorPrimary)
+		});
+
+		// create the action row and add the button to it
+		const dmRow = new ActionRowBuilder({
+			components: [
+				new ButtonBuilder({
+					label: `${franchise.name} Discord`,
+					style: ButtonStyle.Link,
+					url: franchise.Brand.urlDiscord
+				})
+			]
+		});
+		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
+
+	} catch (e) {
+		console.log(e)
+		logger.console({ level: `WARNING`, title: `User ${playerData.name} does not have DMs open` })
+	}
+
+	// await interaction.deleteReply();
+	// const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
+	// return await transactionsChannel.send({ embeds: [announcement] });
 }
 
 module.exports = {

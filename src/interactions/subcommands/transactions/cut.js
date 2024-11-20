@@ -7,6 +7,10 @@ const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../
 const { Tier } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
+const Logger = require("../../../core/logger");
+const logger = new Logger();
+
+const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Request confirmation to cut a player
@@ -135,6 +139,30 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 		footer: { text: `Transactions — CUT` },
 		timestamp: Date.now(),
 	});
+
+	// Attempt to send a message to the user once they are cut
+	try {
+		const dmEmbed = new EmbedBuilder({
+			description: `Unfortunately, you've been cut from ${franchise.name}, but that's not the end! If you want to stay involved & showcase your talent to other teams-- as well as showing your old team that they would've been way better off with you on it... Join the FA Hub!`,
+			thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
+			color: Number(franchise.Brand.colorPrimary)
+		});
+
+		// create the action row and add the button to it
+		const dmRow = new ActionRowBuilder({
+			components: [
+				new ButtonBuilder({
+					label: `Free Agent Hub`,
+					style: ButtonStyle.Link,
+					url: `https://go.vdc.gg/fahub`
+				})
+			]
+		});
+		await guildMember.send({embeds: [dmEmbed], components: [dmRow]});
+
+	} catch (e) {
+		logger.console({ level: `WARNING`, title: `User ${playerData.name} does not have DMs open` })
+	}
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);

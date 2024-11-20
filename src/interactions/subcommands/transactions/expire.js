@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Player, Team, Transaction, Franchise } = require(`../../../../prisma`);
+const { Player, Team, Transaction, Franchise, Flags } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { Tier } = require("@prisma/client");
@@ -71,7 +71,7 @@ async function confirmExpire(interaction) {
 	const playerData = await Player.getBy({ discordID: playerID });
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const guildMember = await interaction.guild.members.fetch(playerID);
-	
+
 	const team = await Team.getBy({ id: playerData.team });
 	const franchise = await Franchise.getBy({ teamID: playerData.team });
 
@@ -84,7 +84,11 @@ async function confirmExpire(interaction) {
 		...Object.values(ROLES.TIER),
 		...franchiseRoleIDs
 	]);
-	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.FREE_AGENT]);
+
+	const flags = await Player.getFlags({ userID: playerData.id });
+	let agentType = flags & Flags.REGISTERED_AS_RFA ? `RFA` : `FA`;
+
+	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, agentType == `RFA` ? ROLES.LEAGUE.RESTRICTED_FREE_AGENT : ROLES.LEAGUE.FREE_AGENT]);
 	switch (team.tier) {
 		case Tier.PROSPECT:
 			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
@@ -102,7 +106,7 @@ async function confirmExpire(interaction) {
 
 	// get player info (IGN, Accolades) & update their nickname
 	const accolades = guildMember.nickname?.match(emoteregex);
-	guildMember.setNickname(`FA | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+	guildMember.setNickname(`${agentType} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
 
 	// cut the player & ensure that the player's team property is now null
 	const status = await Transaction.cut(playerID);
@@ -137,6 +141,30 @@ async function confirmExpire(interaction) {
 		footer: { text: `Transactions — Expire` },
 		timestamp: Date.now(),
 	});
+
+	// Attempt to send a message to the user once they are cut
+	try {
+		const dmEmbed = new EmbedBuilder({
+			description: `Unfortunately, your contract with ${franchise.name} has expired but that's not the end! If you want to stay involved & showcase your talent to other teams-- as well as showing your old team that they would've been way better off with you on it... Join the FA Hub!`,
+			thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
+			color: Number(franchise.Brand.colorPrimary)
+		});
+
+		// create the action row and add the button to it
+		const dmRow = new ActionRowBuilder({
+			components: [
+				new ButtonBuilder({
+					label: `Free Agent Hub`,
+					style: ButtonStyle.Link,
+					url: `https://go.vdc.gg/fahub`
+				})
+			]
+		});
+		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
+
+	} catch (e) {
+		logger.console({ level: `WARNING`, title: `User ${playerData.name} does not have DMs open` })
+	}
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
