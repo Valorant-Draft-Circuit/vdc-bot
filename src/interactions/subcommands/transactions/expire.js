@@ -7,6 +7,12 @@ const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../
 const { prisma } = require("../../../../prisma/prismadb");
 const { Tier } = require("@prisma/client");
 
+
+const Logger = require("../../../core/logger");
+const logger = new Logger();
+
+const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
+
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Send confirmation to Renew a player
@@ -86,7 +92,7 @@ async function confirmExpire(interaction) {
 	]);
 
 	const flags = await Player.getFlags({ userID: playerData.id });
-	let agentType = flags & Flags.REGISTERED_AS_RFA ? `RFA` : `FA`;
+	let agentType = flags == BigInt(Flags.REGISTERED_AS_RFA) ? `RFA` : `FA`;
 
 	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, agentType == `RFA` ? ROLES.LEAGUE.RESTRICTED_FREE_AGENT : ROLES.LEAGUE.FREE_AGENT]);
 	switch (team.tier) {
