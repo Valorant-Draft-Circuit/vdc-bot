@@ -1,19 +1,11 @@
-const fs = require("fs");
-const { LeagueStatus, ContractStatus, Tier } = require("@prisma/client");
-
-const { Franchise, Player, Team, Games, ControlPanel } = require("../../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction, } = require("discord.js");
-const { prisma } = require("../../../../prisma/prismadb");
-const { CHANNELS } = require("../../../../utils/enums");
+const { Franchise, ControlPanel } = require(`../../../../prisma`);
+const { prisma } = require(`../../../../prisma/prismadb`);
 
 async function fulfillFutureTrade(interaction, round, tier, franchiseFromName, franchiseToName) {
 	if (franchiseFromName === franchiseToName) return await interaction.editReply(`A franchise cannot give a future trade to themselves!`);
 
-	// get current season
-	const currentSeasonResponse = await prisma.controlPanel.findFirst({
-		where: { name: `current_season` },
-	});
-	const season = Number(currentSeasonResponse.value);
+    // get current season from the database
+    const season = await ControlPanel.getSeason();
 
 	// get franchise, it's team in the tier (if it exists) & the filtered draft board
 	const franchiseFrom = await Franchise.getBy({ name: franchiseFromName });

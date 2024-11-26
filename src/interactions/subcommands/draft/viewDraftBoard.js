@@ -1,17 +1,11 @@
-const fs = require("fs");
-const { LeagueStatus, ContractStatus, Tier } = require("@prisma/client");
+const fs = require(`fs`);
 
-const { Franchise, Player, Team, Games, ControlPanel } = require("../../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction, } = require("discord.js");
-const { prisma } = require("../../../../prisma/prismadb");
-const { CHANNELS } = require("../../../../utils/enums");
+const { ControlPanel } = require(`../../../../prisma`);
+const { prisma } = require(`../../../../prisma/prismadb`);
 
 async function viewTierDraftBoard(interaction, tier) {
 	// get current season from the database
-	const currentSeasonResponse = await prisma.controlPanel.findFirst({
-		where: { name: `current_season` },
-	});
-	const season = Number(currentSeasonResponse.value);
+	const season = await ControlPanel.getSeason();
 
 	// check to make sure the draft hasn't already been generated for this season
 	const draftDoneCheck = await prisma.draft.findMany({ where: { AND: [{ season: season }, { tier: tier }] } });
@@ -35,11 +29,11 @@ async function viewTierDraftBoard(interaction, tier) {
 	const output = sortedDraftBoard.map((sdb) => {
 		let strArr = [];
 		if (sdb.round == lRound + 1) {
-			strArr.push(`\n  ` + `Round  ${sdb.round} `.padEnd(90, `-`) + ` \n\n`);
+			strArr.push(`\n  ` + `Round  ${sdb.round} `.padEnd(100, `-`) + ` \n\n`);
 			lRound++;
 		}
 		if (sdb.round == 99 && lRound != 99) {
-			strArr.push(`\n  ` + `Keeper Round  `.padEnd(90, `-`) + ` \n\n`);
+			strArr.push(`\n  ` + `Keeper Round  `.padEnd(100, `-`) + ` \n\n`);
 			lRound = 99;
 		}
 		strArr.push(
