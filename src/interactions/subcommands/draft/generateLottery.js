@@ -1,140 +1,99 @@
-const fs = require("fs");
-const { LeagueStatus, ContractStatus, Tier } = require("@prisma/client");
+const fs = require(`fs`);
+const { LeagueStatus, ContractStatus, MatchType } = require(`@prisma/client`);
 
-const { Franchise, Player, Team, Games, ControlPanel } = require("../../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction, } = require("discord.js");
-const { prisma } = require("../../../../prisma/prismadb");
-const { CHANNELS } = require("../../../../utils/enums");
+const { Player, Team, ControlPanel } = require(`../../../../prisma`);
+const { EmbedBuilder, ChatInputCommandInteraction, } = require(`discord.js`);
+const { prisma } = require(`../../../../prisma/prismadb`);
 
-// unable to get post points remove when able too
-const postPoints = [
-    { id: 35, postPoints: 1 },
-    { id: 4, postPoints: 2.5 },
-    { id: 28, postPoints: 1 },
-    { id: 31, postPoints: 2 },
-    { id: 30, postPoints: 0 },
-    { id: 36, postPoints: 0 },
-    { id: 19, postPoints: 2.5 },
-    { id: 33, postPoints: 1 },
-    { id: 25, postPoints: 2 },
-    { id: 32, postPoints: 1 },
-    { id: 18, postPoints: 0 },
-    { id: 3, postPoints: 0 },
-    { id: 41, postPoints: 0 },
-    { id: 26, postPoints: 0 },
-    { id: 16, postPoints: 1 },
-    { id: 10, postPoints: 2.5 },
-    { id: 24, postPoints: 1 },
-    { id: 23, postPoints: 2 },
-    { id: 14, postPoints: 0 },
-    { id: 8, postPoints: 0 },
-    { id: 15, postPoints: 0 },
-    { id: 22, postPoints: 0 },
-    { id: 11, postPoints: 2 },
-    { id: 13, postPoints: 1 },
-    { id: 12, postPoints: 0 },
-    { id: 43, postPoints: 2.5 },
-    { id: 6, postPoints: 1 },
-];
-const teamWinLoss = [
-    { id: 35, win: 11, lose: 9 },
-    { id: 4, win: 11, lose: 9 },
-    { id: 28, win: 11, lose: 9 },
-    { id: 31, win: 10, lose: 10 },
-    { id: 30, win: 10, lose: 10 },
-    { id: 36, win: 7, lose: 13 },
-    { id: 19, win: 22, lose: 6 },
-    { id: 33, win: 17, lose: 11 },
-    { id: 25, win: 17, lose: 11 },
-    { id: 32, win: 15, lose: 13 },
-    { id: 18, win: 14, lose: 14 },
-    { id: 3, win: 11, lose: 17 },
-    { id: 41, win: 10, lose: 16 },
-    { id: 26, win: 4, lose: 22 },
-    { id: 16, win: 19, lose: 9 },
-    { id: 10, win: 17, lose: 11 },
-    { id: 24, win: 16, lose: 12 },
-    { id: 23, win: 15, lose: 13 },
-    { id: 14, win: 14, lose: 15 },
-    { id: 8, win: 12, lose: 16 },
-    { id: 15, win: 11, lose: 17 },
-    { id: 22, win: 9, lose: 19 },
-    { id: 11, win: 14, lose: 4 },
-    { id: 13, win: 12, lose: 6 },
 
-    { id: 43, win: 11, lose: 7 },
-    { id: 12, win: 8, lose: 10 },
-    { id: 6, win: 5, lose: 13 },
-];
-const newFrachise = [];
+// 2.5 pts - First Place
+const first = [`Celestial Calzones`, `Prophetic Paninis`, `Surge`, `Orion`];
 
-const newTeam = [
-    { id: 38 },
-    { id: 44 },
-    { id: 39 },
-    { id: 1 },
-    { id: 2 },
-    { id: 27 },
-    { id: 45 },
-    { id: 20 },
-    { id: 9 },
-    { id: 5 },
-];
+// 2 pts - Second Place
+const second = [`Pink Azalea`, `Cold Brew`, `Purple Iris`, `Blue Lotus`];
+
+// 1 pts - Third/Fourth Place
+const thirdfourth = [`Pegasus`, `Swell`, `Enforcers`, `Crest`, `Espresso`, `The Mafiosos`, `Bearzerkers`, `Royal Flush`];
 
 
 async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
     console.log(tier);
 
     // get current season from the database
-    const currentSeasonResponse = await prisma.controlPanel.findFirst({
-        where: { name: `current_season` },
-    });
-    const season = Number(currentSeasonResponse.value);
+    const season = await ControlPanel.getSeason();
 
     // check to make sure the draft hasn't already been generated for this season
     const draftDoneCheck = await prisma.draft.findMany({
-        where: { AND: [{ season: season }, { tier: tier }] },
+        where: { AND: [{ season: season }, { tier: tier }] }
     });
-    console.log(draftDoneCheck.length);
     if (draftDoneCheck.length !== 0) return await interaction.editReply(`The ${tier} draft lottery for season ${season} has already been generated.`);
 
-    // get MMR tier lines from the database
-    const mmrCapResponse = await prisma.controlPanel.findMany({ where: { name: { contains: `mmr_cap_player` } }, });
-    const prospectMMRCap = mmrCapResponse.find((r) => r.name === `prospect_mmr_cap_player`).value;
-    const apprenticeMMRCap = mmrCapResponse.find((r) => r.name === `apprentice_mmr_cap_player`).value;
-    const expertMMRCap = mmrCapResponse.find((r) => r.name === `expert_mmr_cap_player`).value;
+    const activeTeams = await prisma.teams.findMany({ where: { active: true }, select: { id: true, name: true } });
 
-    // store all MMR bounds in array and grab the relevant MMR bounds to store in tierMMR
-    const tierMMRBounds = [
-        { name: Tier.PROSPECT, high: prospectMMRCap, low: 0 },
-        { name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap },
-        { name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
-        { name: Tier.MYTHIC, high: 999, low: expertMMRCap },
-    ];
-    const tierMMR = tierMMRBounds.filter((m) => m.name === tier)[0];
+    const activeTeamsWinLoss = [];
+    for (let i = 0; i < activeTeams.length; i++) {
+        const activeTeamMatchDays = await prisma.matches.findMany({
+            where: {
+                AND: [
+                    { season: season - 1 }, { matchType: MatchType.BO2 },
+                    { OR: [{ home: activeTeams[i].id }, { away: activeTeams[i].id }] }
+                ]
+            }, include: { Games: true }
+        });
+
+        let gw = 0;
+        let gl = 0
+        activeTeamMatchDays.forEach(m => {
+            gw += m.Games.filter(g => g.winner == activeTeams[i].id).length
+            gl += m.Games.filter(g => g.winner != activeTeams[i].id).length
+        });
+
+        activeTeamsWinLoss.push({ ...activeTeams[i], win: gw, loss: gl });
+    }
+
+    const allTeams = await prisma.teams.findMany();
+    const postPoints = [];
+
+    for (let i = 0; i < first.length; i++) {
+        const team = allTeams.find(t => t.name == first[i]);
+        postPoints.push({ id: team.id, name: team.name, postPoints: 2.5 });
+    }
+    for (let j = 0; j < second.length; j++) {
+        const team = allTeams.find(t => t.name == second[j]);
+        postPoints.push({ id: team.id, name: team.name, postPoints: 2 });
+    }
+    for (let k = 0; k < thirdfourth.length; k++) {
+        const team = allTeams.find(t => t.name == thirdfourth[k]);
+        postPoints.push({ id: team.id, name: team.name, postPoints: 1 });
+    }
+    for (let l = 0; l < allTeams.length; l++) {
+        if (!postPoints.find(ppt => ppt.id === allTeams[l].id)) postPoints.push({ id: allTeams[l].id, name: allTeams[l].name, postPoints: 0 });
+    }
+
+    const teamWinLoss = activeTeamsWinLoss.filter(r => r.win !== 0 && r.loss !== 0);
+    const newTeam = teamWinLoss.filter(r => r.win === 0 && r.loss === 0);
+
+    // get MMR tier lines from the database
+    const tierMMR = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
 
     // get active teams who will be drafting and active players to draft from (for general managers, a check is included to only add playing GMs to the draft)
     const draftTeams = await Team.getAllActiveByTier(tier);
-    const draftPlayers = (
-        await Player.filterAllByStatus([
-            LeagueStatus.DRAFT_ELIGIBLE,
-            LeagueStatus.FREE_AGENT,
-            LeagueStatus.SIGNED,
-            LeagueStatus.GENERAL_MANAGER,
-        ])
-    ).filter((p) => p.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER ? p.Status.contractStatus === ContractStatus.SIGNED : true);
+    const draftPlayers = (await Player.filterAllByStatus([
+        LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT,
+        LeagueStatus.SIGNED, LeagueStatus.GENERAL_MANAGER
+    ])).filter((p) => p.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER ? p.Status.contractStatus === ContractStatus.SIGNED : true);
 
     // filter players to the tier that the draft is being rolled for
     const tierPlayers = draftPlayers.filter((p) =>
         p.PrimaryRiotAccount?.mmr &&
-        p.PrimaryRiotAccount.MMR.mmrEffective < tierMMR.high &&
-        p.PrimaryRiotAccount.MMR.mmrEffective >= tierMMR.low
+        p.PrimaryRiotAccount.MMR.mmrEffective < tierMMR.max &&
+        p.PrimaryRiotAccount.MMR.mmrEffective >= tierMMR.min
     );
     let amountOfPlayers = tierPlayers.length;
     let teamScore = [];
     let lotteryScore = 0;
 
-    const tierGames = await Games.getAllBy({ tier: tier });
+    // const tierGames = await Games.getAllBy({ tier: tier });
     let teamWins = [];
     draftTeams.forEach((team) => {
         //const win = tierGames.filter((g) => g.winner === team.id).length;
@@ -198,14 +157,14 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         if (newTeamCheck[0]?.id === team.id) {
             const score = highest + 0.02 * (teamWinPercent.length / 12);
 
-            console.log("score" + score, team.name);
+            console.log(`score` + score, team.name);
 
             teamCheck.push({ ...team, score: score });
             lotteryScore += score;
         } else {
             const score = team.score;
 
-            console.log("score" + score, team.name);
+            console.log(`score` + score, team.name);
             lotteryScore += score;
 
             teamCheck.push({ ...team, score: score });
@@ -215,7 +174,6 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
     //get team draft %
 
     let teamdraftScore = [];
-
     teamCheck.forEach((team) => {
         let draftScore = team.score / lotteryScore;
 
@@ -321,7 +279,7 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         console.log(`-----`);
     }
     snakedTeams.forEach((team) => {
-        console.log(`Franchise:`, team.franchise, `Season:`, season, `Pick:`, pick, `round:`, 99, tier, "Keeper:", true);
+        console.log(`Franchise:`, team.franchise, `Season:`, season, `Pick:`, pick, `round:`, 99, tier, `Keeper:`, true);
 
         console.log(team)
         draftLottery.push({
@@ -350,13 +308,13 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
     await prisma.draft.createMany({ data: draftLottery });
 
     const embed = new EmbedBuilder({
-        author: { name: "VDC Draft Generator" },
+        author: { name: `VDC Draft Generator` },
         description: `Teams for ${tier} pick in the following order. The database has been updated to show these picks.`,
         color: 0xe92929,
         fields: [
             ...teamOrder,
-            { name: "Players: ", value: amountOfPlayers, inline: true },
-            { name: "Rounds: ", value: `${Math.ceil(rounds)}`, inline: true },
+            { name: `Players: `, value: amountOfPlayers, inline: true },
+            { name: `Rounds: `, value: `${Math.ceil(rounds)}`, inline: true },
         ],
         footer: { text: `Valorant Draft Circuit - Draft` },
     });

@@ -1,9 +1,9 @@
-const { LeagueStatus, Tier, ContractStatus } = require("@prisma/client");
+const { LeagueStatus, Tier, ContractStatus } = require(`@prisma/client`);
 
-const { ControlPanel, Transaction } = require("../../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { prisma } = require("../../../../prisma/prismadb");
-const { CHANNELS, ROLES } = require("../../../../utils/enums");
+const { ControlPanel, Transaction } = require(`../../../../prisma`);
+const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { prisma } = require(`../../../../prisma/prismadb`);
+const { CHANNELS, ROLES } = require(`../../../../utils/enums`);
 
 const COLORS = {
     PROSPECT: 0xFEC335,
@@ -12,7 +12,7 @@ const COLORS = {
     MYTHIC: 0xA657A6,
 }
 
-const Logger = require("../../../core/logger");
+const Logger = require(`../../../core/logger`);
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;

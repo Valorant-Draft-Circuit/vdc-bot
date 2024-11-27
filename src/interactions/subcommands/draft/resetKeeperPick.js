@@ -1,17 +1,9 @@
-const fs = require("fs");
-const { LeagueStatus, ContractStatus, Tier } = require("@prisma/client");
-
-const { Franchise, Player, Team, Games, ControlPanel } = require("../../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction, } = require("discord.js");
-const { prisma } = require("../../../../prisma/prismadb");
-const { CHANNELS } = require("../../../../utils/enums");
+const { Player, ControlPanel } = require(`../../../../prisma`);
+const { prisma } = require(`../../../../prisma/prismadb`);
 
 async function resetKeeperPick(interaction, discordID) {
 	// get current season from the database
-	const currentSeasonResponse = await prisma.controlPanel.findFirst({
-		where: { name: `current_season` },
-	});
-	const season = Number(currentSeasonResponse.value);
+	const season = await ControlPanel.getSeason();
 
 	const player = await Player.getBy({ discordID: discordID });
 	if (player === null) return await interaction.editReply(`This player doesn't exist!`);
