@@ -1,10 +1,9 @@
-const fs = require("fs");
-const { LeagueStatus, ContractStatus, Tier } = require("@prisma/client");
+const { LeagueStatus, } = require(`@prisma/client`);
 
-const { Franchise, Player, Team, Games, ControlPanel } = require("../../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction } = require("discord.js");
-const { prisma } = require("../../../../prisma/prismadb");
-const { CHANNELS, ButtonOptions } = require("../../../../utils/enums");
+const { Franchise, Player, ControlPanel } = require(`../../../../prisma`);
+const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction } = require(`discord.js`);
+const { prisma } = require(`../../../../prisma/prismadb`);
+const { CHANNELS, ButtonOptions } = require(`../../../../utils/enums`);
 
 const draftableLeagueStatuses = [LeagueStatus.FREE_AGENT, LeagueStatus.DRAFT_ELIGIBLE];
 
@@ -50,7 +49,7 @@ async function beginOfflineDraft(/** @type ChatInputCommandInteraction */ intera
     const pick = draftBoard[0];
 
     // get GMs
-    const drafterUserFilter = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID]
+    const drafterUserFilter = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID]
         .filter(id => id !== null)
         .map(id => { return { id: id } });
 
@@ -90,7 +89,7 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     const tierID = interaction.channelId;
     const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
     const tierBounds = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
-    if (!TIER_DRAFT_ENABLE[tier]) return await interaction.editReply(`The ${tier} draft has not begun yet!`);
+    // if (!TIER_DRAFT_ENABLE[tier]) return await interaction.editReply(`The ${tier} draft has not begun yet!`);
 
     // get all draftable players & filter to make sure they have an MMR and fall within the MMR range for the tier
     const draftablePlayers = (await Player.filterAllByStatus(draftableLeagueStatuses))
@@ -101,6 +100,10 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
         );
 
     // get the draft board and the current pick
+    const fullDraftBoard = await prisma.draft.findMany({
+        where: { AND: [{ season: season }, { tier: tier }, { round: { not: 99 } }] },
+        include: { Franchise: true },
+    })
     const draftBoard = (await prisma.draft.findMany({
         where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
         include: { Franchise: true },
@@ -119,6 +122,10 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     const player = await Player.getBy({ discordID: discordID });
     const riotAccount = player.PrimaryRiotAccount;
     const mmrEffective = riotAccount.MMR.mmrEffective;
+
+    console.log(fullDraftBoard[0])
+    
+    if (draftBoard.map(db => db.userID).includes(player.id)) return await interaction.editReply(`The player you're trying to draft has already been picked up by another franchise and cannot be drafted by yours.`);
     if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
     if (player.primaryRiotAccountID == null) return await interaction.editReply(`This player does not have a primary Riot account set and cannot be drafted.`);
     if (riotAccount.mmr == null) return await interaction.editReply(`This player does not have an MMR entry and cannot be drafted.`);
@@ -235,7 +242,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     // if (!allowedDrafters.includes(drafter.id)) return await interaction.editReply(`You are not a GM or AGM of ${pick.Franchise.name} and so you cannot confirm this draft pick.`);
 
 
-    const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID]
+    const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID, nextPick.Franchise.agm3ID]
         .filter(id => id !== null)
         .map(id => { return { id: id } });
 
@@ -273,6 +280,16 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
         color: COLORS[tier],
         footer: { text: `Draft — ${tier}` }
     });
+
+    // get all draftable players & filter to make sure they have an MMR and fall within the MMR range for the tier
+    const draftablePlayers = (await Player.filterAllByStatus(draftableLeagueStatuses))
+        .filter(dp => dp.primaryRiotAccountID !== null)
+        .filter(dp => dp.PrimaryRiotAccount.mmr !== null)
+        .filter(dp => dp.PrimaryRiotAccount.MMR.mmrEffective >= tierBounds.min &&
+            dp.PrimaryRiotAccount.MMR.mmrEffective <= tierBounds.max
+        );
+
+    if (draftBoard.length == 0 || draftablePlayers.length == 0) return await interaction.editReply(`There are no more draftable players or available draft slots, and so the season ${season} ${tier} draft has concluded!`);
 
     await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => `<@${nddi}>`).join(`, `)}! It's \`${nextPick.Franchise.name}\`'s turn to draft for for their round \`${nextPick.round}\`, pick \`${nextPick.pick}\` slot!`);
     await interaction.editReply(`Success!`)
