@@ -40,7 +40,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await prisma.franchise.update({ where: { id: franchise.id }, data: { gmID: null } });
 
             await updateTransactionsPerms(interaction, guildMember, franchise, `REMOVE`);
-            await guildMember.roles.remove([ROLES.OPERATIONS.GM]);
+            await guildMember.roles.remove([ROLES.OPERATIONS.GM, franchise.roleID]);
 
             await Player.modifyRoles({ userID: player.id }, `REMOVE`, [Roles.LEAGUE_GM]);
 
@@ -70,7 +70,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await prisma.franchise.update({ where: { id: franchise.id }, data: { [`agm${agmNumber}ID`]: null } });
 
             await updateTransactionsPerms(interaction, guildMember, franchise, `REMOVE`);
-            await guildMember.roles.remove([ROLES.OPERATIONS.AGM]);
+            await guildMember.roles.remove([ROLES.OPERATIONS.AGM, franchise.roleID]);
 
             await Player.modifyRoles({ userID: player.id }, `REMOVE`, [Roles.LEAGUE_AGM]);
 
@@ -106,7 +106,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await prisma.franchise.update({ where: { id: franchise.id }, data: { gmID: player.id } });
 
             await updateTransactionsPerms(interaction, guildMember, franchise, `ADD`);
-            await guildMember.roles.add([ROLES.OPERATIONS.GM]);
+            await guildMember.roles.add([ROLES.OPERATIONS.GM, franchise.roleID]);
 
             await Player.modifyRoles({ userID: player.id }, `ADD`, [Roles.LEAGUE_GM]);
             await Transaction.updateStatus({ playerID: guildMember.user.id, status: LeagueStatus.GENERAL_MANAGER });
@@ -145,7 +145,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             await prisma.franchise.update({ where: { id: franchise.id }, data: { [`agm${openSlot}ID`]: player.id } });
 
             await updateTransactionsPerms(interaction, guildMember, franchise, `ADD`);
-            await guildMember.roles.add([ROLES.OPERATIONS.AGM]);
+            await guildMember.roles.add([ROLES.OPERATIONS.AGM, franchise.roleID]);
 
             await Player.modifyRoles({ userID: player.id }, `ADD`, [Roles.LEAGUE_AGM]);
             await Transaction.updateStatus({ playerID: guildMember.user.id, status: LeagueStatus.GENERAL_MANAGER });
