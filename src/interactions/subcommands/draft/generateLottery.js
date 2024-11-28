@@ -44,12 +44,15 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         let gw = 0;
         let gl = 0
         activeTeamMatchDays.forEach(m => {
-            gw += m.Games.filter(g => g.winner == activeTeams[i].id).length
-            gl += m.Games.filter(g => g.winner != activeTeams[i].id).length
+            gw += m.Games.filter(g => g.winner == activeTeams[i].id).length;
+            gl += m.Games.filter(g => g.winner != activeTeams[i].id).length;
         });
 
         activeTeamsWinLoss.push({ ...activeTeams[i], win: gw, loss: gl });
     }
+
+    console.log(activeTeamsWinLoss)
+    // return
 
     const allTeams = await prisma.teams.findMany();
     const postPoints = [];
@@ -72,6 +75,9 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
     const teamWinLoss = activeTeamsWinLoss.filter(r => r.win !== 0 && r.loss !== 0);
     const newTeam = teamWinLoss.filter(r => r.win === 0 && r.loss === 0);
+
+    console.log(teamWinLoss)
+    // console.log(newTeam)
 
     // get MMR tier lines from the database
     const tierMMR = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
@@ -104,12 +110,16 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
             teamWins.push({ ...team, wins: win, loss: loss });
         } else {
             const win = winloss[0].win;
-            const loss = winloss[0].lose;
+            const loss = winloss[0].loss;
 
             teamWins.push({ ...team, wins: win, loss: loss });
         }
     });
 
+    console.log(teamWins)
+
+
+    // return
     let teamWinPercent = [];
     teamWins.forEach((team) => {
         let winPercent = team.wins / (team.wins + team.loss);
@@ -149,6 +159,9 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
             highest = score;
         }
     });
+
+    console.log(`HIGHEST`, highest)
+    console.log(`TWP`, teamWinPercent)
 
     let teamCheck = [];
 
