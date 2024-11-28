@@ -195,14 +195,14 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
             }
         }
         const outs = await canvas.encode('png');
-        fs.writeFileSync(`./bin/draftboard_${tier}.png`, outs);
+        fs.writeFileSync(`./cache/draftboard_${tier}.png`, outs);
 
         await dbc.send({
             username: `Season ${season} ${tier.charAt(0).toUpperCase() + tier.substring(1).toLowerCase()} Draft Board`,
             avatarURL: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/logo.png`,
             // embeds: [franchiseManagement, teamsEmbed, descriptionEmbed],
             // components: [components]
-            files: [`./bin/draftboard_${tier}.png`]
+            files: [`./cache/draftboard_${tier}.png`]
             // content: `poo2p`
         });
     }

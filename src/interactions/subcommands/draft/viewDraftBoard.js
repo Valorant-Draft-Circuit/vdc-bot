@@ -12,8 +12,12 @@ async function viewTierDraftBoard(interaction, tier) {
 	const draftDoneCheck = await prisma.draft.findMany({ where: { AND: [{ season: season }, { tier: tier }] } });
 	if (draftDoneCheck.length === 0) return await interaction.editReply(`The ${tier} draft lottery for season ${season} has not happened yet, and so there is nothing to display.`);
 
-	await refreshDraftBoardChannel(interaction);
-	return await interaction.editReply({ content: `The ${tier} tier's draft board is attached!`, files: [`./bin/draftboard_${tier}.png`], });
+	await interaction.editReply({
+		content: `The ${tier} tier's draft board is attached!`,
+		files: [`./cache/draftboard_${tier}.png`],
+	});
+
+	return await refreshDraftBoardChannel(interaction);
 }
 
 module.exports = { viewTierDraftBoard }
