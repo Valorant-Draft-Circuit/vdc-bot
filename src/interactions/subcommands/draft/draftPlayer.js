@@ -4,6 +4,7 @@ const { Franchise, Player, ControlPanel } = require(`../../../../prisma`);
 const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ButtonOptions } = require(`../../../../utils/enums`);
+const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 
 const draftableLeagueStatuses = [LeagueStatus.FREE_AGENT, LeagueStatus.DRAFT_ELIGIBLE];
 
@@ -124,7 +125,7 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     const mmrEffective = riotAccount.MMR.mmrEffective;
 
     console.log(fullDraftBoard[0])
-    
+
     if (draftBoard.map(db => db.userID).includes(player.id)) return await interaction.editReply(`The player you're trying to draft has already been picked up by another franchise and cannot be drafted by yours.`);
     if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
     if (player.primaryRiotAccountID == null) return await interaction.editReply(`This player does not have a primary Riot account set and cannot be drafted.`);
@@ -293,6 +294,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
 
     await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => `<@${nddi}>`).join(`, `)}! It's \`${nextPick.Franchise.name}\`'s turn to draft for for their round \`${nextPick.round}\`, pick \`${nextPick.pick}\` slot!`);
     await interaction.editReply(`Success!`)
+    await refreshDraftBoardChannel(interaction);
     return await interaction.message.edit({ embeds: [embed], components: [] });
 }
 

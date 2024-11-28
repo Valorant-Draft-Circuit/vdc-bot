@@ -5,7 +5,7 @@ const { Franchise, Player, Team, Games, ControlPanel } = require("../../../prism
 const { EmbedBuilder, ChatInputCommandInteraction, } = require("discord.js");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS } = require("../../../utils/enums");
-const { generateLottery, awardCompPicks, fulfillFutureTrade, viewTierDraftBoard, setKeeperPick, resetKeeperPick, draftPlayer, releaseOfflineDraftResults } = require("../subcommands/draft");
+const { generateLottery, awardCompPicks, fulfillFutureTrade, viewTierDraftBoard, setKeeperPick, resetKeeperPick, draftPlayer, releaseOfflineDraftResults, refreshDraftBoardChannel } = require("../subcommands/draft");
 const { beginOfflineDraft } = require("../subcommands/draft/draftPlayer");
 
 
@@ -75,6 +75,11 @@ module.exports = {
 				const tier = _hoistedOptions[0].value;
 
 				return await releaseOfflineDraftResults(interaction, tier);
+			}
+
+			case `refresh-draft-board`: {
+				await refreshDraftBoardChannel(interaction);
+				return await interaction.editReply(`The <#${CHANNELS.DRAFT_BOARD}> channel has been updated!`)
 			}
 		}
 	},

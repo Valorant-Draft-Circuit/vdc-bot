@@ -1,5 +1,6 @@
 const { Player, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
+const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 
 async function resetKeeperPick(interaction, discordID) {
 	// get current season from the database
@@ -28,7 +29,10 @@ async function resetKeeperPick(interaction, discordID) {
 	});
 
 	if (updatedPick.userID !== null) return await interaction.editReply(`There was an error. The database was not updated`);
-	else return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been removed from the R:${keeperSearch.round}, P:${keeperSearch.pick} keeper slot.`);
+	else {
+		await refreshDraftBoardChannel(interaction);
+		return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been removed from the R:${keeperSearch.round}, P:${keeperSearch.pick} keeper slot.`);
+	}
 }
 
 module.exports = { resetKeeperPick }
