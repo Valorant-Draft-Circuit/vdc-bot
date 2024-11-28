@@ -70,8 +70,8 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
 
 
     const season = await ControlPanel.getSeason();
-    // const tiers = [Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
-    const tiers = [Tier.EXPERT];
+    const tiers = [Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
+    // const tiers = [Tier.EXPERT];
 
     for (let i = 0; i < tiers.length; i++) {
         const tier = tiers[i];
