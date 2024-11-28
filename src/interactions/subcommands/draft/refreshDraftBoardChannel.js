@@ -7,6 +7,8 @@ const fs = require(`fs`);
 const Canvas = require('@napi-rs/canvas');
 const { Tier } = require('@prisma/client');
 const { ControlPanel } = require('../../../../prisma');
+const { GlobalFonts } = require('@napi-rs/canvas');
+
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 
@@ -58,6 +60,9 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
 
     const fetchedMessages = await draftBoardChannel.messages.fetch({ limit: 100 });
     fetchedMessages.map(async (m) => await m.delete());
+
+
+    GlobalFonts.registerFromPath(`./utils/assets/Lato-Regular.ttf`, `Lato`)
 
     const dbc = await draftBoardChannel.createWebhook({
         name: 'draftboardupdater',
@@ -182,7 +187,7 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
                 context.fillStyle = COLORS.RED;
                 context.font = `700 45px Lato`;
                 const plyr = draftboard[dp].userID == undefined ? `` : draftboard[dp].Player?.PrimaryRiotAccount.riotIGN;
-                console.log(plyr)
+                // console.log(plyr)
                 const plyrMeasurements = context.measureText(plyr)
 
                 context.fillText(
