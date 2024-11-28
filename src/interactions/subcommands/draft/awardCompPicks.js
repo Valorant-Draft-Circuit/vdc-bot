@@ -1,9 +1,10 @@
 const { Franchise, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
+const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 
 async function awardCompPicks(interaction, round, tier, franchiseName) {
-    // get current season from the database
-    const season = await ControlPanel.getSeason();
+	// get current season from the database
+	const season = await ControlPanel.getSeason();
 
 	// get franchise, it's team in the tier (if it exists) & the filtered draft board
 	const franchise = await Franchise.getBy({ name: franchiseName });
@@ -33,6 +34,7 @@ async function awardCompPicks(interaction, round, tier, franchiseName) {
 		},
 	});
 
+	await refreshDraftBoardChannel(interaction);
 	return await interaction.editReply(`The round ${round} ${tier} compensation pick has been successfully awarded to ${franchiseName} (${franchise.id}) and the database has been updated.`);
 }
 

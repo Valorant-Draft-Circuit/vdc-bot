@@ -235,6 +235,11 @@ module.exports = {
 				}
 			],
 		},
+		{
+			name: `refresh-draft-board`,
+			description: "Refresh the draft board",
+			type: ApplicationCommandOptionType.Subcommand
+		},
 	],
 };
 

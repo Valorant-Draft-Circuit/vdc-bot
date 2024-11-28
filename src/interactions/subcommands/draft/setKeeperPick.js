@@ -1,5 +1,6 @@
 const { Player, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
+const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 
 async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 	// get current season from the database
@@ -37,7 +38,10 @@ async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 	});
 
 	if (updatedPick.userID !== player.id) return await interaction.editReply(`There was an error. The database was not updated`);
-	else return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round ${pick.round}, pick ${pick.pick} (overall pick: ${overallPickNumber})`);
+	else {
+		await refreshDraftBoardChannel(interaction);
+		return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round ${pick.round}, pick ${pick.pick} (overall pick: ${overallPickNumber})`)
+	};
 }
 
 module.exports = { setKeeperPick }
