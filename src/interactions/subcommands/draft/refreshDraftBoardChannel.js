@@ -40,7 +40,7 @@ const setup = {
     pick_y: 250,
 
     // pick padding
-    x_pp: 2,
+    x_pp: 4,
     y_pp: 4,
     /*  -----------------------------------------------------------------------------  */
 
@@ -70,7 +70,8 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
 
 
     const season = await ControlPanel.getSeason();
-    const tiers = [Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
+    // const tiers = [Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
+    const tiers = [Tier.EXPERT];
 
     for (let i = 0; i < tiers.length; i++) {
         const tier = tiers[i];
@@ -85,6 +86,8 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
 
         const rounds = Math.max(...draftboard.filter(db => db.round !== 99).map(db => db.round));
         const picks = Math.max(...draftboard.filter(db => db.round === 99).map(db => db.pick));
+
+        // console.log(i, draftboard.filter(db => db.round === 99).map(db => db.pick))
 
 
 
@@ -136,7 +139,8 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
             // console.log(i)
             const picksInRound = Math.max(...draftboard.filter(db => rounds != i + 1 ? db.round === 99 : db.round === i + 1).map(db => db.pick));
 
-            // console.log(picksInRound)
+            console.log(tier, i, picksInRound)
+            console.log(draftboard.filter(db => rounds != i + 1 ? db.round === 99 : db.round === i + 1))
 
             // const pickPadding = picksInRound - 1;
 
