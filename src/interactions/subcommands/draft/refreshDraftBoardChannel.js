@@ -41,7 +41,7 @@ const setup = {
 
     // pick padding
     x_pp: 2,
-    y_pp: 3,
+    y_pp: 4,
     /*  -----------------------------------------------------------------------------  */
 
     title_x_perc: 0.06, // percent
@@ -131,16 +131,19 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
 
         // console.log(rounds)
         let dp = 0;
-        for (let i = 0; i < rounds; i++) {
+        for (let i = 0; i < rounds + 1; i++) {
             // for (let i = 0; i < 1; i++) {
             // console.log(i)
-            const picksInRound = Math.max(...draftboard.filter(db => db.round === i + 1).map(db => db.pick));
+            const picksInRound = Math.max(...draftboard.filter(db => rounds != i + 1 ? db.round === 99 : db.round === i + 1).map(db => db.pick));
 
             // console.log(picksInRound)
 
             // const pickPadding = picksInRound - 1;
 
             for (let j = 0; j < picksInRound; j++) {
+
+                // console.log(`${imagepath}${draftboard[dp].Franchise.Brand.logo}`)
+                // const franchiseLogo = await Canvas.loadImage(`${imagepath}${draftboard[dp].Franchise.Brand.logo}`);
 
                 const topx = (w - (picksInRound * setup.pick_x + (picksInRound - 1) * setup.pick_x_padding)) / 2 + j * (setup.pick_x + setup.pick_x_padding);
                 const topy = setup.pick_y_begin * h + (setup.pick_y_padding + setup.pick_y) * i;
@@ -170,10 +173,28 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
                     topy + slugMeasurements.actualBoundingBoxAscent + setup.pick_slug_padding * 1.5
                 );
 
+                // const sizexy = slugMeasurements.width / (draftboard[dp].Franchise.slug == `CHA` || draftboard[dp].Franchise.slug == `MOX` ? 4 : 2);
+                // const logoy = topy + slugMeasurements.actualBoundingBoxAscent + setup.pick_slug_padding * 1.5 - slugMeasurements.width + (slugMeasurements.actualBoundingBoxAscent + sizexy / 2) / 2;
+                // context.drawImage( // FRANCHISE LOGO LEFT
+                //     franchiseLogo,
+                //     (topx + setup.pick_x / 2) - (2 * slugMeasurements.width) - (sizexy / 2),
+                //     logoy,
+                //     sizexy,
+                //     sizexy
+                // );
+
+                // context.drawImage( // FRANCHISE LOGO RIGHT
+                //     franchiseLogo,
+                //     (topx + setup.pick_x / 2) + (2 * slugMeasurements.width) + sizexy + (sizexy / 2),
+                //     logoy,
+                //     sizexy,
+                //     sizexy
+                // );
+
                 // PICK DETAILS
                 context.fillStyle = COLORS.RED;
                 context.font = `900 30px Lato`;
-                const pick = `R: ${i + 1}  |  P: ${j + 1}  |  O: ${dp + 1}  |  K : ${draftboard[dp].keeper}`;
+                const pick = `R: ${rounds > i ? i + 1 : `KEEPER`}  |  P: ${j + 1}  |  O: ${dp + 1}  |  K : ${draftboard[dp].keeper}`;
                 const pickMeasurements = context.measureText(pick)
 
                 context.fillText(
