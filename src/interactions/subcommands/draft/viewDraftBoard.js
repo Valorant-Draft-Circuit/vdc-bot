@@ -55,12 +55,12 @@ async function viewTierDraftBoard(interaction, tier) {
 		// write (or overwrite) the draft board file and send it
 		fs.writeFileSync(`./cache/draft_board_${tier}.js`, `${tier} Draft Board\n` + output.join(`\n`));
 
-	await interaction.editReply({
+	return await interaction.editReply({
 		content: `The ${tier} tier's draft board is attached!`,
-		files: [`./cache/draftboard_${tier}.png`, `./cache/draft_board_${tier}.js`],
+		files: [`./cache/draft_board_${tier}.js`],
 	});
 
-	return await refreshDraftBoardChannel(interaction);
+	// return await refreshDraftBoardChannel(interaction);
 }
 
 module.exports = { viewTierDraftBoard }
