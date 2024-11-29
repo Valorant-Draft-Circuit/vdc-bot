@@ -40,8 +40,8 @@ const setup = {
     pick_y: 250,
 
     // pick padding
-    x_pp: 4,
-    y_pp: 4,
+    x_pp: 2,
+    y_pp: 3,
     /*  -----------------------------------------------------------------------------  */
 
     title_x_perc: 0.06, // percent
@@ -56,44 +56,57 @@ const setup = {
 
 
 async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */ interaction) {
-    const draftBoardChannel = await interaction.guild.channels.fetch(CHANNELS.DRAFT_BOARD);
 
+    // get channel & delete all messages
+    const draftBoardChannel = await interaction.guild.channels.fetch(CHANNELS.DRAFT_BOARD);
     const fetchedMessages = await draftBoardChannel.messages.fetch({ limit: 100 });
     fetchedMessages.map(async (m) => await m.delete());
 
+    // delete extra webhooks
+    const webhooks = await draftBoardChannel.fetchWebhooks();
+    for (const webhook of webhooks.values()) {
+        await webhook.delete();
+        console.log(`Deleted webhook: ${webhook.name}`);
+    }
 
-    GlobalFonts.registerFromPath(`./utils/assets/Lato-Regular.ttf`, `Lato`)
+    const dbc = await draftBoardChannel.createWebhook({ name: 'draftboardupdater' });
 
-    const dbc = await draftBoardChannel.createWebhook({
-        name: 'draftboardupdater',
-    });
-
+    GlobalFonts.registerFromPath(`./utils/assets/Lato-Regular.ttf`, `Lato`);
 
     const season = await ControlPanel.getSeason();
     const tiers = [Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
-    // const tiers = [Tier.EXPERT];
+    // const tiers = [Tier.MYTHIC];
 
     for (let i = 0; i < tiers.length; i++) {
         const tier = tiers[i];
 
-        const draftboard = await prisma.draft.findMany({
+        const draftboard = (await prisma.draft.findMany({
             where: { season: season, tier: tier },
             include: {
                 Franchise: { include: { Brand: true } },
                 Player: { include: { PrimaryRiotAccount: true } }
             }
-        });
+        })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
 
-        const rounds = Math.max(...draftboard.filter(db => db.round !== 99).map(db => db.round));
-        const picks = Math.max(...draftboard.filter(db => db.round === 99).map(db => db.pick));
+        const rounds = Array.from(new Set(draftboard.map(db => db.round)));
+        const highestPick = Math.max(...Array.from(new Set(draftboard.map(db => db.pick))));
+
+        // console.log(tier, Math.max(...Array.from(new Set(draftboard.map(db => db.pick)))))
+
+
+        // continue
+
+        // const rounds1 = Math.max(...draftboard.filter(db => db.round !== 99).map(db => db.round));
+        // const picks = Math.max(...draftboard.filter(db => db.round === 99).map(db => db.pick));
 
         // console.log(i, draftboard.filter(db => db.round === 99).map(db => db.pick))
 
 
+        // console.log(highestPick, rounds.length)
 
         const canvas = Canvas.createCanvas(
-            setup.pick_x * (picks + setup.x_pp),
-            setup.pick_y * (rounds + setup.y_pp)
+            setup.pick_x * (highestPick + setup.x_pp),
+            setup.pick_y * (rounds.length + setup.y_pp)
         );
         const context = canvas.getContext('2d');
 
@@ -125,31 +138,33 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
         );
         /*  ----------------------------------------------------------------------------  */
 
-        // context.fillStyle = COLORS.APPRENTICE;
-        // // context.fillRect(0, 0, setup.pick_x, setup.pick_y);
-        // context.fillRect(100, 100, 300, 300);
-        context.fillStyle = COLORS.APPRENTICE;
-        // context.fillRect(100, 300, 300, 300);
-        context.fillStyle = COLORS.EXPERT;
 
-        // console.log(rounds)
+        // set counter for current draft pick
         let dp = 0;
-        for (let i = 0; i < rounds + 1; i++) {
-            // for (let i = 0; i < 1; i++) {
-            // console.log(i)
-            const picksInRound = Math.max(...draftboard.filter(db => rounds != i + 1 ? db.round === 99 : db.round === i + 1).map(db => db.pick));
+        // console.log(draftboard)
 
-            console.log(tier, i, picksInRound)
-            console.log(draftboard.filter(db => rounds != i + 1 ? db.round === 99 : db.round === i + 1))
+        // iterate through rounds
+        for (let i = 0; i < rounds.length; i++) {
+
+            const picksInRound = Math.max(...draftboard.filter(db => db.round == rounds[i] + 1).map(db => db.pick));
+
+            const pks = draftboard.filter(db => db.round == rounds[i])
+                .map(db => db.pick)
+            // console.log(i, pks)
+
+            // return
+
+            // console.log(tier, i, picksInRound)
+            // console.log(draftboard.filter(db => rounds[i] != i + 1 ? db.round === 99 : db.round === i + 1))
 
             // const pickPadding = picksInRound - 1;
 
-            for (let j = 0; j < picksInRound; j++) {
+            for (let j = 0; j < pks.length; j++) {
 
                 // console.log(`${imagepath}${draftboard[dp].Franchise.Brand.logo}`)
                 // const franchiseLogo = await Canvas.loadImage(`${imagepath}${draftboard[dp].Franchise.Brand.logo}`);
 
-                const topx = (w - (picksInRound * setup.pick_x + (picksInRound - 1) * setup.pick_x_padding)) / 2 + j * (setup.pick_x + setup.pick_x_padding);
+                const topx = (w - (pks.length * setup.pick_x + (pks.length - 1) * setup.pick_x_padding)) / 2 + j * (setup.pick_x + setup.pick_x_padding);
                 const topy = setup.pick_y_begin * h + (setup.pick_y_padding + setup.pick_y) * i;
 
 
@@ -198,7 +213,7 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
                 // PICK DETAILS
                 context.fillStyle = COLORS.RED;
                 context.font = `900 30px Lato`;
-                const pick = `R: ${rounds > i ? i + 1 : `KEEPER`}  |  P: ${j + 1}  |  O: ${dp + 1}  |  K : ${draftboard[dp].keeper}`;
+                const pick = `R: ${rounds[i] > i ? i + 1 : `KEEPER`}  |  P: ${j + 1}  |  O: ${dp + 1}  |  K : ${draftboard[dp].keeper}`;
                 const pickMeasurements = context.measureText(pick)
 
                 context.fillText(
@@ -237,7 +252,8 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
         });
     }
 
-    setTimeout(() => dbc.delete(), 30000)
+    console.log(`Done updating`)
+    setTimeout(() => dbc.delete(), 30000);
 }
 
 module.exports = {
