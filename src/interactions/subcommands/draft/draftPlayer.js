@@ -247,7 +247,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
         .filter(id => id !== null)
         .map(id => { return { id: id } });
 
-    console.log(nextDrafters)
+    // console.log(nextDrafters)
     const nextDrafterUsers = await prisma.user.findMany({
         where: { OR: nextDrafters },
         include: { Accounts: true }
@@ -282,6 +282,8 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
         footer: { text: `Draft — ${tier}` }
     });
 
+    const tierBounds = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
+
     // get all draftable players & filter to make sure they have an MMR and fall within the MMR range for the tier
     const draftablePlayers = (await Player.filterAllByStatus(draftableLeagueStatuses))
         .filter(dp => dp.primaryRiotAccountID !== null)
@@ -294,7 +296,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
 
     await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => `<@${nddi}>`).join(`, `)}! It's \`${nextPick.Franchise.name}\`'s turn to draft for for their round \`${nextPick.round}\`, pick \`${nextPick.pick}\` slot!`);
     await interaction.editReply(`Success!`)
-    await refreshDraftBoardChannel(interaction);
+    // await refreshDraftBoardChannel(interaction);
     return await interaction.message.edit({ embeds: [embed], components: [] });
 }
 
