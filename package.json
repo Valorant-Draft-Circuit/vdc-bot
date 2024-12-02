@@ -27,7 +27,7 @@
   "homepage": "https://github.com/Unieveth/vdc-bot#readme",
   "dependencies": {
     "@napi-rs/canvas": "^0.1.52",
-    "@prisma/client": "^5.2.0",
+    "@prisma/client": "^6.0.0",
     "chalk": "^4.1.2",
     "discord.js": "^14.13.0",
     "dotenv": "^16.3.1"
