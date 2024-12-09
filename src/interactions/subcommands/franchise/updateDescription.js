@@ -28,7 +28,6 @@ async function confirmUpdate(interaction) {
 	const attachment = _hoistedOptions[0].attachment
 	if (!attachment.name.endsWith(`.txt`)) return await interaction.editReply(`Please only upload \`*.txt\` files. \`${attachment.name}\` is not a text file.`);
 
-
 	const gmids = (await prisma.franchise.findMany({
 		include: {
 			GM: { include: { Accounts: true } },
