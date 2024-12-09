@@ -144,12 +144,58 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	// check to make sure the bot can update the user's nickname
 	if (!guildMember.manageable) return await interaction.editReply({ content: `The database was updated to reflect your new IGN: (\`${updatedIGN}\`), but I can't update your nickname- your roles are higher than mine! You will need to update your nickname manually!` });
 
-	// update the user's nickname in the server
-	const slug = playerData.team ? (await Franchise.getBy({ teamID: playerData.team })).slug : playerData.Status.leagueStatus == LeagueStatus.FREE_AGENT ? `FA` : playerData.Status.leagueStatus == LeagueStatus.DRAFT_ELIGIBLE ? `DE` : `RFA`;
+	const gmids = (await prisma.franchise.findMany({
+		include: {
+			GM: { include: { Accounts: true } },
+			AGM1: { include: { Accounts: true } },
+			AGM2: { include: { Accounts: true } },
+			AGM3: { include: { Accounts: true } },
+		}
+	})).map(f => {
+		return [
+			f.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			f.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			f.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			f.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+		]
+	}).flat().filter(v => v !== undefined);
+
+	const isGM = gmids.includes(interaction.user.id);
+
+	let slug = ``;
+	switch (true) {
+		case isGM:
+			slug = (await prisma.franchise.findFirst({
+				where: {
+					OR: [
+						{ GM: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
+						{ AGM1: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
+						{ AGM2: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
+						{ AGM3: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
+					]
+				},
+				include: { Brand: true }
+			})).slug
+			break;
+
+		case playerData.team != null:
+			slug = (await Franchise.getBy({ teamID: playerData.team })).slug
+			break;
+
+		case playerData.Status.leagueStatus == LeagueStatus.FREE_AGENT:
+			slug = `FA`
+			break;
+		case playerData.Status.leagueStatus == LeagueStatus.DRAFT_ELIGIBLE:
+			slug = `DE`
+			break;
+		default:
+			slug = `RFA`
+			break
+	}
 	const accolades = guildMember.nickname?.match(emoteregex);
 	guildMember.setNickname(`${slug} | ${gameName} ${accolades ? accolades.join(``) : ``}`);
 
-	const mmrShow = await ControlPanel.getMMRDisplayState();
+	const leagueState = await prisma.controlPanel.findFirst({ where: { name: `league_state` } });
 
 	// remove all league roles and then add League & franchise role
 	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
@@ -163,7 +209,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		case LeagueStatus.DRAFT_ELIGIBLE:
 			await guildMember.roles.add([
 				ROLES.LEAGUE.LEAGUE,
-				mmrShow ? ROLES.TIER[team.tier] : null,
+				leagueState != `COMBINES` ? ROLES.TIER[team.tier] : null,
 				ROLES.LEAGUE.DRAFT_ELIGIBLE
 			].filter(rid => rid != null));
 			break;
@@ -171,14 +217,14 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			await guildMember.roles.add([
 				ROLES.LEAGUE.LEAGUE, ,
 				ROLES.LEAGUE.FREE_AGENT,
-				mmrShow ? ROLES.TIER[team.tier] : null
+				leagueState != `COMBINES` ? ROLES.TIER[team.tier] : null
 			].filter(rid => rid != null));
 			break;
 		case LeagueStatus.RESTRICTED_FREE_AGENT:
 			await guildMember.roles.add([
 				ROLES.LEAGUE.LEAGUE,
 				ROLES.LEAGUE.RESTRICTED_FREE_AGENT,
-				mmrShow ? ROLES.TIER[team.tier] : null
+				leagueState != `COMBINES` ? ROLES.TIER[team.tier] : null
 			].filter(rid => rid != null));
 			break;
 		case LeagueStatus.GENERAL_MANAGER:
@@ -186,7 +232,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			await guildMember.roles.add([
 				ROLES.LEAGUE.LEAGUE,
 				playerFranchise.gmID == playerData.id ? ROLES.OPERATIONS.GM : ROLES.OPERATIONS.AGM,
-				mmrShow ? ROLES.TIER[team.tier] : null,
+				leagueState != `COMBINES` ? ROLES.TIER[team.tier] : null,
 				playerData.Team.Franchise.roleID
 			].filter(rid => rid != null));
 			break;
@@ -196,12 +242,12 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	if (playerData.Status.contractStatus == ContractStatus.SIGNED) {
 		await guildMember.roles.add([
 			ROLES.LEAGUE.LEAGUE,
-			mmrShow ? ROLES.TIER[team.tier] : null,
+			leagueState != `COMBINES` ? ROLES.TIER[team.tier] : null,
 			playerData.Team.Franchise.roleID
 		].filter(rid => rid != null));
 	} else {
 		// update league roles
-		if (mmrShow) {
+		if (leagueState != `COMBINES`) {
 			const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
 			const mmrEffective = Math.round(playerData.PrimaryRiotAccount.MMR.mmrEffective);
 			switch (true) {
