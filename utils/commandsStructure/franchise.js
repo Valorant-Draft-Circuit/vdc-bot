@@ -18,12 +18,32 @@ module.exports = {
     description: `Get info about a franchise`,
     options: [
         {
-            name: `franchise`,
-            description: `The franchise to get teams for`,
-            type: ApplicationCommandOptionType.String,
-            required: true,
-            choices: franchiseChoices()
-        }
+            name: `info`,
+            description: `Get information about a franchise`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `franchise`,
+                    description: `The franchise's info you're looking for`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: franchiseChoices()
+                }
+            ]
+        },
+        {
+            name: `update-description`,
+            description: `Update the description for your franchise`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `description`,
+                    description: `Upload a .txt file with your franchise's new description`,
+                    type: ApplicationCommandOptionType.Attachment,
+                    required: true,
+                }
+            ]
+        },
     ]
 }
 
