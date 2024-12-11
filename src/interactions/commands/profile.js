@@ -31,7 +31,6 @@ module.exports = {
 
 async function user(/** @type ChatInputCommandInteraction */ interaction) {
 	const discordID = interaction.options._hoistedOptions[0].value;
-	// console.log(discordID)
 
 	const player = await Player.getBy({ discordID: discordID });
 	// const stats = awa
@@ -277,6 +276,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	let team = null;
 	let franchise = null;
 	let isGM = false;
+	let isCaptain = false;
 	let state = null;
 
 	// currently accolades are set via whatever is currently in the nickname, but when the Accolades table is updated, this will also become a black initialization
@@ -353,6 +353,22 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	}
 
 	progress[progress.length - 1] = `✅ Your team is \`${team ? team.name : null}\`, your franchise is \`${franchise ? franchise.name : null}\`, your slug is \`${slug}\` and your state is \`${state}\``;
+	await interaction.editReply(progress.join(`\n`));
+	// --------------------------------------------------------------------------------------------
+
+
+	// Checking if user is a captain
+	// --------------------------------------------------------------------------------------------
+	progress.push(`🔃 Checking if you are a captain...`);
+	await interaction.editReply(progress.join(`\n`));
+
+	const allCaptains = (await prisma.teams.findMany({
+		where: { active: true }, select: { captain: true }
+	})).map(t => t.captain).filter(cid => cid !== null);
+
+	isCaptain = allCaptains.includes(player.id);
+
+	progress[progress.length - 1] = `✅ You **are${isCaptain ? ` ` : ` not `}**a team captain!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
@@ -453,6 +469,11 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			roles.push(ROLES.LEAGUE.VIEWER);
 			readableRoles.push(`Viewer`);
 		}
+	}
+
+	if (isCaptain) {
+		roles.push(ROLES.LEAGUE.CAPTAIN);
+		readableRoles.push(`Captain`);
 	}
 
 	progress[progress.length - 1] = `✅ Roles array built! The roles you'll recieve are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`;
