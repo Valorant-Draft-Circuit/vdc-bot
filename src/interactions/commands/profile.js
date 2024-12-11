@@ -468,7 +468,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	const nicknameComponents = [
 		slug ? `${slug} |` : null,
 		gameName,
-		accolades.join(``)
+		accolades ? accolades.join(``) : null
 	];
 	const nickname = nicknameComponents.filter(nc => nc !== null).join(` `);
 
