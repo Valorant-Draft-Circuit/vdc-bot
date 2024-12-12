@@ -320,7 +320,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			.find(a => a.provider == `discord`).providerAccountId;
 		if (franchiseGMDiscordID == userID) isGM = true;
 
-		state = isGM ? `NON-PLAYING GM` : `NON-PLAYING AGM`;
+		state = isGM ? `NON PLAYING GM` : `NON PLAYING AGM`;
 	} else if (isFM && isSigned) { 										// PLAYING (A)GM
 		team = player.Team;
 		franchise = player.Team.Franchise;

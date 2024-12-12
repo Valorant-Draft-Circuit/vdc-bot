@@ -68,6 +68,8 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     choices: [
+                        { name: `Unregistered`, value: LeagueStatus.UNREGISTERED },
+                        { name: `Pending`, value: LeagueStatus.PENDING },
                         { name: `Approved`, value: LeagueStatus.APPROVED },
                         { name: `Draft Eligible`, value: LeagueStatus.DRAFT_ELIGIBLE },
                         { name: `Free Agent`, value: LeagueStatus.FREE_AGENT },
@@ -85,6 +87,7 @@ module.exports = {
                     required: false,
                     choices: [
                         { name: `Signed`, value: ContractStatus.SIGNED },
+                        { name: `Subbed Out`, value: ContractStatus.SUBBED_OUT },
                         { name: `Inactive Reserve`, value: ContractStatus.INACTIVE_RESERVE },
                         { name: `null`, value: `999` },
                     ]
@@ -127,11 +130,15 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     choices: [
+                        { name: `Unregistered`, value: LeagueStatus.UNREGISTERED },
+                        { name: `Pending`, value: LeagueStatus.PENDING },
+                        { name: `Approved`, value: LeagueStatus.APPROVED },
                         { name: `Draft Eligible`, value: LeagueStatus.DRAFT_ELIGIBLE },
                         { name: `Free Agent`, value: LeagueStatus.FREE_AGENT },
                         { name: `Restricted Free Agent`, value: LeagueStatus.RESTRICTED_FREE_AGENT },
                         { name: `Signed`, value: LeagueStatus.SIGNED },
                         { name: `General Manager`, value: LeagueStatus.GENERAL_MANAGER },
+                        { name: `Retired`, value: LeagueStatus.RETIRED },
                         { name: `Suspended`, value: LeagueStatus.SUSPENDED },
                     ]
                 },
@@ -142,6 +149,7 @@ module.exports = {
                     required: false,
                     choices: [
                         { name: `Signed`, value: ContractStatus.SIGNED },
+                        { name: `Subbed Out`, value: ContractStatus.SUBBED_OUT },
                         { name: `Inactive Reserve`, value: ContractStatus.INACTIVE_RESERVE },
                         { name: `null`, value: `999` },
                     ]
