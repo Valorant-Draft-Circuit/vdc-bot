@@ -1,6 +1,7 @@
 const { EmbedBuilder, ChatInputCommandInteraction } = require("discord.js");
-const { Games, Team } = require("../../../prisma");
+const { Games, Team, ControlPanel } = require("../../../prisma");
 const { GameType } = require("@prisma/client");
+const { prisma } = require("../../../prisma/prismadb");
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 const playoffsCutoff = {
@@ -24,15 +25,42 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
-        const tier = interaction.options._hoistedOptions[0].value;
-        const allgames = await Games.getAllBy({ type: GameType.SEASON, tier: tier });
-        const activeTeamsInTier = await Team.getAllActiveByTier(tier);
+        const options = interaction.options._hoistedOptions;
+
+        const tier = options[0].value;
+        const currentSeason = await ControlPanel.getSeason()
+        const season = options[1] ? options[1].value : currentSeason;
+        if (season > currentSeason) return await interaction.editReply(`Season ${season} hasn't happened yet!`);
+        if (season < 6) return await interaction.editReply(`We don't have standings saved for seasons prior to season 6 :(`);
+
+        // get all valid SEASON games for the requested tier and season
+        const games = await Games.getAllBy({ type: GameType.SEASON, tier: tier, season: season });
+
+
+        // create array of unique teamIDs
+        const activeTeamIDs = Array.from(new Set(games.map(ag => {
+            return [ag.Match.home, ag.Match.away]
+        }).flat()));
+
+        // create a teams filter to get teams who were active in that season
+        const teamsFilter = activeTeamIDs.map(atid => { return { id: atid } });
+        const teams = season == currentSeason ?
+            await Team.getAllActiveByTier(tier) :
+            await prisma.teams.findMany({
+                where: {
+                    AND: [
+                        { OR: teamsFilter },
+                        { tier: tier },
+                    ]
+                },
+                include: { Franchise: { include: { Brand: true } } }
+            });
 
         // Get wins, losses, round wins & losses, total rounds and then first sort bt RWP and then total wins to correctly order the standings
-        const processedData = activeTeamsInTier.map(team => {
-            const gamesPlayed = allgames.filter(g => [g.Match.home, g.Match.away].includes(team.id));
+        const processedData = teams.map(team => {
+            const gamesPlayed = games.filter(g => [g.Match.home, g.Match.away].includes(team.id));
             const totalGamesPlayed = gamesPlayed.length;
-            const gamesWon = allgames.filter(g => g.winner == team.id).length;
+            const gamesWon = games.filter(g => g.winner == team.id).length;
             const gamesLost = totalGamesPlayed - gamesWon;
 
             const roundsWon = gamesPlayed.map(g => g.Match.home === team.id ? g.roundsWonHome : g.roundsWonAway);
@@ -66,7 +94,7 @@ module.exports = {
 
         // create the base embed
         const embed = new EmbedBuilder({
-            author: { name: `${tier[0].toUpperCase() + tier.substring(1).toLowerCase()} | Franchise Standings`, iconURL: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png` },
+            author: { name: `${tier[0].toUpperCase() + tier.substring(1).toLowerCase()} | Season ${season} Franchise Standings`, iconURL: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png` },
             description: `\`\`\`${legend.join(`   `)}\`\`\`\n${standingsOutput.join(`\n`)}`,
             color: COLORS[tier],
             footer: { text: `Standings — ${tier[0].toUpperCase() + tier.substring(1).toLowerCase()}` }
@@ -102,7 +130,7 @@ function createFranchiseStandingsModule(teamData) {
         teamName.padStart(teamNameLength + startSpaces, ` `).padEnd(teamMaxWidth, ` `),
         GREEN + String(teamData.wins).padStart(2, ` `),
         RED + String(teamData.loss).padStart(2, ` `),
-        color + `${(100 * teamData.roundsWon / teamData.totalRounds).toFixed(2)}%`.padStart(6, ` `),
+        color + `${((100 * teamData.roundsWon / teamData.totalRounds) || 0).toFixed(2)}%`.padStart(6, ` `),
     ]
 
     // and then format & return the "module"

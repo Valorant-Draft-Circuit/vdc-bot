@@ -40,6 +40,12 @@ module.exports = {
                     description: 'The player to get stats for',
                     type: ApplicationCommandOptionType.User,
                     required: true,
+                },
+                {
+                    name: `season`,
+                    description: `The season you'd like to see the player's stats for (defaults to current season)`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: false,
                 }
             ]
         }
