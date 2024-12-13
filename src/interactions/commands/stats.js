@@ -75,10 +75,21 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 
 async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interaction, /** @type GuildMember */ guildMember) {
 
-    const player = await Player.getBy({ discordID: guildMember.user.id });
-    const playerStats = await Player.getStatsBy(player.id);
+    const currentSeason = await ControlPanel.getSeason();
+    const options = interaction.options._hoistedOptions;
+    const season = options[1] ? options[1].value : currentSeason;
 
-    const mmr = Math.round(player.PrimaryRiotAccount.MMR.mmrEffective);
+    if (season > currentSeason) return await interaction.editReply(`Season ${season} hasn't happened yet!`);
+
+
+    const player = await Player.getBy({ discordID: guildMember.user.id });
+    if (player == null) return await interaction.editReply(`This player does not exist in our database!`);
+
+    const playerStats = await Player.getStatsBy(player.id, season);
+    if (playerStats.length == 0) return await interaction.editReply(`This player doesn't have any stats for season ${season}!`);
+
+    const mmrShow = await ControlPanel.getMMRDisplayState()
+    const mmr = mmrShow ? Math.round(player.PrimaryRiotAccount?.MMR.mmrEffective) || undefined : undefined;
     const team = player.Team;
     const processedPlayerStats = playerStats.map(s => {
         const rounds = s.Game.rounds;
@@ -86,13 +97,23 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     });
 
     // get agent pool & save as emotes
-    const agentPool = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(agent => {
-        const agentSatatized = agent.toLowerCase().replace(/[^a-z]/, ``);
-        return `<:${agentSatatized}:${AgentEmotes[agentSatatized]}>`
+    // const agentPool = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(agent => {
+    //     const agentSatatized = agent.toLowerCase().replace(/[^a-z]/, ``);
+    //     return `<:${agentSatatized}:${AgentEmotes[agentSatatized]}>`
+    // });
+    const allAgentsPicked = processedPlayerStats.map(ps => ps.agent);
+    const agentPercentage = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(a => {
+        return {
+            agentName: a,
+            agentIcon: `<:${a.toLowerCase().replace(/[^a-z]/, ``)}:${AgentEmotes[a.toLowerCase().replace(/[^a-z]/, ``)]}>`,
+            pickRate: allAgentsPicked.filter(agent => agent === a).length / allAgentsPicked.length
+        }
     });
 
     // create the code block module (Team stats if on a team, Sub info if sub)
-    const associatedData = team ? await createFranchiseStatsModule(player) : await createSubOverview(player);
+    const associatedData = season == currentSeason ?
+        team ? await createFranchiseStatsModule(player, season) : await createSubOverview(player) :
+        ``;
 
     const summedStats = {
         totalKills: sum(processedPlayerStats.map(ps => ps.kills)),
@@ -110,17 +131,17 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     }
 
     // do calculations and formatting
-    const ratingAttack = summedStats.ratingAttack.toFixed(2)
-    const ratingDefense = summedStats.ratingDefense.toFixed(2)
-    const kpr = (summedStats.totalKills / summedStats.rounds).toFixed(2);
-    const apr = (summedStats.totalAssists / summedStats.rounds).toFixed(2);
-    const dpr = (summedStats.totalDeaths / summedStats.rounds).toFixed(2);
-    const dmgpr = (summedStats.totalDamage / summedStats.rounds).toFixed(2);
-    const fkpr = (summedStats.firstKills * 100 / summedStats.rounds).toFixed(2);
-    const fdpr = (summedStats.firstDeaths * 100 / summedStats.rounds).toFixed(2);
+    const ratingAttack = (summedStats.ratingAttack || 0).toFixed(2)
+    const ratingDefense = (summedStats.ratingDefense || 0).toFixed(2)
+    const kpr = ((summedStats.totalKills / summedStats.rounds) || 0).toFixed(2);
+    const apr = ((summedStats.totalAssists / summedStats.rounds) || 0).toFixed(2);
+    const dpr = ((summedStats.totalDeaths / summedStats.rounds) || 0).toFixed(2);
+    const dmgpr = ((summedStats.totalDamage / summedStats.rounds) || 0).toFixed(2);
+    const fkpr = ((summedStats.firstKills * 100 / summedStats.rounds) || 0).toFixed(2);
+    const fdpr = ((summedStats.firstDeaths * 100 / summedStats.rounds) || 0).toFixed(2);
     const plants = summedStats.totalPlants;
     const clutches = summedStats.clutches;
-    const avgkast = (summedStats.avgkast).toFixed(2);
+    const avgkast = (summedStats.avgkast || 0).toFixed(2);
 
     const riotIGN = player.PrimaryRiotAccount.riotIGN;
     const trackerURL = `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(riotIGN)}`
@@ -128,14 +149,27 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     // prefix for user
     const prefix = player.Team?.Franchise ? player.Team.Franchise.slug : player.Status == LeagueStatus.FREE_AGENT ? `FA` : `RFA`;
 
+    // let agenti = 0;
+    const agentOut = [];
+
+    for (let i = 0; i < agentPercentage.length; i++) {
+        if (i <= 2) agentOut.push(`${agentPercentage[i].agentIcon} \` ${(agentPercentage[i].pickRate * 100).toFixed(1)}% \``);
+        else agentOut[3] = agentOut[3] ? agentOut[3] += agentPercentage[i].agentIcon : agentPercentage[i].agentIcon;
+    }
+    // console.log(agentPercentage, agentOut)
+    // const top3Agents = agentPercentage.map(ap=> {
+    //     if (agenti == 2) return 
+    //     return `${ap.agentIcon} \` ${(ap.pickRate*100).toFixed(1)}% \``
+    // }).join(` | `)
+
     const description = [
         `ATK : \` ${ratingAttack} \` // DEF : \` ${ratingDefense} \``,
         [
-            `MMR: \` ${String(mmr).padStart(3, ` `)} \``,
-            `Games: \` ${String(processedPlayerStats.length).padStart(3, ` `)} \``,
-            agentPool.join(` `)
-        ].join(` | `),
-        associatedData
+            mmr ? `MMR: \` ${String(mmr).padStart(3, ` `)} \`` : undefined,
+            `Games: \` ${String(processedPlayerStats.length).padStart(2, ` `)} \``
+        ].filter(v => v !== undefined).join(` | `),
+        associatedData,
+        agentOut.join(` | `)
     ];
 
     const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
@@ -158,7 +192,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
             embedcolor = 0xE92929;
             break;
     }
-    
+
     const trackerButton = new ButtonBuilder({
         style: ButtonStyle.Link,
         label: `Tracker`,
@@ -167,7 +201,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
 
     // create the embed
     const embed = new EmbedBuilder({
-        author: { name: [prefix, riotIGN.split(`#`)[0]].join(` | `), url: trackerURL },
+        author: { name: `${[prefix, riotIGN.split(`#`)[0]].join(` | `)}  -  ${`Season ${season} Stats`}`, url: trackerURL },
         description: description.join(`\n`),
         color: embedcolor,
         fields: [
@@ -175,7 +209,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
             { name: `Damage/Round`, value: `\`\`\`ansi\n\u001b[0;36m${dmgpr}\`\`\``, inline: true },
             { name: `Assists/Round`, value: `\`\`\`ansi\n\u001b[0;36m${apr}\`\`\``, inline: true },
             { name: `First Kill %`, value: `\`\`\`ansi\n\u001b[0;36m${fkpr} %\`\`\``, inline: true },
-            { name: `KAST`, value: `\`\`\`ansi\n\u001b[0;36m${avgkast} %\`\`\``, inline: true },
+            { name: `aKAST`, value: `\`\`\`ansi\n\u001b[0;36m${avgkast} %\`\`\``, inline: true },
             { name: `Clutches`, value: `\`\`\`ansi\n\u001b[0;36m${clutches}\`\`\``, inline: true },
             { name: `First Death %`, value: `\`\`\`ansi\n\u001b[0;36m${fdpr} %\`\`\``, inline: true },
             { name: `Deaths/Round`, value: `\`\`\`ansi\n\u001b[0;36m${dpr}\`\`\``, inline: true },
@@ -252,7 +286,7 @@ function createMatchPlayerStats(player, home, team) {
 }
 
 /** Create the standings "module" for a franchise if the player is signed to one */
-async function createFranchiseStatsModule(player) {
+async function createFranchiseStatsModule(player, season) {
     const team = player.Team;
     const franchise = team.Franchise;
 
@@ -261,7 +295,7 @@ async function createFranchiseStatsModule(player) {
     const franchiseName = franchise.name;
     const teamName = team.name;
 
-    const allTeamGames = await Games.getAllBy({ team: team.id });
+    const allTeamGames = await Games.getAllBy({ team: team.id, season: season });
     const teamStats = {
         wins: allTeamGames.filter(g => g.winner == team.id).length,
         loss: allTeamGames.filter(g => g.winner !== team.id).length,
@@ -286,7 +320,7 @@ async function createFranchiseStatsModule(player) {
         teamName.padStart(teamNameLength + startSpaces, ` `).padEnd(teamMaxWidth, ` `),
         GREEN + String(teamStats.wins).padStart(2, ` `),
         RED + String(teamStats.loss).padStart(2, ` `),
-        color + `${(100 * teamStats.roundsWon / teamStats.totalRounds).toFixed(2)}% `.padStart(6, ` `),
+        color + `${((100 * teamStats.roundsWon / teamStats.totalRounds) || 0).toFixed(2)}% `.padStart(6, ` `),
     ];
 
     // and then format & return the "module"
