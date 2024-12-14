@@ -33,7 +33,7 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 	const discordID = interaction.options._hoistedOptions[0].value;
 
 	const player = await Player.getBy({ discordID: discordID });
-	// const stats = awa
+	if (player == null) return await interaction.editReply(`This player (<@${discordID}>) does not exist in our database!`);
 
 	// if there is a tagged user, use that, otherwise use the interaction author
 	const guildMember = interaction.options._hoistedOptions.length > 0 ? interaction.guild.members.cache.get(interaction.options._hoistedOptions[0].value) : interaction.member;

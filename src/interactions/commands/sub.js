@@ -24,7 +24,8 @@ module.exports = {
         const mmrMax = interaction.options._hoistedOptions[1]?.value;
 
         const capMin = mmrTierLines[tier].min;
-        const capMax = mmrMax && showMMR ? mmrMax : mmrTierLines[tier].max;
+        const capMax = mmrMax && showMMR && mmrMax <= mmrTierLines[tier].max ? mmrMax : mmrTierLines[tier].max;
+
 
         // get all active subs, filter to be within MMR paramaters and sort by least to greatest
         const activeSubs = (await Player.getAllSubs()).map((player) => {
