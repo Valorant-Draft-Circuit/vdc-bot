@@ -97,10 +97,6 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     });
 
     // get agent pool & save as emotes
-    // const agentPool = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(agent => {
-    //     const agentSatatized = agent.toLowerCase().replace(/[^a-z]/, ``);
-    //     return `<:${agentSatatized}:${AgentEmotes[agentSatatized]}>`
-    // });
     const allAgentsPicked = processedPlayerStats.map(ps => ps.agent);
     const agentPercentage = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(a => {
         return {
@@ -108,7 +104,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
             agentIcon: `<:${a.toLowerCase().replace(/[^a-z]/, ``)}:${AgentEmotes[a.toLowerCase().replace(/[^a-z]/, ``)]}>`,
             pickRate: allAgentsPicked.filter(agent => agent === a).length / allAgentsPicked.length
         }
-    });
+    }).sort((a, b) => b.pickRate - a.pickRate);
 
     // create the code block module (Team stats if on a team, Sub info if sub)
     const associatedData = season == currentSeason ?
@@ -149,18 +145,11 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     // prefix for user
     const prefix = player.Team?.Franchise ? player.Team.Franchise.slug : player.Status == LeagueStatus.FREE_AGENT ? `FA` : `RFA`;
 
-    // let agenti = 0;
     const agentOut = [];
-
     for (let i = 0; i < agentPercentage.length; i++) {
         if (i <= 2) agentOut.push(`${agentPercentage[i].agentIcon} \` ${(agentPercentage[i].pickRate * 100).toFixed(1)}% \``);
         else agentOut[3] = agentOut[3] ? agentOut[3] += agentPercentage[i].agentIcon : agentPercentage[i].agentIcon;
     }
-    // console.log(agentPercentage, agentOut)
-    // const top3Agents = agentPercentage.map(ap=> {
-    //     if (agenti == 2) return 
-    //     return `${ap.agentIcon} \` ${(ap.pickRate*100).toFixed(1)}% \``
-    // }).join(` | `)
 
     const description = [
         `ATK : \` ${ratingAttack} \` // DEF : \` ${ratingDefense} \``,
