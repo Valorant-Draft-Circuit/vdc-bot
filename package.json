@@ -7,9 +7,11 @@
     "start": "node bot.js",
     "deploy": "npm run cache && npm run start",
 
-    "dev": "nodemon --no-warnings --ignore ./cache/ bot.js",
-    "compile":"tsc utils/enums/index && tsc prisma/index",
-    "cache" : "node ./cache/cache.js",
+    "compile": "tsc utils/enums/index prisma/index",
+    "cache": "node ./cache/cache.js",
+
+    "dev:start": "nodemon --no-warnings --ignore ./cache/ --ignore ./bin/ bot.js",
+    "dev:compile": "npm run cache && tsc -w utils/enums/index prisma/index",
 
     "generate": "prisma generate && (clear || cls)",
     "pull": "prisma db pull --force",
@@ -29,7 +31,7 @@
     "@napi-rs/canvas": "^0.1.52",
     "@prisma/client": "^5.2.0",
     "chalk": "^4.1.2",
-    "discord.js": "^14.13.0",
+    "discord.js": "^14.16.3",
     "dotenv": "^16.3.1"
   },
   "devDependencies": {
