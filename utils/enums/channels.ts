@@ -12,6 +12,10 @@ export const CHANNELS = process.env.ENVIRONMENT == "DEV" ?
             EXPERT: `1059244366671118487`,
             APPRENTICE: `1059244366671118487`,
             PROSPECT: `1059244366671118487`
+        },
+
+        CATEGORIES: {
+            MAPBANS: `1318651615699402802`,
         }
     } :
     /** @production */
@@ -27,5 +31,9 @@ export const CHANNELS = process.env.ENVIRONMENT == "DEV" ?
             EXPERT: `1173394810170790019`,
             APPRENTICE: `1173394850905853952`,
             PROSPECT: `1173394893297696788`
+        },
+
+        CATEGORIES: {
+            // PRODUCTION IS CURRENTLY MISSING THE MAPBANS SECTION IN THE MAIN VDC SERVER
         }
     };
