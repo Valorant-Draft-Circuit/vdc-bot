@@ -108,7 +108,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
             agentIcon: `<:${a.toLowerCase().replace(/[^a-z]/, ``)}:${AgentEmotes[a.toLowerCase().replace(/[^a-z]/, ``)]}>`,
             pickRate: allAgentsPicked.filter(agent => agent === a).length / allAgentsPicked.length
         }
-    });
+    }).sort((a, b) => b.pickRate - a.pickRate);
 
     // create the code block module (Team stats if on a team, Sub info if sub)
     const associatedData = season == currentSeason ?
