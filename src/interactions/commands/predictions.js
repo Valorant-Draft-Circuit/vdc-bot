@@ -14,10 +14,8 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
 
         const options = interaction.options._hoistedOptions;
-
         const tier = options.find(o => o.name == `tier`).value;
         const day = Number(options.find(o => o.name == `matchday`).value);
-        // console.log(tier, day)
 
         const matches = await prisma.matches.findMany({
             where: {
@@ -30,27 +28,10 @@ module.exports = {
             }
         });
 
-        // const playedMatches = (await prisma.matches.findMany({
-        //     where: {
-        //         OR: [
-        //             { home: team.id },
-        //             { away: team.id },
-        //         ],
-        //         season: 7,
-        //         matchType: type,
-        //     },
-        //     include: {
-        //         Games: true,
-        //         Home: { include: { Franchise: true } },
-        //         Away: { include: { Franchise: true } },
-        //     },
-        // })).filter(g => g.Games.length !== 0);
+        if (matches.length == 0) return await interaction.editReply(`Matchday ${day} has no matches to make predictions on!`);
 
         for (let i = 0; i < matches.length; i++) {
             const match = matches[i];
-            // if (i > 0) continue;
-            // console.log((new Date(Date.parse(match.dateScheduled) + (4 * 60 * 60 * 1000))).toISOString())
-
             const home = match.Home;
             const away = match.Away;
 
@@ -88,64 +69,39 @@ module.exports = {
             })).filter(g => g.Games.length !== 0);
 
 
-            // console.log(homePlayed)
-            // console.log(awayPlayed)
-
-
             const date = Date.parse(match.dateScheduled) - Date.now();
             const hoursTill = date / (1000 * 60 * 60);
             if (hoursTill < 0) return await interaction.editReply(`This matchday has already happened!`);
 
-            // `[\`${match.Home.Franchise.slug} v. ${match.Away.Franchise.slug} | ${map} | ${game.roundsWonHome}-${game.roundsWonAway}\`](https://tracker.gg/valorant/match/${game.gameID})`
-
+            // initialize matchday counters and create select menu options for home and away teams
             let hi = 1;
             let ai = 1;
             const homeOptionsArr = homePlayed.map((m) => {
                 const map1 = m.Games[0];
                 const map2 = m.Games[1];
 
-                const out1 = [
+                const label = [
                     `Match Day ${hi}`,
                     `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
                     map1.map,
-                    `${map1.roundsWonHome}-${map1.roundsWonAway}`
-                ].filter(v => v != null).join(` | `);
-                const out2 = [
-                    `Match Day ${hi}`,
-                    `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
-                    map2.map,
-                    `${map2.roundsWonHome}-${map2.roundsWonAway}`
+                    `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
                 ].filter(v => v != null).join(` | `);
                 hi++;
-                // console.log(out1,out2)
-                return [
-                    { label: out1, value: map1.gameID, emoji: m.Home.Franchise.Brand.discordEmote },
-                    { label: out2, value: map2.gameID, emoji: m.Home.Franchise.Brand.discordEmote }
-                ]
-            }).flat();
+                return { label: label, value: map1.gameID, emoji: home.Franchise.Brand.discordEmote };
+            });
             const awayOptionsArr = awayPlayed.map((m) => {
                 const map1 = m.Games[0];
                 const map2 = m.Games[1];
 
-                const out1 = [
+                const label = [
                     `Match Day ${ai}`,
                     `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
                     map1.map,
-                    `${map1.roundsWonHome}-${map1.roundsWonAway}`
-                ].filter(v => v != null).join(` | `);
-                const out2 = [
-                    `Match Day ${ai}`,
-                    `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
-                    map2.map,
-                    `${map2.roundsWonHome}-${map2.roundsWonAway}`
+                    `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
                 ].filter(v => v != null).join(` | `);
                 ai++;
-                // console.log(out1,out2)
-                return [
-                    { label: out1, value: map1.gameID, emoji: m.Away.Franchise.Brand.discordEmote },
-                    { label: out2, value: map2.gameID, emoji: m.Away.Franchise.Brand.discordEmote }
-                ]
-            }).flat();
+                return { label: label, value: map1.gameID, emoji: away.Franchise.Brand.discordEmote }
+            });
 
             // create the action row, add the component to it & then reply with all the data
             const homeRow = new ActionRowBuilder({
@@ -163,13 +119,10 @@ module.exports = {
                 })]
             });
 
-
-
-
-            // return
+            // send the match poll predictions
             await interaction.channel.send({
                 poll: {
-                    question: { text: `Match Day ${day} Predictions : ${match.Home.Franchise.slug} v. ${match.Away.Franchise.slug}` },
+                    question: { text: `${tier.charAt(0).toUpperCase() + tier.substring(1).toLowerCase()} Match Day ${day} Predictions : ${match.Home.Franchise.slug} v. ${match.Away.Franchise.slug}` },
                     answers: [
                         { text: `2 - 0`, emoji: match.Home.Franchise.Brand.discordEmote },
                         { text: `1 - 1`, emoji: `🟰` },
@@ -183,42 +136,6 @@ module.exports = {
 
         }
 
-
-
-
-
-
-
-
-
-        // return await interaction.channel.send({
-        //     poll: {
-        //         question: { text: `team1 vs. team2` },
-        //         answers: [
-        //             { text: `team1 2-0`, emoji: `🔴` },
-        //             { text: `1 1`, emoji: `🔴` },
-        //             { text: `team2 2-0`, emoji: `🔴` },
-        //         ],
-        //         allowMultiselect: false,
-        //         duration: 2,
-        //     }
-        // });
+        return await interaction.editReply(`The polls for match day ${day} have been sent!`);
     }
 };
-
-function dhm(t) {
-    let cd = 24 * 60 * 60 * 1000,
-        ch = 60 * 60 * 1000,
-        d = Math.floor(t / cd),
-        h = Math.floor((t - d * cd) / ch),
-        m = Math.round((t - d * cd - h * ch) / 60000),
-        pad = function (n) { return n < 10 ? '0' + n : n; };
-    if (m === 60) { h++; m = 0; }
-    if (h === 24) { d++; h = 0; }
-    return {
-        d: d,
-        h: h,
-        m: m,
-        readable: [d, pad(h), pad(m)].join(':')
-    };
-}
