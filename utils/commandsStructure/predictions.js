@@ -17,6 +17,7 @@ const { ApplicationCommandOptionType } = require(`discord.js`);
 module.exports = {
     name: `predictions`,
     description: `Create matchday predictions`,
+    default_member_permissions: process.env.ENVIRONMENT == `DEV` ? `0x0` : `0x0000000000002000`,
     options: [
         {
             name: `tier`,
