@@ -107,14 +107,14 @@ module.exports = {
             const homeRow = new ActionRowBuilder({
                 components: [new StringSelectMenuBuilder({
                     customId: `maphistory_home`,
-                    placeholder: `${home.Franchise.name} Map History`,
+                    placeholder: `${home.Franchise.name} Match History`,
                     options: homeOptionsArr,
                 })]
             });
             const awayRow = new ActionRowBuilder({
                 components: [new StringSelectMenuBuilder({
                     customId: `maphistory_away`,
-                    placeholder: `${away.Franchise.name} Map History`,
+                    placeholder: `${away.Franchise.name} Match History`,
                     options: awayOptionsArr,
                 })]
             });
