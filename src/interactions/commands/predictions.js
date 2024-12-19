@@ -87,7 +87,7 @@ module.exports = {
                     `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
                 ].filter(v => v != null).join(` | `);
                 hi++;
-                return { label: label, value: map1.gameID, emoji: home.Franchise.Brand.discordEmote };
+                return { label: label, value: String(m.matchID), emoji: home.Franchise.Brand.discordEmote };
             });
             const awayOptionsArr = awayPlayed.map((m) => {
                 const map1 = m.Games[0];
@@ -100,7 +100,7 @@ module.exports = {
                     `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
                 ].filter(v => v != null).join(` | `);
                 ai++;
-                return { label: label, value: map1.gameID, emoji: away.Franchise.Brand.discordEmote }
+                return { label: label, value: String(m.matchID), emoji: away.Franchise.Brand.discordEmote }
             });
 
             // create the action row, add the component to it & then reply with all the data
