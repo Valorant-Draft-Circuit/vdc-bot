@@ -65,7 +65,7 @@ async function executeButton(client, interaction) {
 
     switch (buttonIDComponent.length) {
         case 1: // button is not part of a managed set
-            buttonID = buttonIDComponent;
+            buttonID = buttonIDComponent[0];
             button = client.buttons.get(buttonID);
             args = [interaction];
             break;
