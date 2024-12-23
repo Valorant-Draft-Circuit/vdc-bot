@@ -34,6 +34,6 @@ export const CHANNELS = process.env.ENVIRONMENT == "DEV" ?
         },
 
         VC: {
-            LOBBY: `1027754353970389067`,
+            LOBBY: `963274331864047619`,
         }
     };
