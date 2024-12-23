@@ -193,6 +193,32 @@ module.exports = {
                     choices: franchiseChoices()
                 }
             ]
+        },
+        {
+            name: `reschedule`,
+            description: `Reschedule a match to a new date`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `team`,
+                    description: `Either team involved in the reschedule`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    autocomplete: true
+                },
+                {
+                    name: `matchday`,
+                    description: `The matchday to reschedule`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: true,
+                },
+                {
+                    name: `date`,
+                    description: `The date & time to reschedule to (EST)`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                }
+            ]
         }
     ]
 }

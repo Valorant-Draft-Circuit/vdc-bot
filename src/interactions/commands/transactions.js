@@ -1,6 +1,6 @@
 "use strict";
 
-const { cut, sign, renew, expire, updateTier, sub, unsub, ir, captain, retire, trade } = require(`../subcommands/transactions`);
+const { cut, sign, renew, expire, updateTier, sub, unsub, ir, captain, retire, trade, reschedule } = require(`../subcommands/transactions`);
 
 
 const teamMMRAllowance = {
@@ -87,10 +87,17 @@ module.exports = {
 				return retire.retire(interaction, player);
 			}
 			case `trade`: {
-				// Player to retire
+				// Franchises between which the trade happens
 				const franchise1 = _hoistedOptions[0].value;
 				const franchise2 = _hoistedOptions[1].value;
 				return trade.trade(interaction, franchise1, franchise2);
+			}
+			case `reschedule`: {
+				// match to reschedule
+				const teamName = _hoistedOptions[0].value;
+				const matchday = _hoistedOptions[1].value;
+				const rescheduleDate = _hoistedOptions[2].value;
+				return reschedule.reschedule(interaction, teamName, matchday, rescheduleDate);
 			}
 			default:
 				return interaction.editReply(`That's not a valid subcommand or this command is a work in progress!`);

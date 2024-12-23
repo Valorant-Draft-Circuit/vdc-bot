@@ -16,8 +16,8 @@ export enum TransactionsNavigationOptions {
     DRAFT_SIGN_COMFIRM          = 103,
     UPDATE_TIER_COMFIRM         = 104,
     RETIRE_COMFIRM              = 105,
-    SWAP_COMFIRM                = 106,
     EXPIRE_COMFIRM              = 106,
+    RESCHEDULE_CONFIRM          = 107,
 
     IR_SET_COMFIRM              = 200,
     IR_REMOVE_COMFIRM           = 201,
