@@ -179,6 +179,61 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	// --------------------------------------------------------------------------------------------
 
 
+	// For each alt account, update the database
+	// --------------------------------------------------------------------------------------------
+	progress.push(`🔍 Looking for your alt accounts...`);
+	await interaction.editReply(progress.join(`\n`));
+
+	// get the total number of alts the user has
+	const altAccounts = player.Accounts.filter(a => a.provider == `riot` && a.providerAccountId !== puuid);
+
+	if (altAccounts.length == 0) {				// NO ALTS
+		progress[progress.length - 1] = `✅ You have no alt accounts registered with VDC!`;
+		await interaction.editReply(progress.join(`\n`));
+
+	} else {									// ALTS
+		progress[progress.length - 1] = `✅ Found \`${altAccounts.length}\` alt accounts registered with VDC!`;
+		await interaction.editReply(progress.join(`\n`));
+
+		// iterate through each alt 
+		for (let i = 0; i < altAccounts.length; i++) {
+			const altAccount = altAccounts[i];
+
+			progress.push(`> 🔃 Updating account with IGN \`${altAccount.riotIGN}\`...`);
+			await interaction.editReply(progress.join(`\n`));
+
+			// get the alt's updated IGN from Riot's accountByPuuid endpoint
+			const puuid = altAccount.providerAccountId;
+			const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
+			if (!response.ok) {
+				progress[progress.length - 1] =
+					`> ❌ There was a problem checking Riot's API for account \`${altAccount.riotIGN}\`! Please try again later and/or let a member of the tech team know!`;
+				return await interaction.editReply(progress.join(`\n`));
+			}
+
+			const { gameName, tagLine } = await response.json();
+			const updatedAltIGN = `${gameName}#${tagLine}`;
+
+			// update the database
+			const updatedAltAccount = await prisma.account.update({
+				where: { providerAccountId: puuid },
+				data: { riotIGN: updatedAltIGN }
+			});
+
+			if (updatedAltAccount.riotIGN !== updatedAltIGN) {
+				progress[progress.length - 1] =
+					`> ❌ There was an error updating the databse for \`${altAccount.riotIGN}\`! Please try again later and/or let a member of the tech team know!`;
+				return await interaction.editReply(progress.join(`\n`));
+			}
+
+			progress[progress.length - 1] = `> ✅ Updated alt \`${i + 1}\` of \`${altAccounts.length}\` (\`${altAccount.riotIGN}\` -> \`${updatedAltIGN}\`)`;
+			await interaction.editReply(progress.join(`\n`));
+
+		}
+	}
+	// --------------------------------------------------------------------------------------------
+
+
 	// Get our current info about the player & update the database to the most recent ign
 	// --------------------------------------------------------------------------------------------
 	progress.push(`🔃 Getting your current information & updating the database...`);
@@ -211,7 +266,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	// check to make sure the bot can update the user's nickname
 	if (!guildMember.manageable) {
 		progress[progress.length - 1] =
-			`❌ The database was synced with Discord & Riot (Username: \`${discordUsername}\`, IGN: \`${updatedIGN}\`), but I can't update you- I have insufficient permissions! You will need to update your roles & nickname manually!`;
+			`❌ The database was synced with Discord & Riot (Username: \`${discordUsername}\`, IGN: \`${updatedIGN}\`), but I can't update you in the server- I have insufficient permissions! You will need to update your roles & nickname manually!`;
 		return await interaction.editReply(progress.join(`\n`));
 	}
 
@@ -471,7 +526,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		}
 	}
 
-	if (isCaptain) {
+	if (isCaptain) {													// CAPTAIN
 		roles.push(ROLES.LEAGUE.CAPTAIN);
 		readableRoles.push(`Captain`);
 	}
