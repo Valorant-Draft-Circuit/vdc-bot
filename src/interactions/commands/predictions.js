@@ -1,9 +1,16 @@
-const { ChatInputCommandInteraction, Poll, PollLayoutType, ActionRowBuilder, StringSelectMenuBuilder } = require(`discord.js`);
+const { ChatInputCommandInteraction, Poll, PollLayoutType, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder } = require(`discord.js`);
 
 const { updateFranchiseManagement, refreshFranchisesChannel } = require(`../subcommands/league`);
 const { CHANNELS } = require("../../../utils/enums");
 const { prisma } = require("../../../prisma/prismadb");
 const { MatchType } = require("@prisma/client");
+
+const COLORS = {
+    PROSPECT: 0xFEC335,
+    APPRENTICE: 0x72C357,
+    EXPERT: 0x04AEE4,
+    MYTHIC: 0xA657A6,
+}
 
 
 module.exports = {
@@ -25,6 +32,7 @@ module.exports = {
             include: {
                 Home: { include: { Franchise: { include: { Brand: true } } } },
                 Away: { include: { Franchise: { include: { Brand: true } } } },
+                Games: true
             }
         });
 
@@ -71,7 +79,19 @@ module.exports = {
 
             const date = Date.parse(match.dateScheduled) - Date.now();
             const hoursTill = date / (1000 * 60 * 60);
-            if (hoursTill < 0) return await interaction.editReply(`This matchday has already happened!`);
+            if (hoursTill < 0) {
+                const embed = new EmbedBuilder({
+                    title: `Season ${match.season} Prospect | Regular Season Match`,
+                    description: `[Match Page](https://vdc.gg/match/${match.matchID})`,
+                    color: COLORS[match.tier],
+                    fields: [
+                        { name: `Teams`, value: `<${match.Home.Franchise.Brand.discordEmote}> ${match.Home.name}\n<${match.Away.Franchise.Brand.discordEmote}> ${match.Away.name}`, inline: true },
+                        { name: `Result`, value: `**__${match.Games.filter(g => g.winner == match.Home.id).length}__**\n**__${match.Games.filter(g => g.winner == match.Away.id).length}__**`, inline: true },
+                    ]
+                })
+                await interaction.channel.send({ embeds: [embed] })
+                continue;
+            };
 
             // initialize matchday counters and create select menu options for home and away teams
             let hi = 1;
@@ -83,8 +103,7 @@ module.exports = {
                 const label = [
                     `Match Day ${hi}`,
                     `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
-                    map1.map,
-                    `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
+                    `${map1.map} : ${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.map} : ${map2.roundsWonHome}-${map2.roundsWonAway}`
                 ].filter(v => v != null).join(` | `);
                 hi++;
                 return { label: label, value: String(m.matchID), emoji: home.Franchise.Brand.discordEmote };
@@ -96,8 +115,7 @@ module.exports = {
                 const label = [
                     `Match Day ${ai}`,
                     `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
-                    map1.map,
-                    `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
+                    `${map1.map} : ${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.map} : ${map2.roundsWonHome}-${map2.roundsWonAway}`
                 ].filter(v => v != null).join(` | `);
                 ai++;
                 return { label: label, value: String(m.matchID), emoji: away.Franchise.Brand.discordEmote }
