@@ -87,7 +87,7 @@ async function activityCheck(interaction) {
         maxValues: 5,
         options: [
             {
-                label: `Users who will recieve the Inactive Role`,
+                label: `Users who will receive the Inactive Role`,
                 value: `0`,
             },
             {
