@@ -174,7 +174,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	const { gameName, tagLine } = await response.json();
 	const updatedIGN = `${gameName}#${tagLine}`;
 
-	progress[progress.length - 1] = `✅ Recieved IGN \`${updatedIGN}\` from Riot!`;
+	progress[progress.length - 1] = `✅ Received IGN \`${updatedIGN}\` from Riot!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
@@ -280,7 +280,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	progress.push(`🔨 Creating filters & checking league state...`);
 	await interaction.editReply(progress.join(`\n`));
 
-	// determine if player is GM - will override the slug checks if they are, since nonplaying GMs will still recieve slug & role
+	// determine if player is GM - will override the slug checks if they are, since nonplaying GMs will still receive slug & role
 	const searchSelectParams = { Accounts: { where: { provider: `discord` }, select: { providerAccountId: true } } };
 	const gmids = (await prisma.franchise.findMany({
 		include: {
@@ -531,7 +531,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		readableRoles.push(`Captain`);
 	}
 
-	progress[progress.length - 1] = `✅ Roles array built! The roles you'll recieve are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`;
+	progress[progress.length - 1] = `✅ Roles array built! The roles you'll receive are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
