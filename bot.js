@@ -1,51 +1,45 @@
 require(`dotenv`).config();
 
-const BotClient = require(`./src/core/botClient.js`);
-const Logger = require(`./src/core/logger.js`)
+// initalize logger
+const Logger = require(`./src/core/logger.js`);
+global.logger = new Logger();
+
 
 console.clear();
+logger.log(`VERBOSE`, `Starting...`);
 
 // initialize client
-const client = new BotClient();
+const BotClient = require(`./src/core/botClient.js`);
+global.client = new BotClient();
+logger.log(`DEBUG`, `Initalized client!`);
 
-// initialize logger & attach to new BotClient
-const logger = new Logger();
-client.logger = logger;
 
 // catch exceptions and log to console
 process.on(`uncaughtException`, (err) => {
-    client.logger.console({
-        level: `ERROR`,
-        title: err.name,
-        message: err.cause,
-        stack: err.stack,
-    });
+    return logger.log(`ERROR`, err.cause, err.stack);
 });
 
 // catch warnings and log them to the console
 process.on(`warning`, (warning) => {
-    client.logger.console({
-        level: `WARNING`,
-        title: warning.name,
-        stack: warning.stack,
-    });
+    return logger.log(`ERROR`, warning.name, warning.stack);
 });
 
-// start the bot
-client.logger.console({
-    level: `DEBUG`,
-    title: `Starting...`,
-    message: `Initalized BotClient & attached Logger to the BotClient instance`,
-});
 
+logger.log(`VERBOSE`, `Loading slash commands...`);
 client.loadSlashCommands(`src/interactions/commands`);
+
+logger.log(`VERBOSE`, `Loading buttons...`);
 client.loadButtons(`src/interactions/buttons`);
+
+logger.log(`VERBOSE`, `Loading select menus commands...`);
 client.loadSelectMenus(`src/interactions/selectMenus`);
+
+logger.log(`VERBOSE`, `Loading autocomplete queries...`);
 client.loadAutocomplete(`src/interactions/autocomplete`);
+
+logger.log(`VERBOSE`, `Loading events...`);
 client.loadEvents(`src/events`);
 
+
 client.login(process.env.TOKEN);
-client.logger.console({
-    level: `DEBUG`,
-    title: `Logging in with bot token...`,
-});
+logger.log(`VERBOSE`, `Logging in with token...`);

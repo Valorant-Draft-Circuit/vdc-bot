@@ -88,18 +88,13 @@ async function voiceCreate(
 		bitrate: 64000,
 	}));
 
-	client.logger.console({
-		level: `INFO`,
-		title: `${newVoiceChannel.name} was created`,
-	});
+	logger.log(`INFO`, `${newVoiceChannel.name} was created`);
 
 	newState.channel.members.map(m => {
 		m.voice.setChannel(newVoiceChannel.id);
 		username = m.user.username;
-		client.logger.console({
-			level: `INFO`,
-			title: `${m.user.username} was moved to ${newVoiceChannel.name}`,
-		});
+
+		logger.log(`INFO`, `${m.user.username} was moved to ${newVoiceChannel.name}`);
 	});
 
 	// send the channel settings in the voice channel
@@ -151,9 +146,6 @@ async function voiceCreate(
  * @param {Object} voiceChannel voiceState object
  */
 async function voiceDelete(client, voiceChannel) {
-	client.logger.console({
-		level: `INFO`,
-		title: `${voiceChannel.channel.name} was removed`,
-	});
+	logger.log(`INFO`, `${voiceChannel.channel.name} was deleted`);
 	return await voiceChannel.channel.delete();
 }

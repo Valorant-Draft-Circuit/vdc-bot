@@ -25,12 +25,7 @@ module.exports = {
             if (interaction.isAnySelectMenu()) return await executeSelectMenu(client, interaction);
             if (interaction.isAutocomplete()) return await executeAutocomplete(client, interaction);
         } catch (err) {
-            client.logger.console({
-                level: `ERROR`,
-                title: `${err.name}: Event - ${this.name}`,
-                message: err.cause,
-                stack: err.stack,
-            });
+            logger.log(`ERROR`, `${err.name} - ${this.name}`, err.stack);
         }
     }
 };
@@ -44,11 +39,7 @@ async function executeCommand(client, interaction) {
     const command = client.slashCommands.get(interaction.commandName);
 
     if (command) {
-        client.logger.console({
-            level: `INFO`,
-            title: `Event - interactionCreate`,
-            message: `${interaction.user.tag} ran the ${interaction.commandName} command`,
-        });
+        logger.log(`INFO`, `${interaction.user.tag} ran the ${interaction.commandName} command`);
         await command.execute(interaction);
 
     } else throw new ReferenceError(`Cannot find the application command file!`, { cause: `File is either missing or does not exist.` });
@@ -78,11 +69,7 @@ async function executeButton(client, interaction) {
     }
 
     if (button) {
-        client.logger.console({
-            level: `INFO`,
-            title: `Event - interactionCreate`,
-            message: `${interaction.user.tag} clicked on the ${buttonID} button`,
-        });
+        logger.log(`INFO`, `${interaction.user.tag} clicked on the ${buttonID} button`);
         await button.execute(...args);
 
     } else throw new ReferenceError(`Cannot find the interaction button file!`, { cause: `File is either missing or does not exist.` });
@@ -108,11 +95,7 @@ async function executeSelectMenu(client, interaction) {
     }
 
     if (selectMenu) {
-        client.logger.console({
-            level: `INFO`,
-            title: `Event - interactionCreate`,
-            message: `${interaction.user.tag} interacted with the "${interaction.customId}" select menu!`,
-        });
+        logger.log(`INFO`, `${interaction.user.tag} interacted with the ${interaction.customId} select menu!`);
         await selectMenu.execute(...args);
     } else throw new ReferenceError(`Cannot find the select menu file!`, { cause: `File is either missing or does not exist.` });
 }
@@ -128,11 +111,7 @@ async function executeAutocomplete(client, interaction) {
         client.autocompletes.get(focusedFieldName.split(`-`)[focusedFieldName.split(`-`).length - 1]);
 
     if (autocompleteCommandQuery) {
-        client.logger.console({
-            level: `INFO`,
-            title: `Event - autocomplete`,
-            message: `${interaction.user.tag} ran an autocomplete query`,
-        });
+        logger.log(`INFO`, `${interaction.user.tag} executed an autocomplete query`);
         return await autocompleteCommandQuery.execute(interaction);
 
     } else throw new ReferenceError(`Cannot find the autocomplete file!`, { cause: `File is either missing or does not exist.` });

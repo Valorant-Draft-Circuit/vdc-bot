@@ -137,7 +137,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
         } catch (e) {
-            logger.console({ level: `WARNING`, title: `User ${player.name} does not have DMs open` });
+            logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the drafted message`);
         }
 
         // send the update

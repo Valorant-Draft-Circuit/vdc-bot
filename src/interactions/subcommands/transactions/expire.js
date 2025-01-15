@@ -169,7 +169,7 @@ async function confirmExpire(interaction) {
 		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
 	} catch (e) {
-		logger.console({ level: `WARNING`, title: `User ${playerData.name} does not have DMs open` })
+		logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the contract expiration message`);
 	}
 
 	await interaction.deleteReply();
