@@ -4,6 +4,7 @@ const { updateFranchiseManagement, refreshFranchisesChannel } = require(`../subc
 const { CHANNELS } = require("../../../utils/enums");
 const { prisma } = require("../../../prisma/prismadb");
 const { MatchType } = require("@prisma/client");
+const { ControlPanel } = require("../../../prisma");
 
 const COLORS = {
     PROSPECT: 0xFEC335,
@@ -24,10 +25,13 @@ module.exports = {
         const tier = options.find(o => o.name == `tier`).value;
         const day = Number(options.find(o => o.name == `matchday`).value);
 
+
+        const season = await ControlPanel.getSeason();
         const matches = await prisma.matches.findMany({
             where: {
                 tier: tier,
-                matchDay: day
+                matchDay: day,
+                season: season
             },
             include: {
                 Home: { include: { Franchise: { include: { Brand: true } } } },
@@ -49,7 +53,7 @@ module.exports = {
                         { home: home.id },
                         { away: home.id },
                     ],
-                    season: 7,
+                    season: season,
                     matchType: MatchType.BO2,
                 },
                 include: {
@@ -66,7 +70,7 @@ module.exports = {
                         { home: away.id },
                         { away: away.id },
                     ],
-                    season: 7,
+                    season: season,
                     matchType: MatchType.BO2,
                 },
                 include: {
@@ -81,11 +85,11 @@ module.exports = {
             const hoursTill = date / (1000 * 60 * 60);
             if (hoursTill < 0) {
                 const embed = new EmbedBuilder({
-                    title: `Season ${match.season} Prospect | Regular Season Match`,
+                    title: `Season ${match.season} ${tier[0].toUpperCase() + tier.substring(1).toLowerCase()} | Regular Season Match`,
                     description: `[Match Page](https://vdc.gg/match/${match.matchID})`,
                     color: COLORS[match.tier],
                     fields: [
-                        { name: `Teams`, value: `<${match.Home.Franchise.Brand.discordEmote}> ${match.Home.name}\n<${match.Away.Franchise.Brand.discordEmote}> ${match.Away.name}`, inline: true },
+                        { name: `Teams`, value: `<${match.Home.Franchise.Brand.discordEmote}> **${match.Home.name}**\n<${match.Away.Franchise.Brand.discordEmote}> **${match.Away.name}**`, inline: true },
                         { name: `Result`, value: `**__${match.Games.filter(g => g.winner == match.Home.id).length}__**\n**__${match.Games.filter(g => g.winner == match.Away.id).length}__**`, inline: true },
                     ]
                 })

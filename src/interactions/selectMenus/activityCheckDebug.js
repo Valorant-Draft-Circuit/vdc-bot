@@ -17,27 +17,27 @@ module.exports = {
         // get all active players from the Player table and store their ID
         const allActivePlayers = await Player.getAllActive();
         const allActivePlayerIDs = allActivePlayers.map(p => p.Accounts.find(a => a.provider === `discord`).providerAccountId);
-        console.log(allActivePlayerIDs)
+        // console.log(allActivePlayerIDs)
 
         // get all guild members with the League role & store their ID
         const leagueRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.LEAGUE);
         const leagueRoleMemberIDs = await leagueRole.members.map(m => m.id);
-        console.log(`LEAGUE ROLES`)
-        console.log(leagueRoleMemberIDs)
+        // console.log(`LEAGUE ROLES`)
+        // console.log(leagueRoleMemberIDs)
 
         // get all guild members with the Inactive role & store their ID
         const inactiveRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.INACTIVE);
         const inactiveRoleMemberIDs = await inactiveRole.members.map(m => m.id);
-        console.log(`INACTIVE ROLE`)
-        console.log(leagueRoleMemberIDs)
+        // console.log(`INACTIVE ROLE`)
+        // console.log(leagueRoleMemberIDs)
 
 
         // filter the users to actually get the Inactive role, by making sure they ARE a player in the database and DO NOT ALREADY have the inactive role
         const sharedMemberIDs = leagueRoleMemberIDs
             .filter((id) => allActivePlayerIDs.includes(id))
             .filter((id) => !inactiveRoleMemberIDs.includes(id));
-        console.log(`SHARED IDs (IN DB AND NOT ALREDAY HAVE INACTIVE)`)
-        console.log(leagueRoleMemberIDs)
+        // console.log(`SHARED IDs (IN DB AND NOT ALREDAY HAVE INACTIVE)`)
+        // console.log(leagueRoleMemberIDs)
 
 
         // determine potential warnings/discrepancies

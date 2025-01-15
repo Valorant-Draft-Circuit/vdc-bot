@@ -188,9 +188,6 @@ async function generateFranchiseInformationReport() {
         }
     });
 
-    console.log(franchiseData[2])
-
-
     const refinedFranchiseData = franchiseData.map((fd) => {
 
         const getrefinedUserData = (User) => {

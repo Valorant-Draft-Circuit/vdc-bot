@@ -74,7 +74,7 @@ async function voiceCreate(
 		.map(c => c.name);
 
 	const availableChannelNames = channelNames.filter(c => !currentlyUsedChannels.includes(c));
-	if (availableChannelNames.length === 0) return console.log(`NO MORE CHANNEL OPTIONS REMAINING`);
+	if (availableChannelNames.length === 0) return logger.log(`WARNING`, `No more channel options remaining`);
 
 	const randIndex = Math.floor(Math.random() * availableChannelNames.length);
 	const newChannelName = availableChannelNames[randIndex];

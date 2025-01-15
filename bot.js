@@ -21,7 +21,7 @@ process.on(`uncaughtException`, (err) => {
 
 // catch warnings and log them to the console
 process.on(`warning`, (warning) => {
-    return logger.log(`ERROR`, warning.name, warning.stack);
+    return logger.log(`WARNING`, warning.name, warning.stack);
 });
 
 

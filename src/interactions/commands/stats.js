@@ -26,7 +26,6 @@ module.exports = {
         switch (_subcommand) {
             case `match`:
                 const matchURL = _hoistedOptions[0].value;
-                console.log(matchURL)
                 return await sendMatchStats(interaction, matchURL);
             case `player`:
                 const guildMember = _hoistedOptions[0].member;

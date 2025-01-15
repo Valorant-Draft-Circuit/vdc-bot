@@ -105,7 +105,6 @@ module.exports = {
 
 /** Create the standings "module" for a franchise */
 function createFranchiseStandingsModule(teamData) {
-    // console.log(teamData)
     // collect & organize data for outputs
     const emote = `<${teamData.Franchise.Brand.discordEmote}>`;
     const slug = teamData.Franchise.slug;

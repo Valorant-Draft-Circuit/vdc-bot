@@ -48,7 +48,6 @@ async function requestCaptain(interaction, player) {
 		style: ButtonStyle.Success,
 	});
 
-	console.log(playerData.Captain == null)
 	if (teamData.Captain != null) {
 		if (teamData.captain !== playerData.id) return await interaction.editReply(`This player isn't the captain for their team and cannot be removed!`);
 		// REMOVE A TEAM CAPTAIN

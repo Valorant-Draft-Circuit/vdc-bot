@@ -25,7 +25,6 @@ async function updateByIGN(/** @type ChatInputCommandInteraction */ interaction)
         else updatedDataObject.User.update.data.Status.update.contractStatus = contractStatus.value;
     }
     if (contractRemaining !== undefined) {
-        console.log(String(contractRemaining.value) == `999`)
         if (contractRemaining.value === 999) updatedDataObject.User.update.data.Status.update.contractRemaining = null
         else updatedDataObject.User.update.data.Status.update.contractRemaining = contractRemaining.value;
     }
