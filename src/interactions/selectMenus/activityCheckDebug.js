@@ -50,11 +50,11 @@ module.exports = {
 
         // The following are various functions to dynamically generate the reports. Each takes an array of
         // discord IDs and filters all the server's users to generate the following output format => ID : username
-        const getUsersToRecieveInactiveRole = async () => {
+        const getUsersToReceiveInactiveRole = async () => {
             const filteredUsers = allGuildMembers.filter((member) => sharedMemberIDs.includes(member.id));
             const outputArray = filteredUsers.map((u) => `${u.id.padEnd(20, ` `)} :  ${u.user.username}`);
 
-            return `\n\nUsers who will recieve the Inactive role (${outputArray.length})\n` + `=`.padEnd(75, `=`) + `\n` + outputArray.join(`\n`) + `\n` + `=`.padEnd(75, `=`);
+            return `\n\nUsers who will receive the Inactive role (${outputArray.length})\n` + `=`.padEnd(75, `=`) + `\n` + outputArray.join(`\n`) + `\n` + `=`.padEnd(75, `=`);
         }
 
         const getUsersWithLeagueRoleNotInDatabase = async () => {
@@ -86,7 +86,7 @@ module.exports = {
 
         let report = `Activity Check Debug Report`;
 
-        if (interaction.values.includes(`0`)) report += await getUsersToRecieveInactiveRole();
+        if (interaction.values.includes(`0`)) report += await getUsersToReceiveInactiveRole();
         if (interaction.values.includes(`1`)) report += await getUsersWithLeagueRoleNotInDatabase();
         if (interaction.values.includes(`2`)) report += await getUsersWithoutLeagueRoleInDatabase();
         if (interaction.values.includes(`3`)) report += await getUsersWithInactiveRole();

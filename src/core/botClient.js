@@ -1,6 +1,6 @@
 const fs = require(`fs`);
 
-const { Client, Collection, EmbedBuilder, IntentsBitField } = require("discord.js");
+const { Client, Collection, ActivityType } = require("discord.js");
 const path = require("path");
 
 const {
@@ -14,6 +14,11 @@ const { Channel } = require("discord.js").Partials;
 module.exports = class BotClient extends Client {
     constructor(environment) {
         super({
+            presence: {
+                activities: [
+                    { type: ActivityType.Watching, name: `travestey write bad code` }
+                ]
+            },
             intents: [
                 Guilds, GuildMessages,
                 GuildVoiceStates, GuildMembers,
@@ -67,15 +72,9 @@ module.exports = class BotClient extends Client {
 
         });
 
-        this.logger.console({
-            level: `DEBUG`,
-            title: `Initalized Event Handlers`,
-            message: [
-                `From (${directory}/)...`,
-                `- ${success} events successfully loaded`,
-                `- ${failure} events failed to load`
-            ],
-        });
+        logger.log(`DEBUG`, `Loaded ${success} events(s) from (${directory}/)!`);
+        if (failure !== 0) logger.log(`WARNING`, `Failed to load ${failure} events(s) from (${directory}/)!`);
+        return
     };
 
     /**
@@ -100,24 +99,18 @@ module.exports = class BotClient extends Client {
         if (process.env.ENVIRONMENT === `DEV`) {
             const serverID = `1027754353207033966`;
             readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
+
             readyClient.application.commands.set([]);
-            this.logger.console({ level: `INFO`, title: `Running in the development environment` });
+            logger.log(`INFO`, `Running in the development environment`);
         } else {
             // globally register all application commands
             readyClient.application.commands.set(commandStructures);
-            this.logger.console({ level: `INFO`, title: `Running in the production environment` });
+            logger.log(`INFO`, `Running in the production environment`);
 
         }
 
 
-        this.logger.console({
-            level: `DEBUG`,
-            title: `Registered Slash Commands`,
-            message: [
-                `From (${directory}/)...`,
-                `- ${success} command(s) registered`
-            ],
-        });
+        logger.log(`DEBUG`, `Registered ${success} command(s) from (${directory}/)!`);
     };
 
     /**
@@ -136,14 +129,7 @@ module.exports = class BotClient extends Client {
             success++;
         });
 
-        this.logger.console({
-            level: `DEBUG`,
-            title: `Loaded Slash Commands`,
-            message: [
-                `From (${directory}/)...`,
-                `- ${success} command(s) loaded`
-            ],
-        });
+        return logger.log(`DEBUG`, `Loaded ${success} command(s) from (${directory}/)!`);
     };
 
     /**
@@ -161,14 +147,7 @@ module.exports = class BotClient extends Client {
             success++;
         });
 
-        this.logger.console({
-            level: `DEBUG`,
-            title: `Loaded Buttons & Button Managers`,
-            message: [
-                `From (${directory}/)...`,
-                `- ${success} button/(manager)(s) loaded`
-            ],
-        });
+        return logger.log(`DEBUG`, `Loaded ${success} button(s) from (${directory}/)!`);
     };
 
     /**
@@ -186,14 +165,8 @@ module.exports = class BotClient extends Client {
             success++;
         });
 
-        this.logger.console({
-            level: `DEBUG`,
-            title: `Loaded Select Menus`,
-            message: [
-                `From (${directory}/)...`,
-                `- ${success} menu(s) loaded`
-            ],
-        });
+        
+        logger.log(`DEBUG`, `Loaded ${success} select menu(s) from (${directory}/)!`);
     };
 
     /**
@@ -217,13 +190,7 @@ module.exports = class BotClient extends Client {
             success++;
         });
 
-        this.logger.console({
-            level: `DEBUG`,
-            title: `Loaded Autocomplete Queries`,
-            message: [
-                `From (${directory}/)...`,
-                `- ${success} querie(s) loaded`
-            ],
-        });
+        
+        logger.log(`DEBUG`, `Loaded ${success} autocomplete queries from (${directory}/)!`);
     };
 };

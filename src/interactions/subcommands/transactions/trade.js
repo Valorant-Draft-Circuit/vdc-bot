@@ -611,10 +611,10 @@ async function getFranchiseTradeParamaters(embed, franchiseSelection) {
 	return parsedDataArray;
 }
 
-async function validatePlayerTrade(interaction, playerArray, franchiseToRecieve) {
+async function validatePlayerTrade(interaction, playerArray, franchiseToReceive) {
 	if (playerArray.length === 0) return [true];
 
-	const franchiseTeamsToRecieve = franchiseToRecieve.Teams;
+	const franchiseTeamsToReceive = franchiseToReceive.Teams;
 
 	const playerDataArray = await prisma.user.findMany({
 		where: { OR: playerArray.map(player => { return { name: player.name } }) },
@@ -638,7 +638,7 @@ async function validatePlayerTrade(interaction, playerArray, franchiseToRecieve)
 	const playerTierArr = playerDataArray.map((pdr) => {
 		const effectiveMMR = pdr.PrimaryRiotAccount.MMR.mmrEffective;
 		const playerTier = tierMMRBounds.find((m) => effectiveMMR >= m.low && effectiveMMR < m.high).name;
-		const findValidTeam = franchiseTeamsToRecieve.find(t => t.tier == playerTier && t.active == true);
+		const findValidTeam = franchiseTeamsToReceive.find(t => t.tier == playerTier && t.active == true);
 
 		const returnObject = {
 			id: pdr.id,
@@ -649,7 +649,7 @@ async function validatePlayerTrade(interaction, playerArray, franchiseToRecieve)
 			validTeam: findValidTeam == undefined ? false : true
 		}
 
-		if (!returnObject.validTeam) interaction.channel.send(`${franchiseToRecieve.name} doesn't have an active ${returnObject.tier} team for ${returnObject.riotIGN} (${returnObject.name})`)
+		if (!returnObject.validTeam) interaction.channel.send(`${franchiseToReceive.name} doesn't have an active ${returnObject.tier} team for ${returnObject.riotIGN} (${returnObject.name})`)
 
 		return returnObject;
 	});
@@ -678,7 +678,7 @@ async function executeDraftPickTrade(draftPicks, recievingFranchise) {
 }
 
 async function executePlayerTrade(interaction, players, recievingFranchise) {
-	const franchiseTeamsToRecieve = recievingFranchise.Teams;
+	const franchiseTeamsToReceive = recievingFranchise.Teams;
 
 	const playerDataArray = await prisma.user.findMany({
 		where: { OR: players.map(player => { return { name: player.name } }) },
@@ -702,7 +702,7 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 	const playersToUpdateArray = playerDataArray.map((pdr) => {
 		const effectiveMMR = pdr.PrimaryRiotAccount.MMR.mmrEffective;
 		const playerTier = tierMMRBounds.find((m) => effectiveMMR >= m.low && effectiveMMR < m.high).name;
-		const findValidTeam = franchiseTeamsToRecieve.find(t => t.tier == playerTier && t.active == true);
+		const findValidTeam = franchiseTeamsToReceive.find(t => t.tier == playerTier && t.active == true);
 
 		const returnObject = {
 			id: pdr.id,

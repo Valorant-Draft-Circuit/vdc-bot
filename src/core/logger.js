@@ -1,123 +1,94 @@
 const chalk = require(`chalk`);
 
-module.exports = class Logger {
-    constructor() {
-        /** @member {Class} client the active BotClient */
-        this.client;
+// console color
+const ccolor = {
+    INFO: chalk.green,
+    VERBOSE: chalk.magenta,
+    DEBUG: chalk.blue,
+    WARNING: chalk.yellow,
+    ERROR: chalk.red
+};
 
-        /** @member {Object} config load config data */
-        this.config = require(`./config.js`);
-
-        /** @member {Object} guild fetch guild object for Online College */
-        this.guild;
-
-        /** @member {Object} consoleChannel fetch channel object for consoleChannel */
-        this.consoleChannel;
-
-        /** @member {Object} dmChannel fetch channel object for dmChannel */
-        this.dmChannel;
-    }
-
-    /**
-     * Initializer function for the Logger Class - set this.guild & this.consoleChannel
-     * @param {String} guildID ID of the guild
-     * @param {Object} channels IDs of the channel stored in config.js
-     */
-    async init(/* guildID = this.config.SERVER_ID.DEVELOPMENT, channels = this.config.CHANNELS*/) {
-        // this.guild = await this.client.guilds.fetch(guildID);
-        // this.consoleChannel = await this.guild.channels.fetch(channels.TEST_CONSOLE);
-        // this.dmChannel = await this.guild.channels.fetch(channels.TEST_DIRMSGS);
-
-        this.console({
-            level: `DEBUG`,
-            title: `Initalized Guild & Channel Objects`,
-            message: [
-                `- Fetched guild`,
-                `- Fetched console & DM channels`
-            ],
-        });
-
-        return;
-    };
-
-    /**
-     * Log all relevant console events
-     * @param {Object} consoleObject The object to be parsed and outputted to the console
-     * @param {String} consoleObject.level INFO/DEBUG/WARNING/ERROR
-     * @param {String} consoleObject.title title of message to log to console
-     * @param {String|String[]} consoleObject.message details as string (single line) or array (for multi-line output)
-     * @param {Stack} consoleObject.stack stack
-     * @returns Text to Console
-     */
-    console(consoleObject) {
-        /**
-        client.logger.console({
-            level: ``,
-            title: ``,
-            message: [``],
-            stack: stack,
-        });
-         */
-        const { level, title, message, stack, timestamp = Date.now() } = consoleObject;
-        const { green, blue, yellow, red } = chalk;
-        const out = { message: [] };
-
-        // set constant padding length
-        const messagePadding = ``.padStart(7);
-        out.level = level.padStart(7);
-
-        // get human-readable date & time in CST
-        const time = new Date(timestamp).toLocaleString("en-US", { timeZone: `CST`, month: `short`, day: `2-digit`, hour: `numeric`, minute: `numeric` });
-
-        /** @todo console log err */
-        if (![`INFO`, `DEBUG`, `WARNING`, `ERROR`].includes(level)) return
-
-        switch (level) {
-            case `INFO`:
-                out.title = `${green(time)} | ${green(out.level)} : ` + (message ? green(title) : title);
-                break;
-
-            case `DEBUG`:
-                out.title = `${blue(time)} | ${blue(out.level)} : ${blue(title)}`;
-                break;
-
-            case `WARNING`:
-                out.title = `${yellow(time)} | ${yellow(out.level)} : ${yellow(title)}`;
-                break;
-
-            case `ERROR`:
-                out.title = `${red(time)} | ${red(out.level)} : ${red(title)}`;
-                break;
-        }
-
-        // if the message is an array of messages or a single line
-        if (Array.isArray(message)) {
-            message.forEach(msg => {
-                out.message.push(messagePadding + msg);
-            });
-            // out.message = outMsgArr.join(`\n`);
-        } else if (message) {
-            out.message.push(messagePadding + message);
-        }
-
-        // console.log(out.message)
-        if (stack) {
-            out.message.push(red(`----------------------------------- STACK -----------------------------------`));
-            const stackArr = stack
-                .replaceAll(__dirname.replace(`core`, ``), `./`)                        // replace base paths
-                .replaceAll(__dirname.replace(`src/core`, `node_modules`), `.`)         // replace node module paths
-                .split("\n", 100);                                                      // convert to array
-                
-            stackArr.forEach(line => {
-                out.message.push(line);
-            })
-        }
-
-        console.log(out.title);
-        if (out.message.length > 0) console.log(out.message.join(`\n`));
-    };
+const ldemote = {
+    INFO: `🟩`,
+    VERBOSE: `🟪`,
+    DEBUG: `🟦`,
+    WARNING: `🟨`,
+    ERROR: `🟥`
 }
 
-/**
- * Export the Logger module for use in the rest of the project
- */
+module.exports = class Logger {
+    constructor() {
+        /** @member {Object} logdrain channel object for bot logs */
+        this.logdrain;
+
+        this.logdrainReady = false;
+        this.outqueue = [];
+    }
+
+    /** Initializer function for the Logger Class */
+    async init() {
+
+        this.log(`VERBOSE`, `Fetching logdrain channels...`);
+
+        if (!(/true/i).test(process.env.LOGDRAIN_ENABLE)) return await this.log(`INFO`, `Environment variable LOGDRAIN_ENABLE is set to false, set incorrectly or doesn't exist, skipping logdrain initialization`);
+
+        // check if environment variables exist
+        if (process.env.DEV_SERVER === undefined) return await this.log(`WARNING`, `No environment variable set for development server, skipping logdrain initialization`);
+        if (process.env.LOGGING_CHANNEL === undefined) return await this.log(`WARNING`, `No environment variable set for logdrain channel, skipping logdrain initialization`);
+
+        // fetch the relevant server & channel for logging
+        const loggingServer = await client.guilds.cache.get(process.env.DEV_SERVER);
+        if (loggingServer === undefined) return await this.log(`WARNING`, `Failed to fetch server for logdrain, skipping logdrain initialization`);
+
+        const logdrainchannel = await loggingServer.channels.cache.get(process.env.LOGGING_CHANNEL);
+        if (logdrainchannel === undefined) return await this.log(`WARNING`, `Failed to fetch server for logdrain, skipping logdrain initialization`);
+
+        // save as channel
+        this.logdrainReady = true;
+        this.logdrain = logdrainchannel;
+
+        return this.log(`DEBUG`, `Fetched logdrain channel - (name: ${logdrainchannel.name}, id: ${logdrainchannel.id})`);
+    };
+
+    /**
+     * Push console events to stdout & forward to channel
+     * @param {Object} obj The object to be parsed and outputted to the console
+     * @param {`INFO`|`VERBOSE`|`DEBUG`|`WARNING`|`ERROR`} level log level
+     * @param {String} title title of message to log to console
+     * @param {String} message details as string (single line) or array (for multi-line output)
+     * @param {Stack} stack stack
+     */
+    log(level, message, stack, timestamp = Date.now()) {
+
+        // date & time
+        const time = new Date(timestamp).toLocaleString("en-US", { timeZone: `CST`, month: `short`, day: `2-digit`, hour: `numeric`, minute: `numeric` });
+        const timestampDate = Math.round(Date.now()/1000);
+
+        const levelOut = level.padStart(8, ` `);
+
+        let tidyStack;
+        if (stack) tidyStack = stack.replaceAll(__dirname.replace(`src\\core`, ``), `./`).replaceAll(`\\`, `/`);
+
+        // out to console
+        console.log(`${ccolor[level](time)} | ${ccolor[level](levelOut)} : ${message}`);
+        if (stack) console.log(tidyStack);
+
+        // discord logdrain
+        let logmsg = `${ldemote[level]} <t:${timestampDate}:d> <t:${timestampDate}:T> \` ${levelOut} \` : ${message}`;
+        
+        if (stack) logmsg += `\n\`\`\`js\n${tidyStack}\n\`\`\``;
+        this.outqueue.push(logmsg);
+        return this.processLogQueue();
+    };
+
+    async processLogQueue() {
+
+        if (!this.logdrainReady) return;
+
+        const message = this.outqueue.shift();
+        await this.logdrain.send(message);
+
+        if (this.outqueue.length !== 0) return await this.processLogQueue();
+    }
+}
