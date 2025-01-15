@@ -22,7 +22,8 @@ export const AgentEmotes = {
     "brimstone": "1181493047339536384",
     "yoru": "1181493032709795840",
     "phoenix": "1181493300805505045",
-    "clove": "1222242058585112697"
+    "clove": "1222242058585112697",
+    "tejo": "1329175741652406312",
 };
 
 export enum StatusEmotes {

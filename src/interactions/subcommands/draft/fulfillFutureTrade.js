@@ -34,11 +34,10 @@ async function fulfillFutureTrade(interaction, round, tier, franchiseFromName, f
 	// player in pick exists
 	if (tradedPick.userID !== null) return await interaction.editReply(`This pick (R: ${tradedPick.round}, pick ${tradedPick.round}) already has a player in this pick`);
 
-	console.log(`Pick being GIVEN`);
-	console.log(tradedPick);
+	// console.log(`Pick being GIVEN`);
+	// console.log(tradedPick);
 
-	console.log(`${franchiseFromName} (${franchiseFrom.id}) gives R:${tradedPick.round}, P:${tradedPick.pick} to ${franchiseToName} (${franchiseTo.id})`
-	);
+	// console.log(`${franchiseFromName} (${franchiseFrom.id}) gives R:${tradedPick.round}, P:${tradedPick.pick} to ${franchiseToName} (${franchiseTo.id})`);
 
 	const updatedPick = await prisma.draft.update({
 		where: { id: tradedPick.id }, data: { franchise: franchiseTo.id },

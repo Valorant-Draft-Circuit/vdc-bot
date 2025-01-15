@@ -66,7 +66,7 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
     const webhooks = await draftBoardChannel.fetchWebhooks();
     for (const webhook of webhooks.values()) {
         await webhook.delete();
-        console.log(`Deleted webhook: ${webhook.name}`);
+        logger.log(`INFO`, `Deleted webhook: ${webhook.name}`);
     }
 
     const dbc = await draftBoardChannel.createWebhook({ name: 'draftboardupdater' });

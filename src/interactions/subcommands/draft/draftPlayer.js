@@ -124,8 +124,6 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     const riotAccount = player.PrimaryRiotAccount;
     const mmrEffective = riotAccount.MMR.mmrEffective;
 
-    console.log(fullDraftBoard[0])
-
     if (draftBoard.map(db => db.userID).includes(player.id)) return await interaction.editReply(`The player you're trying to draft has already been picked up by another franchise and cannot be drafted by yours.`);
     if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
     if (player.primaryRiotAccountID == null) return await interaction.editReply(`This player does not have a primary Riot account set and cannot be drafted.`);
@@ -234,7 +232,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
     // const pick = draftBoard[0];
     const nextPick = draftBoard[1];
-    console.log(nextPick)
+    // console.log(nextPick)
 
     // check to make sure the drafter is allowed to draft for this tier  (if they aren't they can't confirm)
     // const drafterDiscordID = interaction.user.id;
@@ -264,7 +262,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     const pickID = Number(data[9]);
 
 
-    console.log(drafteeID, franchiseID, pickID)
+    // console.log(drafteeID, franchiseID, pickID)
 
     const draftee = await Player.getBy({ discordID: drafteeID });
 

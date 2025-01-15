@@ -58,12 +58,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
         // update nickname
         const playerTag = playerIGN.split(`#`)[0];
-        let guildMember;
-        try {
-            guildMember = await interaction.guild.members.fetch(playerDiscordID);
-        } catch (error) {
-            console.log(`There was an error fetching ${player.name} (${playerIGN})`)
-        }
+        let guildMember = await interaction.guild.members.fetch(playerDiscordID);
 
         // checks to make sure the bot doesn't crash lmfao
         if (guildMember == undefined) {

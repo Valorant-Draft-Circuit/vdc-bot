@@ -58,9 +58,6 @@ async function generatePlayoffsImages(
 ) {
 
     const { homeName, awayName, resolution, time, type, style } = options;
-
-    console.log(type)
-    console.log(options)
     
     const homeTeam = await Team.getBy({ name: homeName });
     const awayTeam = await Team.getBy({ name: awayName });
