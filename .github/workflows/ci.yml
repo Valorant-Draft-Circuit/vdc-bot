@@ -1,9 +1,8 @@
 name: Publish Bots Docker image
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
@@ -51,11 +50,4 @@ jobs:
           url: ${{ secrets.PORTAINER_WEBHOOK }}
           method: 'POST'
           preventFailureOnNoResponse: true
-          
-      # - name: Send POST request to auto-refresh
-      #   uses: fjogeleit/http-request-action@v1
-      #   with:
-      #     url: ${{ secrets.COOLIFY_WEBHOOK }}
-      #     method: 'GET'
-      #     customHeaders: '{"Authorization": "Bearer ${{ secrets.COOLIFY_TOKEN }}"}'
-      #     preventFailureOnNoResponse: true
+
