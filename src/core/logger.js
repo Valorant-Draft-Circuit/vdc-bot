@@ -17,10 +17,15 @@ const ldemote = {
     ERROR: `🟥`
 }
 
+const channels = {
+    matchDrainID: `1224147409899225140`
+}
+
 module.exports = class Logger {
     constructor() {
         /** @member {Object} logdrain channel object for bot logs */
         this.logdrain;
+        this.matchDrain;
 
         this.logdrainReady = false;
         this.outqueue = [];
@@ -39,10 +44,15 @@ module.exports = class Logger {
 
         // fetch the relevant server & channel for logging
         const loggingServer = await client.guilds.cache.get(process.env.DEV_SERVER);
-        if (loggingServer === undefined) return await this.log(`WARNING`, `Failed to fetch server for logdrain, skipping logdrain initialization`);
+        if (loggingServer === undefined) return await this.log(`WARNING`, `Failed to fetch server for logdrain, skipping drain initialization`);
+
+        // fetch match drain channel
+        const matchdrainchannel = await loggingServer.channels.cache.get(channels.matchDrainID);
+        if (matchdrainchannel === undefined) await this.log(`WARNING`, `Failed to fetch channel for matchdrain, skipping matchdrain initialization`);
+        if (matchdrainchannel) this.matchDrain = matchdrainchannel;
 
         const logdrainchannel = await loggingServer.channels.cache.get(process.env.LOGGING_CHANNEL);
-        if (logdrainchannel === undefined) return await this.log(`WARNING`, `Failed to fetch server for logdrain, skipping logdrain initialization`);
+        if (logdrainchannel === undefined) return await this.log(`WARNING`, `Failed to fetch channel for logdrain, skipping logdrain initialization`);
 
         // save as channel
         this.logdrainReady = true;
@@ -50,6 +60,10 @@ module.exports = class Logger {
 
         return this.log(`DEBUG`, `Fetched logdrain channel - (name: ${logdrainchannel.name}, id: ${logdrainchannel.id})`);
     };
+
+    matchdrain(message) {
+        this.matchDrain.send(message);
+    }
 
     /**
      * Push console events to stdout & forward to channel
@@ -90,5 +104,5 @@ module.exports = class Logger {
         await this.logdrain.send(message);
 
         if (this.outqueue.length !== 0) return await this.processLogQueue();
-    }
+    };
 }
