@@ -1,8 +1,9 @@
 name: Publish Bots Docker image
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -50,4 +51,3 @@ jobs:
           url: ${{ secrets.PORTAINER_WEBHOOK }}
           method: 'POST'
           preventFailureOnNoResponse: true
-
