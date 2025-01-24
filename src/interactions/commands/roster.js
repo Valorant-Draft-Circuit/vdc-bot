@@ -116,15 +116,16 @@ module.exports = {
          const map1 = m.Games[0];
          const map2 = m.Games[1];
 
+         if (map1 == null || map2 == null) return;
+
          const label = [
             `Match Day ${md}`,
             `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
-            map1.map,
-            `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
+            `${map1.map} : ${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.map} : ${map2.roundsWonHome}-${map2.roundsWonAway}`
          ].filter(v => v != null).join(` | `);
          md++;
          return { label: label, value: String(map1.matchID), emoji: team.Franchise.Brand.discordEmote };
-      });
+      }).filter(v => v != null);
 
       // create the action row, add the component to it & then reply with all the data
       const homeRow = new ActionRowBuilder({
