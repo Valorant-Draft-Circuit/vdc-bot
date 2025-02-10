@@ -14,6 +14,10 @@ export const CHANNELS = process.env.ENVIRONMENT == "DEV" ?
             PROSPECT: `1059244366671118487`
         },
 
+        VC: {
+            LOBBY: `1027754353970389067`,
+        },
+
         CATEGORIES: {
             MAPBANS: `1318651615699402802`,
         }
@@ -33,6 +37,10 @@ export const CHANNELS = process.env.ENVIRONMENT == "DEV" ?
             PROSPECT: `1173394893297696788`
         },
 
+        VC: {
+            LOBBY: `963274331864047619`,
+        },
+        
         CATEGORIES: {
             // PRODUCTION IS CURRENTLY MISSING THE MAPBANS SECTION IN THE MAIN VDC SERVER
         }
