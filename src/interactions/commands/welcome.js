@@ -213,7 +213,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 
 
     // log player and where they get updated
-    console.log(`${playerData.name} => ${welcomeSlug} | ${ign}`);
+    // console.log(`${playerData.name} => ${welcomeSlug} | ${ign}`);
 
     // if it's not a bulk welcome, send a reply
     if (!bulkWelcomeFlag) return await interaction.editReply({ content: `${guildMember.user} was welcomed to the league!` });
@@ -240,7 +240,7 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     let i = 0;
     const int = setInterval(async () => {
         singleWelcome(interaction, playersToWelcome[i], true);
-        console.log(`${playersToWelcome[i]}, ${i}/${playersToWelcome.length}`);
+        // console.log(`${playersToWelcome[i]}, ${i}/${playersToWelcome.length}`);
 
         if (i === playersToWelcome.length - 1) {
             await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed to the league!` });

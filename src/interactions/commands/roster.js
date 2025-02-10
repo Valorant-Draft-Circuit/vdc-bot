@@ -1,7 +1,8 @@
-const { Team, Franchise, ControlPanel } = require(`../../../prisma`);
-const { EmbedBuilder, ChatInputCommandInteraction } = require("discord.js");
+const { Team, Franchise, ControlPanel, Games } = require(`../../../prisma`);
+const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 
-const { LeagueStatus, ContractStatus } = require("@prisma/client");
+const { LeagueStatus, ContractStatus, MatchType } = require("@prisma/client");
+const { prisma } = require("../../../prisma/prismadb");
 
 const imagesURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
@@ -32,11 +33,14 @@ module.exports = {
       const franchise = await Franchise.getBy({ teamName: teamName });
       const gmIDs = [
          franchise.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+      ].filter(v => v !== undefined);
+      const agmIDs = [
          franchise.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
          franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
          franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
-      ].filter(v => v !== undefined)
+      ].filter(v => v !== undefined);
 
+      const season = await ControlPanel.getSeason();
       const teamMMRCap = (await ControlPanel.getMMRCaps("TEAM"))[team.tier];
 
       // process db data and organize for display
@@ -72,7 +76,14 @@ module.exports = {
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
          author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.Brand.logo}` },
-         description: `\`   Managers \` : ${gmIDs.map(gm => `<@${gm}>`)}\n\`       Tier \` : ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()}${showMMR ? `\n\`   Team MMR \` : ${teamMMR} / ${teamMMRCap} (Δ${teamMMRCap - teamMMR})` : ``}`,
+         description: [
+            `\`         GM \` : ${gmIDs.map(gm => `<@${gm}>`)}`,
+            `\`       AGMs \` : ${agmIDs.map(agm => `<@${agm}>`)}`,
+            `\`       Tier \` : ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()}`,
+            `\`       Data \` : T \` ${team.id} \` | F \` ${franchise.id} \``,
+            `${showMMR ? `\`   Team MMR \` : ${teamMMR} / ${teamMMRCap} (Δ${teamMMRCap - teamMMR})` : ``}`,
+            team.captain ? await createFranchiseStatsModule(team, team.Captain, season) : ``
+         ].join(`\n`),
          color: COLORS[team.tier],
          fields: [
             {
@@ -84,8 +95,49 @@ module.exports = {
          footer: { text: `Valorant Draft Circuit — ${franchise.name}` }
       });
 
+      const matchesPlayed = (await prisma.matches.findMany({
+         where: {
+            OR: [
+               { home: team.id },
+               { away: team.id },
+            ],
+            season: 7,
+            matchType: MatchType.BO2,
+         },
+         include: {
+            Games: true,
+            Home: { include: { Franchise: { include: { Brand: true } } } },
+            Away: { include: { Franchise: { include: { Brand: true } } } },
+         },
+      })).filter(g => g.Games.length !== 0);
+
+      let md = 1;
+      const matchesPlayedOptions = matchesPlayed.map((m) => {
+         const map1 = m.Games[0];
+         const map2 = m.Games[1];
+
+         if (map1 == null || map2 == null) return;
+
+         const label = [
+            `Match Day ${md}`,
+            `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
+            `${map1.map} : ${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.map} : ${map2.roundsWonHome}-${map2.roundsWonAway}`
+         ].filter(v => v != null).join(` | `);
+         md++;
+         return { label: label, value: String(map1.matchID), emoji: team.Franchise.Brand.discordEmote };
+      }).filter(v => v != null);
+
+      // create the action row, add the component to it & then reply with all the data
+      const homeRow = new ActionRowBuilder({
+         components: [new StringSelectMenuBuilder({
+            customId: `maphistory_roster`,
+            placeholder: `${team.Franchise.slug} ${team.name} Match History`,
+            options: matchesPlayedOptions,
+         })]
+      });
+
       // send the embed
-      return await interaction.editReply({ embeds: [embed] });
+      return await interaction.editReply({ embeds: [embed], components: [homeRow] });
    }
 };
 
@@ -108,4 +160,47 @@ async function refinedRosterData(/** @type ChatInputCommandInteraction */ intera
    });
 
    return players;
+}
+
+/** Create the standings "module" for a franchise if the player is signed to one */
+async function createFranchiseStatsModule(team, player, season) {
+   // const team = player.Team;
+   const franchise = team.Franchise;
+
+   const emote = `<${franchise.Brand.discordEmote}>`;
+   const slug = franchise.slug;
+   const franchiseName = franchise.name;
+   const teamName = team.name;
+
+   const allTeamGames = await Games.getAllBy({ team: team.id, season: season });
+   const teamStats = {
+      wins: allTeamGames.filter(g => g.winner == team.id).length,
+      loss: allTeamGames.filter(g => g.winner !== team.id).length,
+      roundsWon: sum(allTeamGames.map(g => g.Match.home === team.id ? g.roundsWonHome : g.roundsWonAway)),
+      totalRounds: sum(allTeamGames.map(g => g.rounds))
+   }
+
+   // text coloring
+   const color = `\u001b[0;30m`;
+   const GREEN = `\u001b[0;32m`;
+   const RED = `\u001b[0;31m`;
+
+   // centering for team names
+   const teamMaxWidth = 20;
+   const teamNameLength = teamName.length;
+   const startSpaces = Math.ceil((teamMaxWidth - teamNameLength) / 2);
+
+   // create the data array
+   const data = [
+      // ` # ${teamGameData.rank}`.padEnd(5, ` `),
+      (slug.length < 3 ? `${slug} ` : slug).padStart(4, ` `),
+      teamName.padStart(teamNameLength + startSpaces, ` `).padEnd(teamMaxWidth, ` `),
+      GREEN + String(teamStats.wins).padStart(2, ` `),
+      RED + String(teamStats.loss).padStart(2, ` `),
+      color + `${((100 * teamStats.roundsWon / teamStats.totalRounds) || 0).toFixed(2)}% `.padStart(6, ` `),
+   ];
+
+   // and then format & return the "module"
+   return `\n${emote} **${franchiseName}** - ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()}` + `\n` +
+      `\`\`\`ansi\n${color}${data.join(`${color} | `)}\n\`\`\``;
 }

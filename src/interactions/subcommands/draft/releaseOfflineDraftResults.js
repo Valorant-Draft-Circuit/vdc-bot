@@ -58,12 +58,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
         // update nickname
         const playerTag = playerIGN.split(`#`)[0];
-        let guildMember;
-        try {
-            guildMember = await interaction.guild.members.fetch(playerDiscordID);
-        } catch (error) {
-            console.log(`There was an error fetching ${player.name} (${playerIGN})`)
-        }
+        let guildMember = await interaction.guild.members.fetch(playerDiscordID);
 
         // checks to make sure the bot doesn't crash lmfao
         if (guildMember == undefined) {
@@ -137,7 +132,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
         } catch (e) {
-            logger.console({ level: `WARNING`, title: `User ${player.name} does not have DMs open` });
+            logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the drafted message`);
         }
 
         // send the update

@@ -12,20 +12,12 @@ module.exports = {
 	once: true,
 
 	async execute(client) {
-		client.logger.console({
-			level: `INFO`,
-			title: `${client.user.tag} is online!`,
-		});
-
-		// set activity
-		const presenceConfig = client.config.PRESENCE;
-		client.user.setActivity(presenceConfig.MESSAGE, { type: presenceConfig.TYPE });
+		logger.log(`INFO`, `${client.user.tag} is online!`);
 
 		// register slash commands
 		client.registerSlashCommands(client, `./utils/commandsStructure`);
 
-		// pass active BotClient to logger & then initialize the logger class
-		client.logger.client = client;
-		client.logger.init();
+		// initialize logger logdrain needs
+		return await logger.init();
 	},
 };

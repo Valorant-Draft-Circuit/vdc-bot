@@ -5,6 +5,6 @@ module.exports = {
     name: `ping`,
 
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
-        interaction.reply({ content: `Pong!` });
+        return await interaction.reply({ content: `Pong!` });
     }
 };

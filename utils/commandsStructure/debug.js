@@ -213,5 +213,18 @@ module.exports = {
                 },
             ],
         },
+        {
+            name: "profile-update",
+            description: "Forcefully update a player's profile in discord",
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: "player",
+                    description: "The player to update",
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+            ],
+        },
     ]
 }

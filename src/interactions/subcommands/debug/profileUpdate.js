@@ -1,134 +1,36 @@
 const { EmbedBuilder, GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
-const { Player, Franchise, ControlPanel } = require(`../../../prisma`);
-const { prisma } = require(`../../../prisma/prismadb`);
+const { Player, Franchise, ControlPanel } = require(`../../../../prisma`);
+// const { prisma } = require(`../../../prisma`);
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
-const { StatusEmotes, ROLES } = require("../../../utils/enums");
+// const { StatusEmotes, ROLES } = require("../../../utils/enums");
+const { prisma } = require("../../../../prisma/prismadb");
+const { ROLES } = require("../../../../utils/enums");
 
-/** Riot's API endpoint to fetch a user's account by their puuid 
- * @TODO Update to the internal VDC endpoint once it's ready */
+
 const getAccountByPuuid = `https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid`;
-
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
-module.exports = {
-	name: `profile`,
 
-	async execute(/** @type ChatInputCommandInteraction */ interaction) {
-		await interaction.deferReply();
+async function profileUpdate(/** @type ChatInputCommandInteraction */ interaction) {
+	const userID = interaction.options._hoistedOptions[0].value;
 
-		const { _subcommand, hoistedOptions } = interaction.options;
+	/** @type GuildMember */
+	const guildMember = await interaction.guild.members.fetch(userID);
 
-		switch (_subcommand) {
-			case `user`:
-				return await user(interaction);
-			case `update`:
-				return await update(interaction);
-			default:
-				return await interaction.editReply({ content: `That's not a valid subcommand or this command is a work in progress!` });
-		}
-	},
-};
+	// get the player's current discord username
+	const discordUsername = guildMember.user.username;
 
-async function user(/** @type ChatInputCommandInteraction */ interaction) {
-	const discordID = interaction.options._hoistedOptions[0].value;
-
-	const player = await Player.getBy({ discordID: discordID });
-	if (player == null) return await interaction.editReply(`This player (<@${discordID}>) does not exist in our database!`);
-
-	// if there is a tagged user, use that, otherwise use the interaction author
-	const guildMember = interaction.options._hoistedOptions.length > 0 ? interaction.guild.members.cache.get(interaction.options._hoistedOptions[0].value) : interaction.member;
-	const guildUser = guildMember.user;
-	const guildNickname = guildMember.nickname ? guildMember.nickname : guildMember.user.username;
-	const guildUserAvatar = guildUser.displayAvatarURL({ format: "png", dynamic: true });
-
-	// get the member's roles
-	const allUserRoles = guildMember.roles.cache.sort((a, b) => b.position - a.position).map(r => r);
-	const serverRoles = allUserRoles.slice(0, allUserRoles.length - 1).join(`, `);
-
-	// get account join information & convert to date, time & days elapsed
-	const discordJoinDate = new Date(guildMember.user.createdAt)
-	const discordDateJoined = discordJoinDate.toLocaleString(`en-US`, { month: "long", day: "numeric", year: "numeric" });
-	const discordTimeJoined = discordJoinDate.toLocaleString(`en-US`, { hour: "numeric", minute: "numeric", timeZoneName: "short" });
-	const accountAge = Math.floor((Date.now() - discordJoinDate) / 86400000);
-
-	// get user's server join information & convert to date, time & days elapsed
-	const serverJoinDate = new Date(guildMember.joinedTimestamp)
-	const serverDateJoined = serverJoinDate.toLocaleString(`en-US`, { month: "long", day: "numeric", year: "numeric" });
-	const serverTimeJoined = serverJoinDate.toLocaleString(`en-US`, { hour: "numeric", minute: "numeric", timeZoneName: "short" });
-	const daysOnServer = Math.floor((Date.now() - serverJoinDate) / 86400000);
-
-	// determine online presenceStatus
-	let presenceStatus = `**Presence:** `;
-	let memberPresence = guildMember.presence == null ? `offline` : guildMember.presence.status;
-	switch (memberPresence) {
-		case `online`:
-			presenceStatus += `<:online:${StatusEmotes.ONLINE}> Online`;
-			break;
-		case `idle`:
-			presenceStatus += `<:idle:${StatusEmotes.IDLE}> Idle`;
-			break;
-		case `dnd`:
-			presenceStatus += `<:dnd:${StatusEmotes.DND}> Do Not Disturb`;
-			break;
-		default:
-			presenceStatus += `<:offline:${StatusEmotes.OFFLINE}> Offline`;
-			break;
-	}
-
-	const riotAccounts = player.Accounts.filter(a => a.provider === `riot`).map(a => `[\`${a.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(a.riotIGN)}`})`).join(`, `)
-
-	const embed = new EmbedBuilder({
-		author: { name: `User Profile: ${guildNickname}`, icon_url: guildUserAvatar },
-		description:
-			`**Discord ID:** ${guildUser.id}\n` +
-			`**Username:** ${guildUser.username}\n` +
-			`**User Tag:** <@!${guildUser.id}>\n` +
-			`${presenceStatus}\n` +
-			`**Roles**: \`${player.roles}\`\n**Flags**: \`${player.flags}\`\n\n` +
-			`**Server Roles:** ${serverRoles}`,
-		// thumbnail: { url: guildUserAvatar },
-		color: 0xE92929,
-		fields: [
-			{
-				name: `\u200B`, value: `**League Information**:\n` +
-					`**League Status**: ${player.Status.leagueStatus}\n` +
-					`**Contract Status**: ${player.Status.contractStatus}\n` +
-					`**Contract Remaining**: ${player.Status.contractRemaining}\n`
-				, inline: true
-			},
-			{ name: `\u200B`, value: `**Riot Accounts**:\n${riotAccounts}`, inline: true },
-			{
-				name: `\u200B`, value: `**Miscellaneous Info**:\n` +
-					`UID: \`${player.id}\`\n` +
-					`TID: \`${player.team}\`\n` +
-					`FID: \`${player.team ? player.Team.Franchise.id : undefined}\`\n`
-				, inline: false
-			},
-			{ name: `\u200B`, value: `**Joined Discord:**\n${discordDateJoined}\n${discordTimeJoined}\nAccount Age: ${accountAge} Days`, inline: true },
-			{ name: `\u200B`, value: `\u200B`, inline: true },
-			{ name: `\u200B`, value: `**Joined ${interaction.guild}:**\n${serverDateJoined}\n${serverTimeJoined}\nTime on Server: ${daysOnServer} Days`, inline: true }
-		],
-		// timestamp: Date.now()
-		footer: { text: `Valorant Draft Circuit - ${guildNickname}`, icon_url: guildUserAvatar },
-
-	});
-
-	return await interaction.editReply({ embeds: [embed], ephemeral: false });
-}
-
-async function update(/** @type ChatInputCommandInteraction */ interaction) {
-	const userID = interaction.user.id;
 	let progress = []
 
 	// Check our database
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔍 Searching the VDC database for you & your accounts...`);
+	progress.push(`🔍 Searching the VDC database for \`${discordUsername}\` & their accounts...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	const player = await Player.getBy({ discordID: userID });
 	if (!player.primaryRiotAccountID) {
 		progress[progress.length - 1] =
-			`❌ I looked through our database and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!`;
+			`❌ I looked through our database and I don't see \`${discordUsername}\`'s Riot account linked anywhere! Please have them link one [here](https://vdc.gg/me)!`;
 		return await interaction.editReply(progress.join(`\n`));
 	}
 
@@ -138,28 +40,26 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	// Update database to current discord username
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Syncing your Discord username...`);
+	progress.push(`🔃 Syncing \`${discordUsername}\`'s Discord username...`);
 	await interaction.editReply(progress.join(`\n`));
 
-	// get the player's current discord username
-	const discordUsername = interaction.user.username;
 	const updatedUsername = await prisma.user.update({
 		where: { id: player.id },
 		data: { name: discordUsername },
 	});
 	if (updatedUsername.name !== discordUsername) {
 		progress[progress.length - 1] =
-			`❌ Looks like there was an error and we weren't able to sync your Discord username! Please try again later and/or let a member of the tech team know!`;
+			`❌ Looks like there was an error and we weren't able to sync \`${discordUsername}\`'s Discord username! Please try again later and/or let a member of the tech team know!`;
 		return await interaction.editReply(progress.join(`\n`));
 	}
 
-	progress[progress.length - 1] = `✅ Synced your Discord username (\`${discordUsername}\` -> \`${updatedUsername.name}\`)`;
+	progress[progress.length - 1] = `✅ Synced \`${discordUsername}\`'s Discord username (\`${discordUsername}\` -> \`${updatedUsername.name}\`)`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 	// Get most recent riotIGN from Riot
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Fetching your current Riot IGN from Riot's servers...`);
+	progress.push(`🔃 Fetching \`${discordUsername}\`'s current Riot IGN from Riot's servers...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	// get the player's updated IGN from Riot's accountByPuuid endpoint
@@ -181,14 +81,14 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	// For each alt account, update the database
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔍 Looking for your alt accounts...`);
+	progress.push(`🔍 Looking for \`${discordUsername}\`'s alt accounts...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	// get the total number of alts the user has
 	const altAccounts = player.Accounts.filter(a => a.provider == `riot` && a.providerAccountId !== puuid);
 
 	if (altAccounts.length == 0) {				// NO ALTS
-		progress[progress.length - 1] = `✅ You have no alt accounts registered with VDC!`;
+		progress[progress.length - 1] = `✅ \`${discordUsername}\` has no alt accounts registered with VDC!`;
 		await interaction.editReply(progress.join(`\n`));
 
 	} else {									// ALTS
@@ -236,13 +136,11 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	// Get our current info about the player & update the database to the most recent ign
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Getting your current information & updating the database...`);
+	progress.push(`🔃 Getting \`${discordUsername}\`'s current information & updating the database...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	const ignFromDB = await Player.getIGNby({ discordID: userID });
 
-	/** @type GuildMember */
-	const guildMember = await interaction.guild.members.fetch(userID);
 	const updatedPlayer = await prisma.account.update({
 		where: { providerAccountId: puuid },
 		data: { riotIGN: updatedIGN }
@@ -253,24 +151,24 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		return await interaction.editReply(progress.join(`\n`));
 	}
 
-	progress[progress.length - 1] = `✅ Updating the database to your latest IGN (\`${ignFromDB}\` -> \`${updatedIGN}\`)`;
+	progress[progress.length - 1] = `✅ Updating the database to \`${discordUsername}\`'s latest IGN (\`${ignFromDB}\` -> \`${updatedIGN}\`)`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 
 	// Confirming user is managable
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Making sure I can update your roles...`);
+	progress.push(`🔃 Making sure I can update \`${discordUsername}\`'s roles...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	// check to make sure the bot can update the user's nickname
 	if (!guildMember.manageable) {
 		progress[progress.length - 1] =
-			`❌ The database was synced with Discord & Riot (Username: \`${discordUsername}\`, IGN: \`${updatedIGN}\`), but I can't update you in the server- I have insufficient permissions! You will need to update your roles & nickname manually!`;
+			`❌ The database was synced with Discord & Riot (Username: \`${discordUsername}\`, IGN: \`${updatedIGN}\`), but I can't update \`${discordUsername}\` in the server- I have insufficient permissions! You will need to update \`${discordUsername}\`'s roles & nickname manually!`;
 		return await interaction.editReply(progress.join(`\n`));
 	}
 
-	progress[progress.length - 1] = `✅ I can update your nickname & roles!`;
+	progress[progress.length - 1] = `✅ I can update \`${discordUsername}\`'s nickname & roles!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
@@ -299,20 +197,20 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	}).flat().filter(v => v !== undefined);
 
 	// determine if the player is signed
-	const isFM = gmids.includes(interaction.user.id);
+	const isFM = gmids.includes(userID);
 	const isSigned = player.team !== null;
 
 	// determine leaguestate
 	const leagueState = await ControlPanel.getLeagueState();
 
-	progress[progress.length - 1] = `✅ The league state is \`${leagueState}\`, you **are${isFM ? `` : ` not`}** in franchise management & you **are${isSigned ? `` : ` not`}** signed!`;
+	progress[progress.length - 1] = `✅ The league state is \`${leagueState}\`, \`${discordUsername}\` **is${isFM ? `` : ` not`}** in franchise management & \`${discordUsername}\` **is${isSigned ? `` : ` not`}** signed!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 
 	// Clear roles and create blank roles array to rebuild from
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔨 Clearing your roles & prepping to rebuild...`);
+	progress.push(`🔨 Clearing \`${discordUsername}\`'s roles & prepping to rebuild...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	// get franchise role IDs to clear
@@ -344,7 +242,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	// Determine correct slug (and update team from null to team object if applicable)
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Determing your team, slug, franchise & state...`);
+	progress.push(`🔃 Determing \`${discordUsername}\`'s team, slug, franchise & state...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	const leagueStatus = player.Status.leagueStatus;
@@ -352,7 +250,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	if (isFM && !isSigned) { 											// NON PLAYING (A)GM
 		const gmFranchiseSearchParam = {
-			Accounts: { some: { providerAccountId: interaction.user.id } }
+			Accounts: { some: { providerAccountId: userID } }
 		};
 		franchise = await prisma.franchise.findFirst({
 			where: {
@@ -407,14 +305,14 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		else state = `VIEWER`;
 	}
 
-	progress[progress.length - 1] = `✅ Your team is \`${team ? team.name : null}\`, your franchise is \`${franchise ? franchise.name : null}\`, your slug is \`${slug}\` and your state is \`${state}\``;
+	progress[progress.length - 1] = `✅ \`${discordUsername}\`'s team is \`${team ? team.name : null}\`, their franchise is \`${franchise ? franchise.name : null}\`, their slug is \`${slug}\` and their state is \`${state}\``;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 
 	// Checking if user is a captain
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Checking if you are a captain...`);
+	progress.push(`🔃 Checking if \`${discordUsername}\` is a captain...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	const allCaptains = (await prisma.teams.findMany({
@@ -423,14 +321,14 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	isCaptain = allCaptains.includes(player.id);
 
-	progress[progress.length - 1] = `✅ You **are${isCaptain ? ` ` : ` not `}**a team captain!`;
+	progress[progress.length - 1] = `✅ \`${discordUsername}\` **is${isCaptain ? ` ` : ` not `}**a team captain!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 
 	// Populate roles array
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔨 Building your roles array...`);
+	progress.push(`🔨 Building \`${discordUsername}\`'s roles array...`);
 	await interaction.editReply(progress.join(`\n`));
 	let readableRoles = []; // roles in plaintext to output
 
@@ -531,14 +429,14 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		readableRoles.push(`Captain`);
 	}
 
-	progress[progress.length - 1] = `✅ Roles array built! The roles you'll receive are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`;
+	progress[progress.length - 1] = `✅ Roles array built! The roles \`${discordUsername}\` will receive are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 
 	// update nickname
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Updating your server nickname...`);
+	progress.push(`🔃 Updating \`${discordUsername}\`'s server nickname...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	const nicknameComponents = [
@@ -550,29 +448,31 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	await guildMember.setNickname(nickname);
 
-	progress[progress.length - 1] = `✅ Your server nickname has been updated to \`${nickname}\`!`;
+	progress[progress.length - 1] = `✅ \`${discordUsername}\`'s server nickname has been updated to \`${nickname}\`!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 
 	// update roles
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Updating your server roles...`);
+	progress.push(`🔃 Updating \`${discordUsername}\`'s server roles...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	await guildMember.roles.add([...roles]);
 
-	progress[progress.length - 1] = `✅ Your server roles have been updated!`;
+	progress[progress.length - 1] = `✅ \`${discordUsername}\`'s server roles have been updated!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 
 	// All done!
 	// --------------------------------------------------------------------------------------------
-	progress.push(`\n✅ Your profile has been updated!`);
+	progress.push(`\n✅ \`${discordUsername}\`'s profile has been updated!`);
 	return await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 }
+
+module.exports = { profileUpdate };
 
 async function getTierRole(player, isSigned) {
 	const mmrEffective = player.PrimaryRiotAccount.MMR.mmrEffective;

@@ -34,8 +34,7 @@ module.exports = {
         if (season < 6) return await interaction.editReply(`We don't have standings saved for seasons prior to season 6 :(`);
 
         // get all valid SEASON games for the requested tier and season
-        const games = await Games.getAllBy({ type: GameType.SEASON, tier: tier, season: season });
-
+        const games = await Games.getAllBy({ type: [GameType.SEASON, GameType.FORFEIT], tier: tier, season: season });
 
         // create array of unique teamIDs
         const activeTeamIDs = Array.from(new Set(games.map(ag => {
@@ -106,7 +105,6 @@ module.exports = {
 
 /** Create the standings "module" for a franchise */
 function createFranchiseStandingsModule(teamData) {
-    // console.log(teamData)
     // collect & organize data for outputs
     const emote = `<${teamData.Franchise.Brand.discordEmote}>`;
     const slug = teamData.Franchise.slug;

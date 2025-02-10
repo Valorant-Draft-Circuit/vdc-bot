@@ -17,7 +17,6 @@ const thirdfourth = [`Pegasus`, `Swell`, `Enforcers`, `Crest`, `Espresso`, `The 
 
 
 async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
-    console.log(tier);
 
     // get current season from the database
     const season = await ControlPanel.getSeason();

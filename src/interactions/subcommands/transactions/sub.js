@@ -16,8 +16,6 @@ async function requestSub(
 	/** @type GuildMember */ subIn,
 	/** @type GuildMember */ subOut
 ) {
-	console.log(activeSubTime)
-
 	const subInData = await Player.getBy({ discordID: subIn.id });
 	const subOutData = await Player.getBy({ discordID: subOut.id });
 

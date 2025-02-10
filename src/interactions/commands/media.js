@@ -21,7 +21,6 @@ module.exports = {
 		 * 		not the same, so the first input may be "player" for one
 		 * 		command and something else for another command.
 		 */
-		console.log(_subcommand)
 		switch (_subcommand) {
 			case `generate-season-thumbnail`: {
 				// Player whose contract to cut
@@ -30,7 +29,6 @@ module.exports = {
 				const day = _hoistedOptions[2].value;
 				const time = _hoistedOptions[3] ? _hoistedOptions[3].value : `9:00 EST / 6:00 PST`;
 
-				console.log(homeTeam, awayTeam, day, time);
 				return generateSeasonThumbnail(interaction, homeTeam, awayTeam, day, time)
 			}
 			case `generate-playoffs-images`: {
@@ -41,7 +39,6 @@ module.exports = {
 				const matchtype = _hoistedOptions[3].value;
 				const time = _hoistedOptions[4] ? _hoistedOptions[3].value : `7:00 EST / 4:00 PST`;
 
-				console.log(homeTeam, awayTeam, time, imagetype, matchtype);
 				return generatePlayoffsImages(interaction, {
 					homeName: homeTeam,
 					awayName: awayTeam,

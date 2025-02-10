@@ -17,27 +17,27 @@ module.exports = {
         // get all active players from the Player table and store their ID
         const allActivePlayers = await Player.getAllActive();
         const allActivePlayerIDs = allActivePlayers.map(p => p.Accounts.find(a => a.provider === `discord`).providerAccountId);
-        console.log(allActivePlayerIDs)
+        // console.log(allActivePlayerIDs)
 
         // get all guild members with the League role & store their ID
         const leagueRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.LEAGUE);
         const leagueRoleMemberIDs = await leagueRole.members.map(m => m.id);
-        console.log(`LEAGUE ROLES`)
-        console.log(leagueRoleMemberIDs)
+        // console.log(`LEAGUE ROLES`)
+        // console.log(leagueRoleMemberIDs)
 
         // get all guild members with the Inactive role & store their ID
         const inactiveRole = await interaction.guild.roles.fetch(ROLES.LEAGUE.INACTIVE);
         const inactiveRoleMemberIDs = await inactiveRole.members.map(m => m.id);
-        console.log(`INACTIVE ROLE`)
-        console.log(leagueRoleMemberIDs)
+        // console.log(`INACTIVE ROLE`)
+        // console.log(leagueRoleMemberIDs)
 
 
         // filter the users to actually get the Inactive role, by making sure they ARE a player in the database and DO NOT ALREADY have the inactive role
         const sharedMemberIDs = leagueRoleMemberIDs
             .filter((id) => allActivePlayerIDs.includes(id))
             .filter((id) => !inactiveRoleMemberIDs.includes(id));
-        console.log(`SHARED IDs (IN DB AND NOT ALREDAY HAVE INACTIVE)`)
-        console.log(leagueRoleMemberIDs)
+        // console.log(`SHARED IDs (IN DB AND NOT ALREDAY HAVE INACTIVE)`)
+        // console.log(leagueRoleMemberIDs)
 
 
         // determine potential warnings/discrepancies
@@ -50,11 +50,11 @@ module.exports = {
 
         // The following are various functions to dynamically generate the reports. Each takes an array of
         // discord IDs and filters all the server's users to generate the following output format => ID : username
-        const getUsersToRecieveInactiveRole = async () => {
+        const getUsersToReceiveInactiveRole = async () => {
             const filteredUsers = allGuildMembers.filter((member) => sharedMemberIDs.includes(member.id));
             const outputArray = filteredUsers.map((u) => `${u.id.padEnd(20, ` `)} :  ${u.user.username}`);
 
-            return `\n\nUsers who will recieve the Inactive role (${outputArray.length})\n` + `=`.padEnd(75, `=`) + `\n` + outputArray.join(`\n`) + `\n` + `=`.padEnd(75, `=`);
+            return `\n\nUsers who will receive the Inactive role (${outputArray.length})\n` + `=`.padEnd(75, `=`) + `\n` + outputArray.join(`\n`) + `\n` + `=`.padEnd(75, `=`);
         }
 
         const getUsersWithLeagueRoleNotInDatabase = async () => {
@@ -86,7 +86,7 @@ module.exports = {
 
         let report = `Activity Check Debug Report`;
 
-        if (interaction.values.includes(`0`)) report += await getUsersToRecieveInactiveRole();
+        if (interaction.values.includes(`0`)) report += await getUsersToReceiveInactiveRole();
         if (interaction.values.includes(`1`)) report += await getUsersWithLeagueRoleNotInDatabase();
         if (interaction.values.includes(`2`)) report += await getUsersWithoutLeagueRoleInDatabase();
         if (interaction.values.includes(`3`)) report += await getUsersWithInactiveRole();

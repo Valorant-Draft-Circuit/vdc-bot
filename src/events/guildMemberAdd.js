@@ -30,12 +30,7 @@ module.exports = {
                 welcomeChannel.send({ embeds: [embed] });
             }
         } catch (err) {
-            client.logger.console({
-                level: 'ERROR',
-                title: `${err.name}: Event - ${this.name}`,
-                message: err.cause,
-                stack: err.stack,
-            });
+            logger.log(`ERROR`, `${err.name} - ${this.name}`, err.stack);
         }
 
 }};

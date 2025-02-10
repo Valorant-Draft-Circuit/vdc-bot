@@ -2,7 +2,6 @@ const { Games } = require(`../../../prisma`);
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, WebhookClient, Message } = require("discord.js");
 
 const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
-const webhookURL = `https://discord.com/api/webhooks/1224147441712889988/mIgidbXQbZP_LarMLrn7oqbYzQvRF9xH_ii3HYogTwAIm5DHyhcbSYUYPvvkqAyZQuDZ`;
 const iconURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png`;
 
 module.exports = {
@@ -48,14 +47,8 @@ module.exports = {
          footer: { text: `Valorant Draft Circuit — Match Result Submissions` }
       });
 
-      // forward the webhook to the thread
-      const webhookClient = new WebhookClient({ url: webhookURL });
-      await webhookClient.send({
-         username: `${type} - ${tier}`,
-         avatarURL: iconURL,
-         embeds: [embed],
-      });
-      webhookClient.destroy();
+      logger.matchdrain(`<t:${Math.round(Date.now()/1000)}:d> <t:${Math.round(Date.now()/1000)}:T> **Match submission** - __Tier__: \` ${tier} \`, __Type__: \` ${type} \`, __Match ID__: [\` ${matchID} \`](https://tracker.gg/valorant/match/${matchID})`);
+      logger.log(`VERBOSE`, `Match submission - Tier: ${tier}, Type: ${type}, Match ID: [${matchID}](https://tracker.gg/valorant/match/${matchID})`);
 
       embed.setDescription(`Your match was successfully submitted!`)
       return interaction.reply({ embeds: [embed] });
