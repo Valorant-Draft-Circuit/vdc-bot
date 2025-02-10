@@ -197,7 +197,7 @@ async function profileUpdate(/** @type ChatInputCommandInteraction */ interactio
 	}).flat().filter(v => v !== undefined);
 
 	// determine if the player is signed
-	const isFM = gmids.includes(guildMember.user.id);
+	const isFM = gmids.includes(userID);
 	const isSigned = player.team !== null;
 
 	// determine leaguestate
@@ -250,7 +250,7 @@ async function profileUpdate(/** @type ChatInputCommandInteraction */ interactio
 
 	if (isFM && !isSigned) { 											// NON PLAYING (A)GM
 		const gmFranchiseSearchParam = {
-			Accounts: { some: { providerAccountId: interaction.user.id } }
+			Accounts: { some: { providerAccountId: userID } }
 		};
 		franchise = await prisma.franchise.findFirst({
 			where: {
@@ -305,7 +305,7 @@ async function profileUpdate(/** @type ChatInputCommandInteraction */ interactio
 		else state = `VIEWER`;
 	}
 
-	progress[progress.length - 1] = `✅ \`${discordUsername}\`'s team is \`${team ? team.name : null}\`, their franchise is \`${franchise ? franchise.name : null}\`, your slug is \`${slug}\` and their state is \`${state}\``;
+	progress[progress.length - 1] = `✅ \`${discordUsername}\`'s team is \`${team ? team.name : null}\`, their franchise is \`${franchise ? franchise.name : null}\`, their slug is \`${slug}\` and their state is \`${state}\``;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
