@@ -5,6 +5,7 @@ const { processInactive } = require("./processInactive");
 const { updateMMR } = require("./updateMMR");
 const { updateByIGN } = require("./updateByIGN");
 const { processRFA } = require("./processRFA");
+const { profileUpdate } = require("./profileUpdate");
 
 
 module.exports = {
@@ -15,4 +16,5 @@ module.exports = {
     processRFA: processRFA,
     updateMMR: updateMMR,
     updateByIGN: updateByIGN,
+    profileUpdate: profileUpdate,
 }
