@@ -31,9 +31,17 @@ module.exports = {
             ]
         },
         {
-            name: `ui`,
-            description: `Get a UI to navigate the history books!`,
+            name: `season`,
+            description: `View the accolades by season!`,
             type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `season`,
+                    description: `The season to view accolades for`,
+                    type: ApplicationCommandOptionType.Number,
+                    required: true,
+                }
+            ]
         }
     ]
 }
