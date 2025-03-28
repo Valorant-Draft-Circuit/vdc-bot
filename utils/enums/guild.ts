@@ -1,4 +1,4 @@
-export const GUILD = process.env.ENVIRONMENT == "DEV" ?
+export const GUILD = !Boolean(Number(process.env.PROD)) ?
 /**
  * @NOTE If bot needs to join franchises servers, production IDS need to be 
  * updated.

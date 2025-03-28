@@ -6,7 +6,7 @@
  * @option tsc ./utils/enums/playerStatusCodes.ts
  */
 
-export const ROLES = process.env.ENVIRONMENT == "DEV" ?
+export const ROLES = !Boolean(Number(process.env.PROD)) ?
     /** @development */
     {
         LEAGUE: {

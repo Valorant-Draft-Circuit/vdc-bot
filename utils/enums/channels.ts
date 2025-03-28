@@ -1,4 +1,4 @@
-export const CHANNELS = process.env.ENVIRONMENT == "DEV" ?
+export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
     /** @development */
     {
         TRANSACTIONS: "1057088094312091678",
