@@ -43,7 +43,7 @@ module.exports = {
 		/** @type VoiceState */ newState
 	) {
 		if (oldState.guild.id !== GUILD) return;
-		if (process.env.ENVIRONMENT === `DEV`) return;
+		if (!Boolean(Number(process.env.PROD))) return;
 
 		const joinedLobbyBool = newState.channelId === CHANNELS.VC.LOBBY;
 		const leftVCBool = channelNames.includes(oldState.channel?.name);

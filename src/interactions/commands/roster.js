@@ -136,8 +136,12 @@ module.exports = {
          })]
       });
 
+      // safely add the components to the reply object if there are any matches played
+      const replyObject = { embeds: [embed] };
+      if (matchesPlayedOptions.length > 0) replyObject.components = [homeRow];
+
       // send the embed
-      return await interaction.editReply({ embeds: [embed], components: [homeRow] });
+      return await interaction.editReply(replyObject);
    }
 };
 

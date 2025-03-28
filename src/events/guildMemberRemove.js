@@ -1,8 +1,8 @@
-const { LeagueStatus, ContractStatus } = require("@prisma/client");
-const { Player, Transaction } = require("../../prisma");
+const { LeagueStatus } = require("@prisma/client");
+const { Player } = require("../../prisma");
 const { prisma } = require("../../prisma/prismadb");
-const { CHANNELS, GUILD } = require(`../../utils/enums`);
-const { EmbedBuilder } = require(`discord.js`);
+const { GUILD } = require(`../../utils/enums`);
+const { GuildMember } = require(`discord.js`);
 
 
 module.exports = {
@@ -17,36 +17,59 @@ module.exports = {
     name: 'guildMemberRemove',
     once: false,
 
-    async execute(client, member) {
-        try {
 
-            const guild = await client.guilds.fetch(GUILD);
+    async execute(client, /** @type {GuildMember} */ member) {
 
-            const farewellChannel = await guild.channels.fetch(CHANNELS.MEMBER_LOGS);
-            const embed = new EmbedBuilder({
-                title: `${member.displayName} has left the server`,
-                description: `${member} left the server, bringing the member count to ${guild.memberCount}`,
-                color: 0x7e383a,
-                timestamp: Date.now(),
-            });
 
-            if (farewellChannel) farewellChannel.send({ embeds: [embed] });
+        const guild = await client.guilds.fetch(member.guild.id);
 
+        logger.memberdrain(`📤 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member left** - __Server__: \` ${member.guild.name} \` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \` ${member.user.username} \`,  __ID__: \` ${member.id} \``);
+
+
+
+        if (member.guild.id == GUILD) {
             const player = await Player.getBy({ discordID: member.id });
-            if (player) {
-                await prisma.status.update({
-                    where: { userID: player.id },
-                    data: {
-                        leagueStatus: LeagueStatus.SUSPENDED,
-                        contractStatus: null,
-                        contractRemaining: null,
-                        Player: { update: { data: { team: null } } }
-                    }
-                });
-            };
+            if (!player) return;
 
-        } catch (err) {
-            logger.log(`ERROR`, `${err.name} - ${this.name}`, err.stack);
+            switch (player.Status.leagueStatus) {
+                case LeagueStatus.PENDING:
+                case LeagueStatus.APPROVED:
+                case LeagueStatus.DRAFT_ELIGIBLE:
+                    // revert to UNREGISTERED LeagueStatus
+
+                    logger.log(`INFO`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \` ${member.guild.name} \`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`UNREGISTERED\``);
+                    await prisma.status.update({
+                        where: { userID: player.id },
+                        data: {
+                            leagueStatus: LeagueStatus.UNREGISTERED,
+                            contractStatus: null,
+                            contractRemaining: null,
+                            Player: { update: { data: { team: null } } }
+                        }
+                    });
+                    break;
+
+                case LeagueStatus.FREE_AGENT:
+                case LeagueStatus.RESTRICTED_FREE_AGENT:
+                case LeagueStatus.SIGNED:
+                case LeagueStatus.GENERAL_MANAGER:
+                    // revert to SUSPENDED LeagueStatus
+
+                    logger.log(`ALERT`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \` ${member.guild.name} \`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`SUSPENDED\``);
+                    await prisma.status.update({
+                        where: { userID: player.id },
+                        data: {
+                            leagueStatus: LeagueStatus.SUSPENDED,
+                            contractStatus: null,
+                            contractRemaining: null,
+                            Player: { update: { data: { team: null } } }
+                        }
+                    });
+                    break
+
+                default:
+                    break;
+            }
         }
     },
 };
