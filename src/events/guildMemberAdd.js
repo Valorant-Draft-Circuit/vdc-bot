@@ -1,5 +1,4 @@
-const { CHANNELS, GUILD } = require(`../../utils/enums`);
-const { EmbedBuilder } = require(`discord.js`);
+const { GuildMember } = require(`discord.js`);
 
 module.exports = {
 
@@ -14,23 +13,11 @@ module.exports = {
     name: 'guildMemberAdd',
     once: false,
 
-    async execute(client, member) {
-        try {
+    async execute(client, /** @type {GuildMember} */ member) {
 
-            const guild = await client.guilds.fetch(GUILD);
-            
-            const welcomeChannel = await guild.channels.fetch(CHANNELS.MEMBER_LOGS);
-            const embed = new EmbedBuilder({
-                title: `${member.displayName} has joined the server`,
-                description: `${member} joined the server, bringing the member count to ${guild.memberCount}`,
-                color: 0x7e383a,
-                timestamp: Date.now(),
-            });
-            if (welcomeChannel) {
-                welcomeChannel.send({ embeds: [embed] });
-            }
-        } catch (err) {
-            logger.log(`ERROR`, `${err.name} - ${this.name}`, err.stack);
-        }
+        const guild = await client.guilds.fetch(member.guild.id);
 
-}};
+        logger.memberdrain(`📥 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member joined** - __Server__: \` ${member.guild.name} \` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \` ${member.user.username} \`,  __ID__: \` ${member.id} \``);
+
+    }
+};
