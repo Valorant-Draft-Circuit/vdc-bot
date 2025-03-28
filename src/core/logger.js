@@ -64,7 +64,8 @@ module.exports = class Logger {
         if (matchdrainchannel) await this.log(`DEBUG`, `Fetched matchdrain channel - (name: ${matchdrainchannel.name}, id: ${matchdrainchannel.id})`);
 
         // fetch member log drain channel
-        const memberlogdrainchannel = await loggingServer.channels.cache.get(channels.memberlogs);
+        const mainServer = await client.guilds.cache.get(process.env.SERVER_ID);
+        const memberlogdrainchannel = await mainServer.channels.cache.get(channels.memberlogs);
         if (memberlogdrainchannel === undefined) await this.log(`WARNING`, `Failed to fetch channel for memberlogs, skipping memberlogs initialization`);
         if (memberlogdrainchannel) this.memberlogDrain = memberlogdrainchannel;
         if (memberlogdrainchannel) await this.log(`DEBUG`, `Fetched memberlog channel - (name: ${memberlogdrainchannel.name}, id: ${memberlogdrainchannel.id})`);
