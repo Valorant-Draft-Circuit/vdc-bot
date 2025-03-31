@@ -43,7 +43,8 @@ module.exports = {
 				// Player to sign & team to sign to
 				const player = _hoistedOptions[0];
 				const team = _hoistedOptions[1].value;
-				return sign.sign(interaction, player, team);
+				const contractLength = _hoistedOptions[2].value;
+				return sign.sign(interaction, player, team, contractLength);
 			}
 			case `update-tier`: {
 				// Player to update & tier to update to

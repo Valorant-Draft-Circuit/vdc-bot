@@ -80,6 +80,16 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     autocomplete: true
+                },
+                {
+                    name: `length`,
+                    description: `The length of the contract`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        { name: `1`, value: "1" },
+                        { name: `2`, value: "2" },
+                    ]
                 }
             ]
         },
