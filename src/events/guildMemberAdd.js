@@ -1,5 +1,6 @@
 const { GuildMember, MessageFlags } = require(`discord.js`);
 const { ControlPanel } = require("../../prisma");
+const { GUILD } = require("../../utils/enums");
 
 const generalChatID = !Boolean(Number(process.env.PROD)) ?
     `1059244366671118487` : // bot-spam
@@ -28,6 +29,9 @@ module.exports = {
         const guild = await client.guilds.fetch(member.guild.id);
         logger.memberdrain(`📥 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member joined** - __Server__: \` ${member.guild.name} \` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \` ${member.user.username} \`,  __ID__: \` ${member.id} \``);
 
+        // if not in the main VDC server, then return and do nothing else
+        if (member.guild.id !== GUILD) return;
+
         // build the message
         const welcomeMessage = (await ControlPanel.getWelcomeMessage()).replace(`{welcome}`, `<@&${welcomePingRoleID}>`).replace(`{user}`, `<@${member.id}>`);
         const messageBody = [
@@ -42,5 +46,6 @@ module.exports = {
         // fetch the channel & send the message
         const channel = await client.channels.fetch(generalChatID);
         channel.send({ content: [welcomeMessage, messageBody, messageFooter].join(`\n`), flags: MessageFlags.SuppressEmbeds });
+        logger.log(`INFO`, `Sent welcome message for <@${member.id}> to <#${generalChatID}>`);
     }
 };
