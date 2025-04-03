@@ -4,11 +4,11 @@ const { GUILD } = require("../../utils/enums");
 
 const generalChatID = !Boolean(Number(process.env.PROD)) ?
     `1059244366671118487` : // bot-spam
-    `963274331864047618`; // VDC gen chat
+    `963274331864047618`;   // VDC gen chat
 
 const welcomePingRoleID = !Boolean(Number(process.env.PROD)) ?
     `1172963557504209027` : // tech lead role
-    `1357086417972494467`; // welcome role
+    `1357081780095549681`;  // welcome role
 
 module.exports = {
 
