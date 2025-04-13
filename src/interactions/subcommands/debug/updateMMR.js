@@ -1,6 +1,7 @@
-const { Player } = require(`../../../../prisma`);
+const { Player, ControlPanel } = require(`../../../../prisma`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
+const fs = require(`fs`);
 
 const flavorResponses = [
     `Admin abuse? god you make me sick`,
@@ -48,9 +49,38 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
         footer: { text: `Valorant Draft Circuit — Update MMR` }
     });
 
+    logger.log(`INFO`, `${interaction.user} (${interaction.user.username}) updated MMR for ${guildMember} (${guildMember.username}) from \`${oldMMR}\` to \`${newMMR}\``);
+
+
+    buildMMRCache();
 
     await interaction.editReply({ embeds: [embed] });
     return await interaction.followUp({ content: flavorResponses[i], ephemeral: true })
 }
 
 module.exports = { updateMMR };
+
+
+/** Query the database to get MMRs */
+async function buildMMRCache() {
+    const playerMMRs = await prisma.user.findMany({
+        include: {
+            Accounts: { where: { provider: `discord` } },
+            PrimaryRiotAccount: { include: { MMR: true } }
+        }
+    });
+
+    const mapped = playerMMRs.map((p) => {
+        const disc = p.Accounts[0].providerAccountId;
+        const mmr = p.PrimaryRiotAccount?.MMR?.mmrEffective;
+        return { discordID: disc, mmr: mmr }
+    }).filter((p => p.mmr !== null && p.mmr !== undefined));
+
+    const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
+
+    fs.writeFileSync(`./cache/mmrCache.json`, JSON.stringify(mapped));
+    fs.writeFileSync(`./cache/mmrTierLinesCache.json`, JSON.stringify({
+        ...tierLines, pulled: new Date()
+    }));
+    return playerMMRs;
+}
