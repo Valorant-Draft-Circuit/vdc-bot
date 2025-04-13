@@ -226,5 +226,10 @@ module.exports = {
                 },
             ],
         },
+        {
+            name: "refresh-cache",
+            description: "Update the bot's MMR cache",
+            type: ApplicationCommandOptionType.Subcommand
+        },
     ]
 }
