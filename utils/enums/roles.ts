@@ -34,9 +34,14 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             PROSPECT_FREE_AGENT: "1224023630330204303",
         },
         OPERATIONS: {
+            // in dev, both of these are the "BADMIN" role
+            ADMIN: `1295970432268238940`,
+            MOD: `1295970432268238940`,
+
             // in dev, the GM/AGM IDs are just the VDC GM/STAFF role
             GM: `1189024973017321572`,
-            AGM: `1189024973017321572`
+            AGM: `1189024973017321572`,
+            SCOUT: `1238499712303235273`
         }
     } :
     /** @production */
@@ -66,8 +71,12 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             PROSPECT_FREE_AGENT: "1028478846753837106",
         },
         OPERATIONS: {
+            ADMIN: `963298727810990101`,
+            MOD: `966910372894343168`,
+
             // GM/AGM IDs
             GM: `963862762881175572`,
-            AGM: `963863601716793384`
+            AGM: `963863601716793384`,
+            SCOUT: `1052008749851742258`
         }
     };
