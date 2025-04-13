@@ -18,10 +18,18 @@ const channelNames = [
 	// machine guns
 	`Ares`, `Odin`,
 ];
-// const channelNames = weapons.map(n => `The Gamer ${n}™`);
 
 const { ChannelType, BaseClient, VoiceState, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require(`discord.js`);
-const { CHANNELS, GUILD } = require(`../../utils/enums`);
+const { CHANNELS, GUILD, ROLES } = require(`../../utils/enums`);
+const fs = require(`fs`);
+
+// 382893405178691584
+
+const refreshRequire = async (path) => {
+	delete require.cache[require.resolve(path)];
+	return await require(path);
+}
+
 
 module.exports = {
 
@@ -42,9 +50,11 @@ module.exports = {
 		/** @type VoiceState */ oldState,
 		/** @type VoiceState */ newState
 	) {
-		if (oldState.guild.id !== GUILD) return;
-		if (!Boolean(Number(process.env.PROD))) return;
+		// if (oldState.guild.id !== GUILD) return;
+		// if (!Boolean(Number(process.env.PROD))) return;
 
+		/** Standard Join/Leave Button (The Range) */
+		/* ########################################################################### */
 		const joinedLobbyBool = newState.channelId === CHANNELS.VC.LOBBY;
 		const leftVCBool = channelNames.includes(oldState.channel?.name);
 		const leftChannelMemberCount = oldState.channel?.members.map(m => m).length;
@@ -59,6 +69,104 @@ module.exports = {
 		if (leftVCBool && leftChannelMemberCount === 0) {
 			return voiceDelete(client, oldState);
 		};
+		/* ########################################################################### */
+
+
+
+		/** Combines VC Sorting */
+		/* ########################################################################### */
+		const sortChannel = CHANNELS.VC.COMBINES.SORT_CHANNEL
+		const joinedCombinesLobbyBool = newState?.channelId === sortChannel;
+
+		const tierCategories = Object.values(CHANNELS.VC.COMBINES.COMBINE_CATEGORY);
+		const isInCombinesCategory = tierCategories.includes(newState?.channel?.parent?.id);
+
+		const isScout = newState.member.roles.cache.map(r => r.id).includes(ROLES.OPERATIONS.SCOUT);
+
+		const isAdmin = newState.member.roles.cache.map(r => r.id).includes(ROLES.OPERATIONS.ADMIN);
+		const isMod = newState.member.roles.cache.map(r => r.id).includes(ROLES.OPERATIONS.MOD);
+
+		// if a player joines the combines lobby, verify valid MMR and then move them to the correct channel
+		if (joinedCombinesLobbyBool) {
+			newState.channel.members.map(async (m) => {
+
+				// import the mmr caches
+				const mmrCache = await refreshRequire(`../../cache/mmrCache`);
+				const tierLines = await refreshRequire(`../../cache/mmrTierLinesCache`);
+
+				const mmr = Number(mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
+				const playerTier = getTier(mmr, tierLines);
+
+				if (playerTier == undefined && !isAdmin && !isMod) {
+
+					await m.voice.disconnect();
+					dmJoinFailureReason(m,
+						`There is a problem with your account (invalid MMR or status) and you cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> currently. Please open an admin ticket.`,
+						`Sent ${m} (${m.user.username}) a DM with an error message for having an invalid MMR`
+					);
+					return await logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an invalid MMR (\`${mmr}\`) & has been disconnected`);
+
+				} else {
+					const channel = CHANNELS.VC.COMBINES.WAITING_ROOM[playerTier];
+
+					await m.voice.setChannel(channel);
+					return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an MMR of \`${mmr}\` & has been moved to <#${channel}>`);
+				}
+			});
+		}
+
+		// if the player joins a channel in the commbines category, confirm that they are a scout or a player with a valid MMR
+		if (isInCombinesCategory) {
+			newState.channel.members.map(async (m) => {
+
+				// import the mmr caches
+				const mmrCache = await refreshRequire(`../../cache/mmrCache`);
+				const tierLines = await refreshRequire(`../../cache/mmrTierLinesCache`);
+
+				const mmr = Number(mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
+				const playerTier = getTier(mmr, tierLines);
+				const isInCorrectTier = playerTier === m.voice.channel.parent.name.toUpperCase().replace(`COMBINES - `, ``);
+
+				if (isScout) {		// if they player is a scout
+
+
+					if (playerTier == undefined) {
+						// player has no tier (non-playing FM scout)
+						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as a scout (or is an Admin/Mod). They **DO NOT** have a valid MMR and **SHOULD NOT BE** playing`);
+
+					} else if (playerTier !== undefined && !isInCorrectTier) {
+						// else if the player is a scout for a tier they are not playing in
+						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as a scout (or is an Admin/Mod). Their tier **DOES NOT MATCH** (${playerTier}) the channel and they **SHOULD NOT BE** playing`);
+					} else {
+						// user is either a player with a valid MMR or a scout
+						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as either a scout OR a player with an MMR of \`${mmr}\``);
+					}
+
+				} else {			// if the player is NOT a scout
+
+					if (!isInCorrectTier && !isAdmin && !isMod) {
+						// not a scout and in the incorrect tier
+						const channelObject = m.voice.channel;
+
+						await m.voice.disconnect();
+						dmJoinFailureReason(m,
+							`You joined the wrong tier channel (${channelObject})- I expected to see you in an \`${playerTier}\` voice channel. Please join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> and wait to be sorted. If you believe this is an error, please open an admin ticket`,
+							`Sent ${m} (${m.user.username}) a DM with an error message for joining the wrong tier channel`
+						);
+						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined the wrong tier channel (${channelObject}) with an MMR of \`${mmr}\` - expected to see them in \`${playerTier}\`. They have been disconnected`);
+
+					} else if (!isInCorrectTier && (isAdmin || isMod)) {
+						// not a scout and in the incorrect tier but is an admin/mod
+						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined the wrong tier channel (${m.voice.channel}) with an MMR of \`${mmr}\` - but they are an admin/mod so they have not been disconnected`);
+
+					} else {
+						// not a scout and in the incorrect tier
+						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined ${m.voice.channel} (${m.voice.channel.name}) with an MMR of \`${mmr}\``);
+					}
+				}
+			});
+		}
+		/* ########################################################################### */
 	}
 };
 
@@ -79,7 +187,6 @@ async function voiceCreate(
 
 	const randIndex = Math.floor(Math.random() * availableChannelNames.length);
 	const newChannelName = availableChannelNames[randIndex];
-	let username = ``;
 
 	const newVoiceChannel = (await newState.guild.channels.create({
 		name: newChannelName,
@@ -116,7 +223,7 @@ async function voiceCreate(
 			options: [
 				{ label: `Open`, value: `0` },
 				{ label: `Duos`, value: `2` },
-				{ label: `Trios`, value: `3` }, 
+				{ label: `Trios`, value: `3` },
 				{ label: `4 Stack`, value: `4` },
 				{ label: `5 Stack`, value: `5` },
 			],
@@ -149,4 +256,23 @@ async function voiceCreate(
 async function voiceDelete(client, voiceChannel) {
 	logger.log(`INFO`, `${voiceChannel.channel.name} was deleted`);
 	return await voiceChannel.channel.delete();
+}
+
+function getTier(mmr, tierLines) {
+
+	for (const tier in tierLines) {
+		if (tierLines[tier].min <= mmr && mmr <= tierLines[tier].max) return tier;
+	}
+	return undefined;
+}
+
+async function dmJoinFailureReason(player, dmMessage, loggerMessage) {
+
+	// Attempt to send a message to the user
+	try {
+		await player.send({ content: dmMessage });
+		return await logger.log(`INFO`, loggerMessage);
+	} catch (e) {
+		logger.log(`WARNING`, `User ${player} (${player.user.username}) does not have DMs open & will not receive the combines join error message`);
+	}
 }

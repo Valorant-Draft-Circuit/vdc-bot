@@ -6,6 +6,7 @@ const { updateMMR } = require("./updateMMR");
 const { updateByIGN } = require("./updateByIGN");
 const { processRFA } = require("./processRFA");
 const { profileUpdate } = require("./profileUpdate");
+const { refreshCache } = require("./refreshCache");
 
 
 module.exports = {
@@ -17,4 +18,5 @@ module.exports = {
     updateMMR: updateMMR,
     updateByIGN: updateByIGN,
     profileUpdate: profileUpdate,
+    refreshCache: refreshCache,
 }

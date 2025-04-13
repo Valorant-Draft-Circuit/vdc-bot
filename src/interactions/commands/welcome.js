@@ -34,15 +34,41 @@ module.exports = {
 
 async function singleWelcome(/** @type ChatInputCommandInteraction */ interaction, discordID, bulkWelcomeFlag = false) {
 
-    // get player information from DB and guild info (guildMember & channel)
-    const playerData = await Player.getBy({ discordID: discordID });
-    const guildMember = await interaction.guild.members.fetch(discordID);
-    const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
-
     // editreply vs normal message send (for bulk welcone)
     const replyFunction = (obj) => !bulkWelcomeFlag ?
         interaction.editReply(obj) :
         interaction.channel.send(obj);
+
+    // get player information from DB and guild info (guildMember & channel)
+    const playerData = await Player.getBy({ discordID: discordID });
+    let guildMember;
+    try {
+        guildMember = await interaction.guild.members.fetch(discordID);
+    } catch (e) {
+        if (playerData) {
+            await prisma.user.update({
+                where: { id: playerData.id },
+                data: {
+                    team: null,
+                    Status: {
+                        update: {
+                            leagueStatus: LeagueStatus.UNREGISTERED,
+                            contractStatus: null,
+                            contractRemaining: null
+                        }
+                    }
+                }
+            });
+            return await replyFunction({
+                content: `I can't find <@${discordID}> (dID : \`${discordID}\`)- they may have left the discord server! Attempting to set them to \`UNREGISTERED\``
+            });
+        } else {
+            return await replyFunction({
+                content: `I can't find <@${discordID}> (dID : \`${discordID}\`)- they may have left the discord server & they aren't in our database!`
+            });
+        }
+    }
+    const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
 
     // status checks
     // check to see if the bot can perform any actions on this user (i.e. if the bot isn't high enough in role hierarchy)
@@ -143,7 +169,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 
             welcomeSlug = franchise.slug;
             franchiseRoleID = franchise.roleID;
-            
+
             await guildMember.roles.add(ROLES.OPERATIONS.AGM);
             await acceptedChannel.send({
                 content: `Welcome ${guildMember.user} back as an Assistant General Manager for ${franchise.name}!`
