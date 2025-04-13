@@ -20,6 +20,7 @@ module.exports = {
 
     async execute(client, /** @type {GuildMember} */ member) {
 
+        if (!Boolean(Number(process.env.PROD))) return;
 
         const guild = await client.guilds.fetch(member.guild.id);
 
