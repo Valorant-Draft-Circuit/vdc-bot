@@ -242,7 +242,10 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     // console.log(`${playerData.name} => ${welcomeSlug} | ${ign}`);
 
     // if it's not a bulk welcome, send a reply
-    if (!bulkWelcomeFlag) return await interaction.editReply({ content: `${guildMember.user} was welcomed to the league!` });
+    if (!bulkWelcomeFlag) {
+        buildMMRCache();
+        return await interaction.editReply({ content: `${guildMember.user} was welcomed to the league!` });
+    }
     else return;
 }
 
@@ -252,6 +255,10 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     const playersToWelcome = approvedPlayers.map(p => {
         return p.Accounts.find((a) => a.provider == `discord`).providerAccountId;
     });
+
+    if (playersToWelcome.length === 0) {
+        return await interaction.editReply({ content: `There are no players to welcome!` });
+    }
 
     const embed = new EmbedBuilder({
         title: `Bulk Welcome`,
@@ -269,6 +276,7 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
         // console.log(`${playersToWelcome[i]}, ${i}/${playersToWelcome.length}`);
 
         if (i === playersToWelcome.length - 1) {
+            buildMMRCache();
             await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed to the league!` });
             return clearInterval(int);
         };
@@ -276,4 +284,29 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     }, rateLimitinMS);
 
     return await interaction.editReply({ embeds: [embed] });
+}
+
+/** Query the database to get MMRs */
+async function buildMMRCache() {
+    const playerMMRs = await prisma.user.findMany({
+        include: {
+            Accounts: { where: { provider: `discord` } },
+            PrimaryRiotAccount: { include: { MMR: true } },
+            Status: true
+        }
+    });
+
+    const mapped = playerMMRs.map((p) => {
+        const disc = p.Accounts[0].providerAccountId;
+        const mmr = p.PrimaryRiotAccount?.MMR?.mmrEffective;
+        return { discordID: disc, mmr: mmr, ls: p.Status.leagueStatus, cs: p.Status.contractStatus};
+    }).filter((p => p.mmr !== null && p.mmr !== undefined));
+
+    const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
+
+    fs.writeFileSync(`./cache/mmrCache.json`, JSON.stringify(mapped));
+    fs.writeFileSync(`./cache/mmrTierLinesCache.json`, JSON.stringify({
+        ...tierLines, pulled: new Date()
+    }));
+    return playerMMRs;
 }

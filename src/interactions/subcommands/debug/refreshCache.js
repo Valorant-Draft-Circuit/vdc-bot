@@ -19,14 +19,15 @@ async function buildMMRCache() {
     const playerMMRs = await prisma.user.findMany({
         include: {
             Accounts: { where: { provider: `discord` } },
-            PrimaryRiotAccount: { include: { MMR: true } }
+            PrimaryRiotAccount: { include: { MMR: true } },
+            Status: true
         }
     });
 
     const mapped = playerMMRs.map((p) => {
         const disc = p.Accounts[0].providerAccountId;
         const mmr = p.PrimaryRiotAccount?.MMR?.mmrEffective;
-        return { discordID: disc, mmr: mmr }
+        return { discordID: disc, mmr: mmr, ls: p.Status.leagueStatus, cs: p.Status.contractStatus};
     }).filter((p => p.mmr !== null && p.mmr !== undefined));
 
     const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
