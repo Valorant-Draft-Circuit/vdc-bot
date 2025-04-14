@@ -22,6 +22,7 @@ const channelNames = [
 const { ChannelType, BaseClient, VoiceState, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require(`discord.js`);
 const { CHANNELS, GUILD, ROLES } = require(`../../utils/enums`);
 const fs = require(`fs`);
+const { LeagueStatus } = require("@prisma/client");
 
 // 382893405178691584
 
@@ -29,6 +30,14 @@ const refreshRequire = async (path) => {
 	delete require.cache[require.resolve(path)];
 	return await require(path);
 }
+
+const allowedLeagueStatuses = [
+	LeagueStatus.DRAFT_ELIGIBLE,
+	LeagueStatus.FREE_AGENT,
+	LeagueStatus.GENERAL_MANAGER,
+	LeagueStatus.RESTRICTED_FREE_AGENT,
+	LeagueStatus.SIGNED
+];
 
 
 module.exports = {
@@ -97,20 +106,54 @@ module.exports = {
 				const mmr = Number(mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
 				const playerTier = getTier(mmr, tierLines);
 
+				// check if the player has a valid MMR/tier and isn't an admin or mod
 				if (playerTier == undefined && !isAdmin && !isMod) {
 
 					await m.voice.disconnect();
 					dmJoinFailureReason(m,
-						`There is a problem with your account (invalid MMR or status) and you cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> currently. Please open an admin ticket.`,
+						`There is a problem with your account (invalid MMR) and you cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> currently. Please open an admin ticket.`,
 						`Sent ${m} (${m.user.username}) a DM with an error message for having an invalid MMR`
 					);
 					return await logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an invalid MMR (\`${mmr}\`) & has been disconnected`);
 
-				} else {
-					const channel = CHANNELS.VC.COMBINES.WAITING_ROOM[playerTier];
+				} else if (playerTier == undefined && (isAdmin || isMod)) {
 
-					await m.voice.setChannel(channel);
-					return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an MMR of \`${mmr}\` & has been moved to <#${channel}>`);
+					// not a valid tier but is an admin/mod
+					await m.voice.disconnect();
+					dmJoinFailureReason(m,
+						`Even though you are an admin/mod, you have an invalid MMR and cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}>. Please join the waiting rooms directly.`,
+						`Sent ${m} (${m.user.username}) a DM with an error message for having an invalid mmr. Even though they are a mod/admin, they cannot be sorted`
+					);
+					return await logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an invalid tier (\`${playerTier}\`) & has been disconnected. Even though they are a mod/admin, they cannot be sorted`);
+				} else {
+					const playerLeagueStatus = mmrCache.find(mmr => mmr.discordID === m.id)?.ls;
+					const isValidStatus = allowedLeagueStatuses.includes(playerLeagueStatus);
+
+					// check if the player has a valid status
+					if (!isValidStatus && !isAdmin && !isMod) {
+						await m.voice.disconnect();
+						dmJoinFailureReason(m,
+							`There is a problem with your account (invalid status, \`${playerLeagueStatus}\`) and you cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> currently. Please open an admin ticket.`,
+							`Sent ${m} (${m.user.username}) a DM with an error message for having an invalid status`
+						);
+						return await logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an invalid leagueStatus (\`${playerLeagueStatus}\`) & has been disconnected. Even though they are a mod/admin, they cannot be sorted`);
+
+					} else if (!isValidStatus && (isAdmin || isMod)) {
+						// not a valid status but is an admin/mod
+						await m.voice.disconnect();
+						dmJoinFailureReason(m,
+							`Even though you are an admin/mod, you have an invalid status (\`${playerLeagueStatus}\`) and cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> Please join the calls directly.`,
+							`Sent ${m} (${m.user.username}) a DM with an error message for having an invalid status. Even if they are a mod/admin, they cannot be sorted`
+						);
+						return await logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an invalid leagueStatus (\`${playerLeagueStatus}\`) & has been disconnected. Even though they are a mod/admin, they cannot be sorted`);
+					} else {
+
+						const channel = CHANNELS.VC.COMBINES.WAITING_ROOM[playerTier];
+
+						await m.voice.setChannel(channel);
+						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an MMR of \`${mmr}\` & has been moved to <#${channel}>`);
+
+					}
 				}
 			});
 		}
@@ -127,19 +170,25 @@ module.exports = {
 				const playerTier = getTier(mmr, tierLines);
 				const isInCorrectTier = playerTier === m.voice.channel.parent.name.toUpperCase().replace(`COMBINES - `, ``);
 
+				const playerLeagueStatus = mmrCache.find(mmr => mmr.discordID === m.id)?.ls;
+				const isValidStatus = allowedLeagueStatuses.includes(playerLeagueStatus);
+
 				if (isScout) {		// if they player is a scout
-
-
 					if (playerTier == undefined) {
-						// player has no tier (non-playing FM scout)
-						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as a scout (or is an Admin/Mod). They **DO NOT** have a valid MMR and **SHOULD NOT BE** playing`);
+						// player has no tier (non-playing FM/scout)
+						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as a scout. They **DO NOT** have a valid MMR and **SHOULD NOT BE** playing`);
 
-					} else if (playerTier !== undefined && !isInCorrectTier) {
+					} else if (playerTier !== undefined && !isInCorrectTier) { 					// valid tier, not correct tier
 						// else if the player is a scout for a tier they are not playing in
-						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as a scout (or is an Admin/Mod). Their tier **DOES NOT MATCH** (${playerTier}) the channel and they **SHOULD NOT BE** playing`);
-					} else {
+						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as a scout. Their tier (${playerTier}) **DOES NOT MATCH** the channel they are in and they **SHOULD NOT BE** playing`);
+
+					} else if (playerTier !== undefined && isInCorrectTier && !isValidStatus) { // valid tier, correct tier, not correct status
+						// else if the player is a scout with an invalid status
+						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as a scout. They have an **INVALID STATUS** (\`${playerLeagueStatus}\`) and they **SHOULD NOT BE** playing`);
+
+					} else {																	// valid tier, correct tier, valid status
 						// user is either a player with a valid MMR or a scout
-						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as either a scout OR a player with an MMR of \`${mmr}\``);
+						return logger.log(`INFO`, `User ${newState.member} (${newState.member.user.username}) is joining ${m.voice.channel} (${m.voice.channel.name}) as either a scout OR a player with an MMR of \`${mmr}\` & leagueStatus of \`${playerLeagueStatus}\``);
 					}
 
 				} else {			// if the player is NOT a scout
@@ -148,20 +197,44 @@ module.exports = {
 						// not a scout and in the incorrect tier
 						const channelObject = m.voice.channel;
 
-						await m.voice.disconnect();
-						dmJoinFailureReason(m,
-							`You joined the wrong tier channel (${channelObject})- I expected to see you in an \`${playerTier}\` voice channel. Please join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> and wait to be sorted. If you believe this is an error, please open an admin ticket`,
-							`Sent ${m} (${m.user.username}) a DM with an error message for joining the wrong tier channel`
-						);
-						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined the wrong tier channel (${channelObject}) with an MMR of \`${mmr}\` - expected to see them in \`${playerTier}\`. They have been disconnected`);
+
+						if (playerTier == undefined) { 				// tier is undefined (invalid mmr)
+							await m.voice.disconnect();
+							dmJoinFailureReason(m,
+								`You joined (${channelObject}, \`${channelObject.name}\`) but do not have a valid mmr. If you believe this is an error, please open an admin ticket`,
+								`Sent ${m} (${m.user.username}) a DM with an error message for joining a tier channel without a valid mmr`
+							);
+							return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined ${channelObject} (\`${channelObject.name}\`) with an invalid mmr. They have been disconnected`);
+						} else {							// tier is defined (valid mmr)
+							await m.voice.disconnect();
+							dmJoinFailureReason(m,
+								`You joined the wrong tier channel (${channelObject}, \`${channelObject.name}\`)- I expected to see you in a(n) \`${playerTier}\` voice channel. Please join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> and wait to be sorted. If you believe this is an error, please open an admin ticket`,
+								`Sent ${m} (${m.user.username}) a DM with an error message for joining the wrong tier channel`
+							);
+							return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined the wrong tier channel (${channelObject}) with an MMR of \`${mmr}\` - expected to see them in \`${playerTier}\`. They have been disconnected`);
+						}
+
 
 					} else if (!isInCorrectTier && (isAdmin || isMod)) {
 						// not a scout and in the incorrect tier but is an admin/mod
 						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined the wrong tier channel (${m.voice.channel}) with an MMR of \`${mmr}\` - but they are an admin/mod so they have not been disconnected`);
 
+					} else if (isInCorrectTier && !isValidStatus && (isAdmin || isMod)) {
+						// not a scout and in the correct tier, has invalid status but is an admin/mod
+						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined ${m.voice.channel} with an invalid leagueStatus (\`${playerLeagueStatus}\`) - but they are an admin/mod so they have not been disconnected`);
+
 					} else {
-						// not a scout and in the incorrect tier
-						return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined ${m.voice.channel} (${m.voice.channel.name}) with an MMR of \`${mmr}\``);
+						// not a scout and in the correct tier
+						if (isValidStatus) { 			// has valid status
+							return await logger.log(`INFO`, `User ${m.user} (${m.user.username}) joined ${m.voice.channel} (${m.voice.channel.name}) with an MMR of \`${mmr}\` & leagueStatus of \`${playerLeagueStatus}\``);
+						} else {						// has invalid status
+							await m.voice.disconnect();
+							dmJoinFailureReason(m,
+								`There is a problem with your account (invalid status, \`${playerLeagueStatus}\`) and you cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> currently. Please open an admin ticket.`,
+								`Sent ${m} (${m.user.username}) a DM with an error message for having an invalid status`
+							);
+							return await logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an invalid leagueStatus (\`${playerLeagueStatus}\`) & has been disconnected`);
+						}
 					}
 				}
 			});
