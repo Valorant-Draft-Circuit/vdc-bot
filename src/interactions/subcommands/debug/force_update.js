@@ -1,12 +1,13 @@
-const { LeagueStatus } = require(`@prisma/client`);
-const { Player, Transaction, Flags, Team } = require(`../../../../prisma`);
-const fs = require(`fs`);
+const { Player, Team } = require(`../../../../prisma`);
 const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 
 
 async function forceUpdate(/** @type ChatInputCommandInteraction */ interaction) {
     const { _subcommand, _hoistedOptions } = interaction.options;
+
+    const player = await Player.getBy({ discordID: _hoistedOptions[0].user.id });
+    if (player == null) return await interaction.editReply(`This player (${debugUser}, \`${debugUser.username}\`, \`${debugUser.id}\`) does not exist in our database!`);
 
     const debugUser = _hoistedOptions[0].user;
     const leagueStatus = _hoistedOptions.find(o => o.name === `league-status`);

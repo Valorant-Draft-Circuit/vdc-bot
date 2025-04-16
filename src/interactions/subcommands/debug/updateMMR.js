@@ -19,7 +19,9 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
     const guildMember = _hoistedOptions[0].user;
     const newMMR = _hoistedOptions[1].value;
 
-    const player = await Player.getBy({ discordID: guildMember.id });
+    const player = await Player.getBy({ discordID: _hoistedOptions[0].user.id });
+	if (player == null) return await interaction.editReply(`This player (${debugUser}, \`${debugUser.username}\`, \`${debugUser.id}\`) does not exist in our database!`);
+
     const mmrEntry = player.PrimaryRiotAccount.MMR;
     const oldMMR = mmrEntry.mmrEffective;
 
