@@ -1,4 +1,4 @@
-const { Tier, GameType, Agent, LeagueStatus, ContractStatus } = require(`@prisma/client`);
+const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
 const { Player, Team, Flags } = require(`../../../../prisma`)
 const { ChatInputCommandInteraction } = require(`discord.js`);
 const fs = require(`fs`);
@@ -242,12 +242,13 @@ async function generateExpiringContractReport() {
                 is: {
                     contractStatus: ContractStatus.SIGNED,
                     contractRemaining: 0,
-                }}
-            },
-        include: {Team: {include: {Franchise: true}}}
+                }
+            }
+        },
+        include: { Team: { include: { Franchise: true } } }
     })).sort((a, b) => b.team - a.team).sort((a, b) => b.Team.franchise - a.Team.franchise);
 
-    const firstFranchise =  expiringContracts[0].Team.Franchise.name
+    const firstFranchise = expiringContracts[0].Team.Franchise.name
     let franciseLastSlug = expiringContracts[0].Team.Franchise.slug;
     return [firstFranchise, ...expiringContracts.map((c) => {
         const out = `${c.Team.Franchise.slug.padEnd(4, ` `)}  |  ${c.Team.name.padStart(20, ` `)} | ${c.name}`

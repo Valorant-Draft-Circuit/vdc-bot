@@ -44,6 +44,7 @@ module.exports = {
 
 		/** forward messages to the right channel */
 		if (message.author.id == NUMBERS_WEBHOOK_ID) {
+			if (message.embeds.length === 0) return;
 			if (message.embeds[0].title !== `Game Processed!`) return;
 
 			const embeddescription = message.embeds[0].description;
