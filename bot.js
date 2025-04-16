@@ -1,19 +1,27 @@
 require(`dotenv`).config();
 
-// initalize logger
+// MODULE REQUIREMENTS ----------------------------------------------------------------------------
+const fs = require(`fs`);
 const Logger = require(`./src/core/logger.js`);
-global.logger = new Logger();
+const BotClient = require(`./src/core/botClient.js`);
+// ################################################################################################
 
+
+// INITIALIZE LOGGER & CLEAR CONSOLE --------------------------------------------------------------
+global.logger = new Logger();
 
 console.clear();
 logger.log(`VERBOSE`, `Starting...`);
+// ################################################################################################
 
-// initialize client
-const BotClient = require(`./src/core/botClient.js`);
+
+// INITALIZE CLIENT -------------------------------------------------------------------------------
 global.client = new BotClient();
 logger.log(`DEBUG`, `Initalized client!`);
+// ################################################################################################
 
 
+// CREATE WATCHERS/LISTENERS ----------------------------------------------------------------------
 // catch exceptions and log to console
 process.on(`uncaughtException`, (err) => {
     return logger.log(`ERROR`, err.cause, err.stack);
@@ -24,7 +32,20 @@ process.on(`warning`, (warning) => {
     return logger.log(`WARNING`, warning.name, warning.stack);
 });
 
+// create hotreloading for cache
+const mmrCachePath = `./cache/mmrCache.json`;
 
+global.mmrCache = require(mmrCachePath);
+fs.watchFile(mmrCachePath, () => {
+    delete require.cache[require.resolve(mmrCachePath)];
+    global.mmrCache = require(mmrCachePath);
+
+    return logger.log(`INFO`, `Reloaded file: ${mmrCachePath}`);
+});
+// ################################################################################################
+
+
+// LOAD COMMANDS, INTERACTIONS & EVENTS -----------------------------------------------------------
 logger.log(`VERBOSE`, `Loading slash commands...`);
 client.loadSlashCommands(`src/interactions/commands`);
 
@@ -39,7 +60,15 @@ client.loadAutocomplete(`src/interactions/autocomplete`);
 
 logger.log(`VERBOSE`, `Loading events...`);
 client.loadEvents(`src/events`);
+// ################################################################################################
 
 
+// LOGIN ------------------------------------------------------------------------------------------
 client.login(process.env.TOKEN);
 logger.log(`VERBOSE`, `Logging in with token...`);
+// ################################################################################################
+
+
+// FUNCTIONS --------------------------------------------------------------------------------------
+
+// ################################################################################################
