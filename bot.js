@@ -17,7 +17,7 @@ logger.log(`VERBOSE`, `Starting...`);
 
 // INITALIZE CLIENT -------------------------------------------------------------------------------
 global.client = new BotClient();
-logger.log(`DEBUG`, `Initalized client!`);
+logger.log(`DEBUG`, `Initialized client!`);
 // ################################################################################################
 
 
