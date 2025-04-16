@@ -83,7 +83,7 @@ module.exports = {
 
 		/** Combines VC Sorting */
 		/* ########################################################################### */
-		const sortChannel = CHANNELS.VC.COMBINES.SORT_CHANNEL
+		const sortChannel = CHANNELS.VC.COMBINES.SORT_CHANNEL;
 		const joinedCombinesLobbyBool = newState?.channelId === sortChannel;
 
 		const tierCategories = Object.values(CHANNELS.VC.COMBINES.COMBINE_CATEGORY);
