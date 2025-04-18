@@ -44,6 +44,6 @@ module.exports = {
         // fetch the channel & send the message
         const channel = await client.channels.fetch(generalChatID);
         const msg = await channel.send({ content: [welcomeMessage, messageBody, messageFooter].join(`\n`), flags: MessageFlags.SuppressEmbeds });
-        logger.log(`INFO`, `Sent welcome message for ${member} (${member.user.username}) : ${msg}`);
+        logger.log(`INFO`, `Sent welcome message for ${member} (${member.user.username}) : ${msg.url}`);
     }
 };
