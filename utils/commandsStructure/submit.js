@@ -38,31 +38,7 @@ module.exports = {
                 {
                     name: 'Mythic',
                     value: 'MYTHIC'
-                },
-                {
-                    name: 'Mixed',
-                    value: 'MIXED'
                 }
-            ]
-        },
-        {
-            name: 'type',
-            description: 'The type of match played',
-            type: ApplicationCommandOptionType.String,
-            required: true,
-            choices: [
-                {
-                    name: 'Combine',
-                    value: 'COMBINE'
-                },
-                {
-                    name: 'Season',
-                    value: 'SEASON'
-                },
-                {
-                    name: 'Playoffs',
-                    value: 'PLAYOFF'
-                },
             ]
         },
         {

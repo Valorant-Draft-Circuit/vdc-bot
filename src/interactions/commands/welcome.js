@@ -299,7 +299,7 @@ async function buildMMRCache() {
     const mapped = playerMMRs.map((p) => {
         const disc = p.Accounts[0].providerAccountId;
         const mmr = p.PrimaryRiotAccount?.MMR?.mmrEffective;
-        return { discordID: disc, mmr: mmr, ls: p.Status.leagueStatus, cs: p.Status.contractStatus};
+        return { discordID: disc, mmr: mmr, ls: p.Status.leagueStatus, cs: p.Status.contractStatus };
     }).filter((p => p.mmr !== null && p.mmr !== undefined));
 
     const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
