@@ -2,7 +2,8 @@ const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { Player, Transaction, Flags, ControlPanel, Roles } = require("../../../prisma");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES } = require(`../../../utils/enums`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
+const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const fs = require(`fs`);
 
 const validStatusesToDE = [
     LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT
