@@ -11,7 +11,7 @@ module.exports = {
    name: `submit`,
 
    async execute(/** @type ChatInputCommandInteraction */ interaction) {
-      interaction.deferReply();
+      await interaction.deferReply();
       const { _hoistedOptions } = interaction.options;
 
       const tier = _hoistedOptions[0].value;
