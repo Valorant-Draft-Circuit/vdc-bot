@@ -264,7 +264,7 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     const embed = new EmbedBuilder({
         title: `Bulk Welcome`,
         description:
-            `I'm on it! I'll be welcoming: \`${playersToWelcome.length} \` players to the league!\n` +
+            `I'm on it! I'll be welcoming: \`${playersToWelcome.length}\` players to the league!\n` +
             `This will take about \` ${playersToWelcome.length * rateLimitinMS / 1000} \` seconds. I'll let you know when I'm done!`
         ,
         color: 0xE92929,
