@@ -100,7 +100,7 @@ module.exports = {
 			const playerTier = getTier(mmr);
 
 			// get player league status
-			const playerLeagueStatus = global.mmrCache.find(mmr => mmr.discordID === m.id)?.ls;
+			const playerLeagueStatus = mmrCache.find(mmr => mmr.discordID === m.id)?.ls;
 			const isValidStatus = allowedLeagueStatuses.includes(playerLeagueStatus);
 
 			if (playerTier && isValidStatus) {					// valid MMR and status
@@ -119,11 +119,11 @@ module.exports = {
 				return console.log(`User ${m.user} (${m.user.username}) joined ${newState.channel.name} as a scout/admin/mod. They have been allowed to join`);
 			} else {											// else check mmr and status
 				// get player MMR
-				const mmr = Number(global.mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
+				const mmr = Number(mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
 				const playerTier = getTier(mmr);
 
 				// get player league status
-				const playerLeagueStatus = global.mmrCache.find(mmr => mmr.discordID === m.id)?.ls;
+				const playerLeagueStatus = mmrCache.find(mmr => mmr.discordID === m.id)?.ls;
 				const isValidStatus = allowedLeagueStatuses.includes(playerLeagueStatus);
 				const isInCorrectTier = playerTier === m.voice.channel.parent.name.toUpperCase().replace(`COMBINES - `, ``);
 
@@ -233,8 +233,8 @@ async function voiceDelete(client, voiceChannel) {
 }
 
 function getTier(mmr) {
-	for (const tier in global.mmrTierLinesCache) {
-		if (global.mmrTierLinesCache[tier].min <= mmr && mmr <= global.mmrTierLinesCache[tier].max) return tier;
+	for (const tier in mmrTierLinesCache) {
+		if (mmrTierLinesCache[tier].min <= mmr && mmr <= mmrTierLinesCache[tier].max) return tier;
 	}
 	return undefined;
 }
