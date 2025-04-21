@@ -96,7 +96,7 @@ module.exports = {
 		// if a player joines the combines lobby, verify valid MMR and then move them to the correct channel
 		if (joinedCombinesLobbyBool) {							// else check mmr and status
 			// get player MMR
-			const mmr = Number(global.mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
+			const mmr = Number(mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
 			const playerTier = getTier(mmr);
 
 			// get player league status
