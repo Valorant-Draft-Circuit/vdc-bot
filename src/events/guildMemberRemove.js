@@ -39,7 +39,7 @@ module.exports = {
                     // revert to UNREGISTERED LeagueStatus
 
                     logger.log(`INFO`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \` ${member.guild.name} \`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`UNREGISTERED\``);
-                    await prisma.status.update({
+                    return await prisma.status.update({
                         where: { userID: player.id },
                         data: {
                             leagueStatus: LeagueStatus.UNREGISTERED,
@@ -48,7 +48,6 @@ module.exports = {
                             Player: { update: { data: { team: null } } }
                         }
                     });
-                    break;
 
                 case LeagueStatus.FREE_AGENT:
                 case LeagueStatus.RESTRICTED_FREE_AGENT:
@@ -57,7 +56,7 @@ module.exports = {
                     // revert to SUSPENDED LeagueStatus
 
                     logger.log(`ALERT`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \` ${member.guild.name} \`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`SUSPENDED\``);
-                    await prisma.status.update({
+                    return await prisma.status.update({
                         where: { userID: player.id },
                         data: {
                             leagueStatus: LeagueStatus.SUSPENDED,
@@ -66,10 +65,9 @@ module.exports = {
                             Player: { update: { data: { team: null } } }
                         }
                     });
-                    break
 
                 default:
-                    break;
+                    return;
             }
         }
     },

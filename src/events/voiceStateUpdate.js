@@ -1,4 +1,4 @@
-// const lobby = ; // ID for "new vc" button
+// const lobby = ; // ID for `new vc` button
 const channelNames = [
 	// pistols
 	`Classic`, `Shorty`, `Frenzy`, `Ghost`, `Sheriff`,
@@ -21,10 +21,7 @@ const channelNames = [
 
 const { ChannelType, BaseClient, VoiceState, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require(`discord.js`);
 const { CHANNELS, GUILD, ROLES } = require(`../../utils/enums`);
-const { LeagueStatus } = require("@prisma/client");
-
-const mmrCache = require(`../../cache/mmrCache.json`);
-const mmrTierLinesCache = require(`../../cache/mmrTierLinesCache.json`);
+const { LeagueStatus } = require(`@prisma/client`);
 
 
 const enableSort = (/true/i).test(process.env.COMBINES_SORT);

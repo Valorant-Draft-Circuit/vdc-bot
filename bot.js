@@ -31,16 +31,31 @@ process.on(`uncaughtException`, (err) => {
 process.on(`warning`, (warning) => {
     return logger.log(`WARNING`, warning.name, warning.stack);
 });
+// ################################################################################################
 
+
+// START HOTRELOAD FILES --------------------------------------------------------------------------
 // create hotreloading for cache
 const mmrCachePath = `./cache/mmrCache.json`;
+const mmrTierLinesCache = `./cache/mmrTierLinesCache.json`;
 
+// initial requires
 global.mmrCache = require(mmrCachePath);
+global.mmrTierLinesCache = require(mmrTierLinesCache);
+
+// create watch files for hot-reloading
 fs.watchFile(mmrCachePath, () => {
     delete require.cache[require.resolve(mmrCachePath)];
     global.mmrCache = require(mmrCachePath);
 
-    return logger.log(`INFO`, `Reloaded file: ${mmrCachePath}`);
+    return logger.log(`INFO`, `Reloaded file: \`${mmrCachePath}\``);
+});
+
+fs.watchFile(mmrTierLinesCache, () => {
+    delete require.cache[require.resolve(mmrTierLinesCache)];
+    global.mmrTierLinesCache = require(mmrTierLinesCache);
+
+    return logger.log(`INFO`, `Reloaded file: \`${mmrTierLinesCache}\``);
 });
 // ################################################################################################
 
