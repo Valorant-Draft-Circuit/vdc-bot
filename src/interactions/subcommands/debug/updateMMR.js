@@ -43,7 +43,7 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
                 name: `\u200B`,
                 value:
                     `__**MMR Update Summary**__\n` +
-                    `\`${String(oldMMR).padStart(4)} \` => \`${String(newMMR).padStart(4)} \``
+                    `\`${oldMMR} \` => \`${newMMR}\``
                 ,
                 inline: false
             }
