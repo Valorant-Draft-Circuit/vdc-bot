@@ -108,7 +108,7 @@ module.exports = {
 				return await m.voice.setChannel(channel);
 			} else {											// not a valid MMR or valid status
 				sendDM(m, `There is a problem with your account (invalid MMR, or status) and you cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> currently. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-				logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined <#${sortChannel}> with an invalid MMR (\`${mmr}\`) or invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
+				logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`) joined <#${sortChannel}> with an invalid MMR (\`${mmr}\`) or invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
 				return await m.voice.disconnect();
 			}
 		}
@@ -116,7 +116,7 @@ module.exports = {
 		// if the player joins a channel in the commbines category, confirm that they are a scout or a player with a valid MMR
 		if (isInCombinesCategory) {
 			if (isScout || isAdmin || isMod) {					// if the user is a scout, admin or mod, ignore all restrictions
-				return console.log(`User ${m.user} (${m.user.username}) joined ${newState.channel.name} as a scout/admin/mod. They have been allowed to join`);
+				return console.log(`User ${m.user} (\`${m.user.username}\`) joined ${newState.channel.name} as a scout/admin/mod. They have been allowed to join`);
 			} else {											// else check mmr and status
 				// get player MMR
 				const mmr = Number(mmrCache.find(mmr => mmr.discordID === m.id)?.mmr);
@@ -129,18 +129,18 @@ module.exports = {
 
 				if (!playerTier) {								// invalid MMR
 					sendDM(m, `You have joined a combines channel, but you do not have a valid MMR. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-					logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid MMR (\`${mmr}\`) & have been disconnected`);
+					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid MMR (\`${mmr}\`) & have been disconnected`);
 					return await m.voice.disconnect();
 				} else if (!isValidStatus) {					// invalid status
 					sendDM(m, `You have joined a combines channel, but you do not have a valid status. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-					logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
+					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
 					return await m.voice.disconnect();
 				} else if (!isInCorrectTier) {					// invalid tier
 					sendDM(m, `You have joined a combines channel, but are not in the correct tier. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-					logger.log(`ALERT`, `User ${m.user} (${m.user.username}) joined ${newState.channel} (\`${newState.channel.name}\`)- expected to see them in a \`${playerTier}\` lobby. They have been disconnected`);
+					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`) joined ${newState.channel} (\`${newState.channel.name}\`)- expected to see them in a \`${playerTier}\` lobby. They have been disconnected`);
 					return await m.voice.disconnect();
 				} else {										// valid MMR, tier and status
-					return console.log(`User ${m.user} (${m.user.username}) joined ${m.voice.channel} (${m.voice.channel.name}) with an MMR of \`${mmr}\`, leagueStatus of \`${playerLeagueStatus}\` & tier of \`${playerTier}\``);
+					return console.log(`User ${m.user} (\`${m.user.username}\`) joined ${m.voice.channel} (${m.voice.channel.name}) with an MMR of \`${mmr}\`, leagueStatus of \`${playerLeagueStatus}\` & tier of \`${playerTier}\``);
 				}
 			}
 		}
@@ -177,7 +177,7 @@ async function voiceCreate(
 	logger.log(`INFO`, `${newVoiceChannel.name} was created`);
 
 	newState.member.voice.setChannel(newVoiceChannel.id);
-	logger.log(`INFO`, `${newState.member.user.username} was moved to ${newVoiceChannel.name}`);
+	logger.log(`INFO`, `\`${newState.member.user.username}\` was moved to ${newVoiceChannel.name}`);
 
 	// send the channel settings in the voice channel
 	const embed = new EmbedBuilder({
