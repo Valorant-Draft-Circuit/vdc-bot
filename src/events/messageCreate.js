@@ -65,7 +65,7 @@ module.exports = {
 			if (match.Games.length !== 2) return logger.log(`VERBOSE`, `Match ID: ${matchID} only has one map, skipping announcement`);
 
 			const homeTeam = match.Home;
-			const awayTeam = match.Away;0
+			const awayTeam = match.Away;
 
 			const map1 = match.Games[0];
 			const map2 = match.Games[1];
