@@ -62,8 +62,8 @@ module.exports = {
          footer: { text: `Valorant Draft Circuit — Match Result Submissions` }
       });
 
-      logger.matchdrain(`<t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Match submission** - __Tier__: \` ${tier} \`, __Type__: \` ${type} \`, __Match ID__: [\` ${gameID} \`](https://tracker.gg/valorant/match/${gameID})`);
-      logger.log(`VERBOSE`, `Match submission - Tier: ${tier}, Type: ${type}, Match ID: [${gameID}](https://tracker.gg/valorant/match/${gameID})`);
+      logger.matchdrain(`<t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Match submission** - __Tier__: \`${tier}\`, __Type__: \`${type}\`, __Match ID__: [\`${gameID}\`](${url})`);
+      logger.log(`VERBOSE`, `Match submission - Tier: \`${tier}\`, Type: \`${type}\`, Match ID: [\`${gameID}\`](${url})`);
       return await interaction.editReply({ embeds: [embed] });
    }
 };
