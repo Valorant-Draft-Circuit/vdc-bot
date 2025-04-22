@@ -51,7 +51,7 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
         footer: { text: `Valorant Draft Circuit — Update MMR` }
     });
 
-    logger.log(`INFO`, `${interaction.user} (${interaction.user.username}) updated MMR for ${guildMember} (${guildMember.username}) from \`${oldMMR}\` to \`${newMMR}\``);
+    logger.log(`INFO`, `${interaction.user} (\`${interaction.user.username}\`) updated MMR for ${guildMember} (\`${guildMember.username}\`) from \`${oldMMR}\` to \`${newMMR}\``);
 
 
     buildMMRCache();

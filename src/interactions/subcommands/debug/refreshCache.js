@@ -8,7 +8,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 async function refreshCache(/** @type ChatInputCommandInteraction */ interaction) {
     await interaction.editReply({ content: `🔃 Refreshing cache...` });
     await buildMMRCache();
-    logger.log(`INFO`, `${interaction.user} (${interaction.user.username}) refreshed the cache`);
+    logger.log(`INFO`, `${interaction.user} (\`${interaction.user.username}\`) refreshed the cache`);
     return await interaction.editReply({ content: `✅ Cache refreshed!` });
 }
 
