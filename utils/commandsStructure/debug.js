@@ -1,11 +1,11 @@
 const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
-const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
+const { ApplicationCommandOptionType, InteractionContextType, PermissionFlagsBits } = require(`discord.js`);
 
 /** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
     name: `debug`,
     description: `Access debug commands here!`,
-    default_member_permissions: !Boolean(Number(process.env.PROD)) ? `0x0` : `0x0000000000002000`,
+    default_member_permissions: !Boolean(Number(process.env.PROD)) ? `0x0` : PermissionFlagsBits.BanMembers,
     contexts: [InteractionContextType.Guild],
     options: [
         {

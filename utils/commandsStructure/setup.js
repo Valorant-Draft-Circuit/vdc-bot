@@ -4,7 +4,7 @@ const { ApplicationCommandOptionType, InteractionContextType, PermissionFlagsBit
 module.exports = {
     name: `setup`,
     description: `Base command to setup/execute various one-time functionalities`,
-    default_member_permissions: PermissionFlagsBits.BanMembers,
+    default_member_permissions: !Boolean(Number(process.env.PROD)) ? `0x0` : PermissionFlagsBits.BanMembers,
     contexts: [InteractionContextType.Guild],
     options: [
         {
