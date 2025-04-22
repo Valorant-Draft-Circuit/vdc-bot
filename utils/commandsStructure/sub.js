@@ -1,26 +1,15 @@
-/** @enum {Number} Pull the enums from ApplicationCommandOptionType
- * @option Subcommand
- * @option SubcommandGroup
- * @option String
- * @option Integer
- * @option Boolean,
- * @option User
- * @option Channel
- * @option Role
- * @option Mentionable
- * @option Number
- * @option Attachment
- */
-const { Tier } = require("@prisma/client");
-const { ApplicationCommandOptionType } = require(`discord.js`);
+const { Tier } = require(`@prisma/client`);
+const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
 
+/** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
-    name: "sub",
-    description: "View FA/RFAs here!",
+    name: `sub`,
+    description: `View FA/RFAs here!`,
+    contexts: [InteractionContextType.Guild],
     options: [
         {
             name: `tier`,
-            description: "The tier you'd like to see available subs for",
+            description: `The tier you'd like to see available subs for`,
             type: ApplicationCommandOptionType.String,
             required: true,
             choices: [
@@ -31,8 +20,8 @@ module.exports = {
             ]
         },
         {
-            name: "max-mmr",
-            description: "The maximum MMR you'd like to see a sub with",
+            name: `max-mmr`,
+            description: `The maximum MMR you'd like to see a sub with`,
             type: ApplicationCommandOptionType.Number,
             required: false
         }

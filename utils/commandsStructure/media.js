@@ -1,78 +1,67 @@
-/** @enum {Number} Pull the enums from ApplicationCommandOptionType
- * @option Subcommand
- * @option SubcommandGroup
- * @option String
- * @option Integer
- * @option Boolean,
- * @option User
- * @option Channel
- * @option Role
- * @option Mentionable
- * @option Number
- * @option Attachment
- */
-const { LeagueStatus, ContractStatus } = require("@prisma/client");
-const { ApplicationCommandOptionType } = require(`discord.js`);
+const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
+const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
 
+/** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
-    name: "media",
-    description: "Access media commands here!",
+    name: `media`,
+    description: `Access media commands here!`,
+    contexts: [InteractionContextType.Guild],
     options: [
         {
-            name: "generate-season-thumbnail",
-            description: "Generate a thumbnail for a season's game",
+            name: `generate-season-thumbnail`,
+            description: `Generate a thumbnail for a season's game`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: `home-team`,
-                    description: "Home team",
+                    description: `Home team`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     autocomplete: true
                 },
                 {
                     name: `away-team`,
-                    description: "Away team",
+                    description: `Away team`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     autocomplete: true
                 },
                 {
                     name: `day`,
-                    description: "Match day",
+                    description: `Match day`,
                     type: ApplicationCommandOptionType.Number,
                     required: true,
                 },
                 {
                     name: `time`,
-                    description: "Match time (Defaults to 9:00 EST / 6:00 PST)",
+                    description: `Match time (Defaults to 9:00 EST / 6:00 PST)`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                 },
             ]
         },
         {
-            name: "generate-playoffs-images",
-            description: "Generate a thumbnail for a season's game",
+            name: `generate-playoffs-images`,
+            description: `Generate a thumbnail for a season's game`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
                     name: `home-team`,
-                    description: "Home team",
+                    description: `Home team`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     autocomplete: true
                 },
                 {
                     name: `away-team`,
-                    description: "Away team",
+                    description: `Away team`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     autocomplete: true
                 },
                 {
                     name: `image-type`,
-                    description: "The type of image to generate",
+                    description: `The type of image to generate`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     choices: [
@@ -82,7 +71,7 @@ module.exports = {
                 },
                 {
                     name: `match-type`,
-                    description: "The type of match",
+                    description: `The type of match`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     choices: [
@@ -93,7 +82,7 @@ module.exports = {
                 },
                 {
                     name: `time`,
-                    description: "Match time (Defaults to 9:00 EST / 6:00 PST)",
+                    description: `Match time (Defaults to 9:00 EST / 6:00 PST)`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                 },

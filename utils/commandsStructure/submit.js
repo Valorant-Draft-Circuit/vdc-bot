@@ -1,49 +1,27 @@
-/** @enum {Number} Pull the enums from ApplicationCommandOptionType
- * @option Subcommand
- * @option SubcommandGroup
- * @option String
- * @option Integer
- * @option Boolean,
- * @option User
- * @option Channel
- * @option Role
- * @option Mentionable
- * @option Number
- * @option Attachment
- */
-const { ApplicationCommandOptionType } = require(`discord.js`);
+const { Tier } = require(`@prisma/client`);
+const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
 
+/** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
-    name: 'submit',
-    description: 'Submit a match for a specific level',
+    name: `submit`,
+    description: `Submit a match for a specific level`,
+    contexts: [InteractionContextType.Guild],
     options: [
         {
-            name: 'tier',
-            description: 'The tier of the match',
+            name: `tier`,
+            description: `The tier of the match`,
             type: ApplicationCommandOptionType.String,
             required: true,
             choices: [
-                {
-                    name: 'Prospect',
-                    value: 'PROSPECT'
-                },
-                {
-                    name: 'Apprentice',
-                    value: 'APPRENTICE'
-                },
-                {
-                    name: 'Expert',
-                    value: 'EXPERT'
-                },
-                {
-                    name: 'Mythic',
-                    value: 'MYTHIC'
-                }
+                { name: `Prospect`, value: Tier.PROSPECT },
+                { name: `Apprentice`, value: Tier.APPRENTICE },
+                { name: `Expert`, value: Tier.EXPERT },
+                { name: `Mythic`, value: Tier.MYTHIC },
             ]
         },
         {
-            name: 'url',
-            description: 'The URL of the match',
+            name: `url`,
+            description: `The URL of the match`,
             type: ApplicationCommandOptionType.String,
             required: true,
         },
