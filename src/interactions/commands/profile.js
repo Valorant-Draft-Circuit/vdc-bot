@@ -1,5 +1,5 @@
 const { EmbedBuilder, GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
-const { Player, Franchise, ControlPanel } = require(`../../../prisma`);
+const { Player, Franchise, ControlPanel, Roles } = require(`../../../prisma`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { StatusEmotes, ROLES } = require("../../../utils/enums");
@@ -241,7 +241,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	const ignFromDB = await Player.getIGNby({ discordID: userID });
 
-	/** @type GuildMember */
+	// /** @type GuildMember */
 	const guildMember = await interaction.guild.members.fetch(userID);
 	const updatedPlayer = await prisma.account.update({
 		where: { providerAccountId: puuid },
@@ -430,10 +430,11 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	// Populate roles array
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔨 Building your roles array...`);
+	progress.push(`🔨 Determining your league roles...`);
 	await interaction.editReply(progress.join(`\n`));
 	let readableRoles = []; // roles in plaintext to output
 
+	// determine league roles
 	if (isFM && !isSigned) { 											// NON PLAYING (A)GM
 		const franchiseRole = franchise.roleID;
 
@@ -441,11 +442,6 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			ROLES.LEAGUE.LEAGUE,
 			franchiseRole,
 			isGM ? ROLES.OPERATIONS.GM : ROLES.OPERATIONS.AGM
-		);
-		readableRoles.push(
-			`League`,
-			franchise.name,
-			isGM ? `General Manager` : `Assistant General Manager`
 		);
 
 	} else if (isFM && isSigned) { 										// PLAYING GM
@@ -457,17 +453,10 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			franchiseRole,
 			isGM ? ROLES.OPERATIONS.GM : ROLES.OPERATIONS.AGM
 		);
-		readableRoles.push(
-			`League`,
-			franchise.name,
-			isGM ? `General Manager` : `Assistant General Manager`
-		);
 
 		// if the state is not combines, add tier roles
 		if (leagueState !== `COMBINES`) {
-			const tierroleResponse = await getTierRole(player, isSigned);
-			roles.push(...tierroleResponse.roles);
-			readableRoles.push(...tierroleResponse.readableRoles);
+			roles.push(...(await getTierRole(player, isSigned)));
 		}
 
 	} else if (isSigned) {												// SIGNED PLAYER
@@ -475,63 +464,79 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 		// push roles to array
 		roles.push(ROLES.LEAGUE.LEAGUE, franchiseRole);
-		readableRoles.push(`League`, franchise.name);
 
 		// if the state is not combines, add tier roles
 		if (leagueState !== `COMBINES`) {
-			const tierroleResponse = await getTierRole(player, isSigned);
-			roles.push(...tierroleResponse.roles);
-			readableRoles.push(...tierroleResponse.readableRoles);
+			roles.push(...(await getTierRole(player, isSigned)));
 		}
 	} else if (leagueStatus == LeagueStatus.FREE_AGENT) {				// FREE AGENT
 		// push roles to array
 		roles.push(ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.FREE_AGENT);
-		readableRoles.push(`League`, `Free Agent`);
 
 		// if the state is not combines, add tier roles
 		if (leagueState !== `COMBINES`) {
-			const tierroleResponse = await getTierRole(player, isSigned);
-			roles.push(...tierroleResponse.roles);
-			readableRoles.push(...tierroleResponse.readableRoles);
+			roles.push(...(await getTierRole(player, isSigned)));
 		}
 	} else if (leagueStatus == LeagueStatus.RESTRICTED_FREE_AGENT) {	// RESTRICTED FREE AGENT
 		// push roles to array
 		roles.push(ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.RESTRICTED_FREE_AGENT);
-		readableRoles.push(`League`, `Restricted Free Agent`);
 
 		// if the state is not combines, add tier roles
 		if (leagueState !== `COMBINES`) {
-			const tierroleResponse = await getTierRole(player, isSigned);
-			roles.push(...tierroleResponse.roles);
-			readableRoles.push(...tierroleResponse.readableRoles);
+			roles.push(...(await getTierRole(player, isSigned)));
 		}
 	} else if (leagueStatus == LeagueStatus.DRAFT_ELIGIBLE) {			// DRAFT ELIGIBLE
 		// push roles to array
 		roles.push(ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.DRAFT_ELIGIBLE);
-		readableRoles.push(`League`, `Draft Eligible`);
 
 		// if the state is not combines, add tier roles
 		if (leagueState !== `COMBINES`) {
-			const tierroleResponse = await getTierRole(player, isSigned);
-			roles.push(...tierroleResponse.roles);
-			readableRoles.push(...tierroleResponse.readableRoles);
+			roles.push(...(await getTierRole(player, isSigned)));
 		}
 	} else {															// VIEWER OR FORMER PLAYER
 		if (leagueStatus == LeagueStatus.RETIRED) {
 			roles.push(ROLES.LEAGUE.FORMER_PLAYER);
-			readableRoles.push(`Former Player`);
 		} else {
 			roles.push(ROLES.LEAGUE.VIEWER);
-			readableRoles.push(`Viewer`);
 		}
 	}
 
 	if (isCaptain) {													// CAPTAIN
 		roles.push(ROLES.LEAGUE.CAPTAIN);
-		readableRoles.push(`Captain`);
 	}
 
-	progress[progress.length - 1] = `✅ Roles array built! The roles you'll receive are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`;
+	progress[progress.length - 1] = `✅ Got your league roles!`;
+	await interaction.editReply(progress.join(`\n`));
+
+	// END LEAGUE ROLES -----------------------------------
+
+	// determine staff roles - commenting out- this works but will need a bit more work
+	// progress.push(`🔨 Checking for staff role(s)...`);
+	// await interaction.editReply(progress.join(`\n`));
+
+	// console.log(decodeRoles(player.roles));
+
+	// progress[progress.length - 1] = `✅ Got your staff roles!`;
+	// await interaction.editReply(progress.join(`\n`));
+
+	// END STAFF ROLES ------------------------------------
+
+	// fetch role snowflakes, if needed
+	progress.push(`🔃 Fetching the roles you need from Discord...`);
+	await interaction.editReply(progress.join(`\n`));
+
+	const guild = guildMember.guild;
+	for (let i = 0; i < roles.length; i++) {
+		const userRole = roles[i];
+		const role = guild.roles.cache.find(guildRoles => guildRoles.id == userRole) || await guild.roles.fetch(userRole);
+		if (role == null) {
+			progress[progress.length - 1] =
+				`❌ There was a problem fetching your roles from Discord! Please try again later and/or let a member of the tech team know!`;
+			return await interaction.editReply(progress.join(`\n`));
+		} else readableRoles.push(role.name);
+	}
+
+	progress[progress.length - 1] = `✅ Grabbed all the roles you need! The roles you'll receive are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
@@ -579,56 +584,49 @@ async function getTierRole(player, isSigned) {
 	const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
 
 	let roles = [];
-	let readableRoles = [];
 
 	if ( 											// PROSPECT
 		tierLines.PROSPECT.min <= mmrEffective &&
 		mmrEffective <= tierLines.PROSPECT.max
 	) {
 		roles.push(ROLES.TIER.PROSPECT);
-		readableRoles.push(`Prospect`);
+		if (!isSigned) roles.push(ROLES.TIER.PROSPECT_FREE_AGENT);
 
-		if (!isSigned) {
-			roles.push(ROLES.TIER.PROSPECT_FREE_AGENT);
-			readableRoles.push(`Prospect Free Agent`);
-		}
 	} else if ( 									// APPRENCICE
 		tierLines.APPRENTICE.min <= mmrEffective &&
 		mmrEffective <= tierLines.APPRENTICE.max
 	) {
 		roles.push(ROLES.TIER.APPRENTICE);
-		readableRoles.push(`Apprentice`);
+		if (!isSigned) roles.push(ROLES.TIER.APPRENTICE_FREE_AGENT);
 
-		if (!isSigned) {
-			roles.push(ROLES.TIER.APPRENTICE_FREE_AGENT);
-			readableRoles.push(`Apprentice Free Agent`);
-		}
 	} else if ( 									// EXPERT
 		tierLines.EXPERT.min <= mmrEffective &&
 		mmrEffective <= tierLines.EXPERT.max
 	) {
 		roles.push(ROLES.TIER.EXPERT);
-		readableRoles.push(`Expert`);
+		if (!isSigned) roles.push(ROLES.TIER.EXPERT_FREE_AGENT);
 
-		if (!isSigned) {
-			roles.push(ROLES.TIER.EXPERT_FREE_AGENT);
-			readableRoles.push(`Expert Free Agent`);
-		}
 	} else if ( 									// MYTHIC
 		tierLines.MYTHIC.min <= mmrEffective &&
 		mmrEffective <= tierLines.MYTHIC.max
 	) {
 		roles.push(ROLES.TIER.MYTHIC);
-		readableRoles.push(`Mythic`);
+		if (!isSigned) roles.push(ROLES.TIER.MYTHIC_FREE_AGENT);
 
-		if (!isSigned) {
-			roles.push(ROLES.TIER.MYTHIC_FREE_AGENT);
-			readableRoles.push(`Mythic Free Agent`);
-		}
 	}
 
-	return {
-		roles: roles,
-		readableRoles: readableRoles
-	};
+	return roles;
+}
+
+function decodeRoles(value) {
+	let roles = [];
+	for (const [key, val] of Object.entries(Roles)) {
+		// Ignore reverse mappings in enums
+		if (typeof val === 'number' || typeof val === 'bigint') {
+			if ((BigInt(value) & BigInt(val)) !== BigInt(0)) {
+				roles.push(key);
+			}
+		}
+	}
+	return roles;
 }
