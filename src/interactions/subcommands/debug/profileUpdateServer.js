@@ -15,6 +15,8 @@ const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[
 
 
 async function profileUpdateServer(/** @type ChatInputCommandInteraction */ interaction) {
+    await interaction.editReply({ content: `I'm on it! Updating all server members` });
+
     // SHARED DATABSE CALLS ###############################
     leagueState = await ControlPanel.getLeagueState();
 
@@ -49,17 +51,30 @@ async function profileUpdateServer(/** @type ChatInputCommandInteraction */ inte
 
     logger.log(`VERBOSE`, `${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) is updating \`${memberCt}\` members`);
 
+    // const initialMessage = await interaction.channel.send({ content: `[\` ${``.padStart(`0`, `█`).padEnd(100, ` `)} \`] (\`${0 + 1}\`/\`${memberCt}\`) \`${`0`.padStart(5, ` `)}\` %  |  \`0\` s` });
+    // initialMessage.pin();
+
+    // because of discord message update limit (500 as of 4/25/25) set max update ct
+    // const msgUpdateLimit = 250;
+
+    // const updFreq = 10;
+    // const maxUpdateCt = Math.floor(memberCt / updFreq);
+
     let errCt = 0;
     const starttime = Date.now();
     for (let i = 0; i < memberCt; i++) {
 
         const percent = Math.round(((i + 1) / memberCt) * 10000) / 100;
 
+        // discord has a message update limit of 500, so only update every so often
+        // if (i % updFreq === 0 || i === memberCt - 1) {
+        //     const timeelapsed = ((Date.now() - starttime) / 1000).toFixed(2);
+        //     await initialMessage.edit({ content: `[\` ${``.padStart(Math.round(percent), `█`).padEnd(100, ` `)} \`] (\`${i + 1}\`/\`${memberCt}\`) \`${percent.toString().padStart(5, ` `)}\` %  |  \`${timeelapsed}\` s` });
+        // }
+        // NVM killing the progess bar I'll use it later. I'll just add progress to the individual messages
+
         const timeelapsed = ((Date.now() - starttime) / 1000).toFixed(2);
-        await interaction.editReply({ content: `[\` ${``.padStart(Math.round(percent), `█`).padEnd(100, ` `)} \`] (\`${i + 1}\`/\`${memberCt}\`) \`${percent.toString().padStart(5, ` `)}\` %  |  \`${timeelapsed}\` s` });
-
-
-        const playerMessage = await interaction.channel.send({ content: `🔃 Updating \`${serverMembers[i].user.username}\`...` });
+        const playerMessage = await interaction.channel.send({ content: `🔃 Updating \`${serverMembers[i].user.username}\` (\`${i + 1}\`/\`${memberCt}\`) \`${percent.toString().padStart(5, ` `)}\` %  |  \`${timeelapsed}\` s...` });
         try { await update(interaction, serverMembers[i], playerMessage); }
         catch (e) {
             errCt++;
@@ -378,7 +393,7 @@ async function update(
 
     await guildMember.setNickname(nickname);
     // --------------------------------------------------------------------------------------------
-    
+
     // update roles
     // --------------------------------------------------------------------------------------------
     await guildMember.roles.add([...roles]);
