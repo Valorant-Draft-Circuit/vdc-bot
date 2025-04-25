@@ -241,7 +241,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	const ignFromDB = await Player.getIGNby({ discordID: userID });
 
-	// /** @type GuildMember */
+	/** @type GuildMember */
 	const guildMember = await interaction.guild.members.fetch(userID);
 	const updatedPlayer = await prisma.account.update({
 		where: { providerAccountId: puuid },
