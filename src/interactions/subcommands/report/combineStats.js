@@ -7,7 +7,7 @@ module.exports = {
     readable: `Combine Statistics`,
 
     helpResponse: [
-        `Use the \`Player League Status\` report to get a comprehensive list of the players in the league and their current status. The report`,
+        `Use the \`Combine Statistics\` report to get a detailed statistics on current and historical combines`,
         [
             `Use \`--season-<number>\` to get combine statistics for a given season (e.g. \`--season-8\`). Defaults to the current season.`,
         ].map(data => `> ${data}`).join(`\n`),
