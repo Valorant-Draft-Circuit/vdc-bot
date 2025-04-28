@@ -201,5 +201,10 @@ module.exports = {
             description: `Update the bot's MMR cache`,
             type: ApplicationCommandOptionType.Subcommand
         },
+        {
+            name: `profile-update-server`,
+            description: `WARNING: This will update the profile of all players in the server!`,
+            type: ApplicationCommandOptionType.Subcommand
+        },
     ]
 }
