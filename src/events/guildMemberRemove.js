@@ -24,7 +24,7 @@ module.exports = {
 
         const guild = await client.guilds.fetch(member.guild.id);
 
-        logger.memberdrain(`📤 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member left** - __Server__: \` ${member.guild.name} \` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \` ${member.user.username} \`,  __ID__: \` ${member.id} \``);
+        logger.memberdrain(`📤 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member left** - __Server__: \`${member.guild.name}\` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \`${member.user.username}\`,  __ID__: \`${member.id}\``);
 
 
 
@@ -38,7 +38,7 @@ module.exports = {
                 case LeagueStatus.DRAFT_ELIGIBLE:
                     // revert to UNREGISTERED LeagueStatus
 
-                    logger.log(`INFO`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \` ${member.guild.name} \`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`UNREGISTERED\``);
+                    logger.log(`INFO`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \`${member.guild.name}\`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`UNREGISTERED\``);
                     return await prisma.status.update({
                         where: { userID: player.id },
                         data: {
@@ -55,7 +55,7 @@ module.exports = {
                 case LeagueStatus.GENERAL_MANAGER:
                     // revert to SUSPENDED LeagueStatus
 
-                    logger.log(`ALERT`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \` ${member.guild.name} \`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`SUSPENDED\``);
+                    logger.log(`ALERT`, `Player \`${player.name}\` (IGN: \`${player.PrimaryRiotAccount.riotIGN}\`, ID: \`${player.id}\`) has left \`${member.guild.name}\`, with a league status of \`${player.Status.leagueStatus}\` — updating their status to \`SUSPENDED\``);
                     return await prisma.status.update({
                         where: { userID: player.id },
                         data: {
