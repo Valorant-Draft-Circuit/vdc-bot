@@ -22,25 +22,6 @@ module.exports = {
             ],
         },
         {
-            name: `report`,
-            description: `Generate a report for all player's LeagueStatuses`,
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                {
-                    name: `type`,
-                    description: `The type of report to generate`,
-                    type: ApplicationCommandOptionType.String,
-                    required: true,
-                    choices: [
-                        { name: `Player League Status`, value: `PLAYER_LEAGUE_STATUS` },
-                        { name: `Franchise Information`, value: `FRANCHISE_INFORMATION` },
-                        { name: `Admin Tier List`, value: `ADMIN_TIER_LIST` },
-                        { name: `Expiring Contracts`, value: `EXPIRING_CONTRACTS` },
-                    ]
-                },
-            ]
-        },
-        {
             name: `force-update`,
             description: `Forcefully update a user's information`,
             type: ApplicationCommandOptionType.Subcommand,

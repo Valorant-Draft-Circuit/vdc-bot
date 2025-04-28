@@ -26,7 +26,7 @@ module.exports = {
 
         // send the join info in the memberdrain channel
         const guild = await client.guilds.fetch(member.guild.id);
-        logger.memberdrain(`📥 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member joined** - __Server__: \` ${member.guild.name} \` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \` ${member.user.username} \`,  __ID__: \` ${member.id} \``);
+        logger.memberdrain(`📥 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member joined** - __Server__: \`${member.guild.name}\` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \`${member.user.username}\`,  __ID__: \`${member.id}\``);
 
         // if not in the main VDC server, then return and do nothing else
         if (member.guild.id !== GUILD) return;
@@ -44,6 +44,6 @@ module.exports = {
         // fetch the channel & send the message
         const channel = await client.channels.fetch(generalChatID);
         const msg = await channel.send({ content: [welcomeMessage, messageBody, messageFooter].join(`\n`), flags: MessageFlags.SuppressEmbeds });
-        logger.log(`INFO`, `Sent welcome message for ${member} (${member.user.username}) : ${msg.url}`);
+        logger.log(`INFO`, `Sent welcome message for ${member} (\`${member.user.username}\`, \`${member.id}\`) : ${msg.url}`);
     }
 };
