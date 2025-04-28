@@ -66,6 +66,6 @@ module.exports = {
 
         // output the report to a file & send it
         fs.writeFileSync(`./cache/report.${extention}`, report);
-        return await interaction.editReply({ content: `This is a work in progress!`, files: [`./cache/report.${extention}`] });
+        return await interaction.editReply({ files: [`./cache/report.${extention}`] });
     }
 };
