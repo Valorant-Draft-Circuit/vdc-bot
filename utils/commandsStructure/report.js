@@ -1,5 +1,4 @@
-const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
-
+const { ApplicationCommandOptionType, InteractionContextType, PermissionFlagsBits } = require(`discord.js`);
 const fs = require(`fs`);
 
 const reportFiles = fs.readdirSync(`./src/interactions/subcommands/report`).filter(f => f.endsWith(`.js`) && f !== `_template.js`);
@@ -18,6 +17,7 @@ reportFiles.forEach(reportFile => {
 module.exports = {
     name: `report`,
     description: `Generate reports for the league`,
+    default_member_permissions: !Boolean(Number(process.env.PROD)) ? `0x0` : PermissionFlagsBits.BanMembers,
     contexts: [InteractionContextType.Guild],
     options: [
         {
