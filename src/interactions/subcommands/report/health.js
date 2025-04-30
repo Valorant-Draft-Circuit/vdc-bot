@@ -17,7 +17,7 @@ const compositionStats = {
         return Math.sqrt(variance);
     },
     "AVG*5": (values) => compositionStats.MEAN(values) * 5,
-}
+};
 
 const round = (num) => +num.toFixed(2) === Math.floor(num) ? Math.floor(num) : num.toFixed(2);
 
@@ -61,21 +61,16 @@ module.exports = {
         const playerMMRStats = (await prisma.user.findMany({
             where: {
                 Status: {
-                    AND: [
-                        {
-                            leagueStatus: {
-                                in: statusesToInclude
-                            }
-                        },
-                    ]
+                    leagueStatus: {
+                        in: statusesToInclude
+                    }
                 }
             },
             include: {
                 Status: true,
                 PrimaryRiotAccount: { include: { MMR: true } },
             }
-        })).filter(p => p.PrimaryRiotAccount?.MMR?.mmrEffective != null)
-        console.log(playerMMRStats.length);
+        })).filter(p => p.PrimaryRiotAccount?.MMR?.mmrEffective != null);
 
         const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
         const tiers = Object.keys(Tier).filter(t => t != Tier.MIXED);
@@ -98,7 +93,6 @@ module.exports = {
 
         // cleaned columns (e.g. "RFA" instead of "Restricted Free Agent")
         const cc1 = [...c1.map(c => c.includes(`_`) ? c.split(`_`).map(l => l[0]).join(``) : c), `TOTAL`];
-        console.log(r1)
 
         out += generateTable(cc1, r1);
         out += `\n\nTotal Active Players : ${playerMMRStats.length}`;
