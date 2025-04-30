@@ -1,4 +1,4 @@
-const { ChatInputCommandInteraction } = require(`discord.js`)
+const { ChatInputCommandInteraction, MessageFlags } = require(`discord.js`)
 const { LeagueStatus } = require("@prisma/client");
 const { Player } = require(`../../../prisma`);
 const { prisma } = require("../../../prisma/prismadb");
@@ -9,7 +9,7 @@ module.exports = {
     name: `active`,
 
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const player = await Player.getBy({ discordID: interaction.member.id });
         const activityCheckState = await prisma.controlPanel.findFirst({ where: { name: `activity_check_state` } });
