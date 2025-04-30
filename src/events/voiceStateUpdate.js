@@ -136,9 +136,9 @@ module.exports = {
 					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
 					return await m.voice.disconnect();
 				} else if (!isInCorrectTier) {					// invalid tier
-					sendDM(m, `You have joined a combines channel, but are not in the correct tier. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`) joined ${newState.channel} (\`${newState.channel.name}\`)- expected to see them in a \`${playerTier}\` lobby. They have been disconnected`);
-					return await m.voice.disconnect();
+					sendDM(m, `You have joined a combines channel, but are not in the correct tier- I expected to see you in a \`${playerTier}\` lobby! I've moved you to <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> to be sorted to the right tier, but in the future, please join that channel at the beginning of each combines night! If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
+					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`) joined ${newState.channel} (\`${newState.channel.name}\`)- expected to see them in a \`${playerTier}\` lobby. They have been moved to <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> to be sorted correctly`);
+					return await m.voice.setChannel(CHANNELS.VC.COMBINES.SORT_CHANNEL);
 				} else {										// valid MMR, tier and status
 					return console.log(`User ${m.user} (\`${m.user.username}\`) joined ${m.voice.channel} (${m.voice.channel.name}) with an MMR of \`${mmr}\`, leagueStatus of \`${playerLeagueStatus}\` & tier of \`${playerTier}\``);
 				}
@@ -242,8 +242,8 @@ function getTier(mmr) {
 async function sendDM(player, dmMessage) {
 	// Attempt to send a message to the user
 	try {
-		player.send({ content: dmMessage });
+		await player.send({ content: dmMessage });
 	} catch (e) {
-		logger.log(`WARNING`, `User ${player} (${player.user.username}) does not have DMs open & will not receive the combines join error message`);
+		logger.log(`WARNING`, `User ${player} (\`${player.user.username}\`, \`${player.id}\`) does not have DMs open & will not receive the combines join error messages`);
 	}
 }
