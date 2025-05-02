@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
+const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
@@ -78,6 +78,7 @@ async function confirmSign(interaction) {
 	const team = await Team.getBy({ name: data[3] });
 	const franchise = await Franchise.getBy({ teamID: team.id });
 	const contractLength = Number(data[5].split(` `)[0]);
+	const leagueState = await ControlPanel.getLeagueState();
 
 	// update nickname
 	const playerTag = playerIGN.split(`#`)[0];
@@ -95,9 +96,9 @@ async function confirmSign(interaction) {
 	]);
 	await guildMember.roles.add([
 		ROLES.LEAGUE.LEAGUE,
-		ROLES.TIER[team.tier],
 		franchise.roleID
 	]);
+	if (leagueState !== `COMBINES`) await guildMember.roles.add(ROLES.TIER[team.tier]);
 
 	// sign the player & ensure that the player's team property is now null
 	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
