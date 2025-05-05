@@ -338,7 +338,7 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
     // console.log(teamOrder);
 
     // return
-    // await prisma.draft.createMany({ data: draftLottery });
+    await prisma.draft.createMany({ data: draftLottery });
 
     // console.log(draftLottery)
 
@@ -352,7 +352,6 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
     for (let i = 0; i < teamOrder.length; i++) {
         const team = draftTeams.find(t => t.name == teamOrder[i].value)
 
-        // await new Promise(resolve => setTimeout(resolve, delay));
 
         const msg = await gmAccouncements.send({
             content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (<t:${(Math.round(Date.now() / 1000)) + (delay / 1000)
@@ -363,11 +362,11 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         await msg.edit({
             content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to: <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - ${team.name}!`
         })
-        // console.log(`Pick ${i + 1} goes to... <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - **${team.name}**!`);
-        // await new Promise(resolve => setTimeout(resolve, 3000));
     }
     await gmAccouncements.send({ content: `-# The \`${tier}\` Draft Lottery has been generated! There are \`${amountOfPlayers}\` draftable players, resulting in \`${Math.ceil(rounds)}\` rounds` });
 
+
+    // output
     const embed = new EmbedBuilder({
         author: { name: `VDC Draft Generator` },
         description: `Teams for ${tier} pick in the following order. The database has been updated to show these picks.`,
