@@ -168,8 +168,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
     await transactionsChannel.send({ embeds: [tierBeginEmbed] });
 
     // begin processing the queue
-    processQueue(draftBoard, releaseInterval, executeSign, finishProcessingMessage);
-
+    // processQueue(draftBoard, releaseInterval, executeSign, finishProcessingMessage);
 
     // update the embed with the expected runtime & remove all the components
     const expectedRuntime = Math.round((releaseInterval * draftBoard.length / 10)) / 100;
@@ -177,7 +176,16 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
         color: COLORS[tier],
         description: `Releasing the season ${season} ${tier} offline draft results. This operation should take approximately ${expectedRuntime} second(s).`
     });
-    return await interaction.editReply({ embeds: [debugEmbed] });
+    await interaction.editReply({ embeds: [debugEmbed] });
+
+    // executing the draft signs
+    for (let i = 0; i < draftBoard.length; i++) {
+        const pick = draftBoard[i];
+        await executeSign(pick);
+    }
+    await finishProcessingMessage();
+
+    return await interaction.channel.send({ content: `The season ${season} ${tier} offline draft results have been released!` })
 }
 
 
@@ -187,20 +195,20 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
  * @param {Function} intervalCallback Callback function to execute every <queueInterval> ms with an index of <arr> as the argument
  * @param {Function} endIntervalQueueCallback Callback function to execute once the queue is finished processing
  */
-async function processQueue(arr, queueInterval, intervalCallback, endIntervalQueueCallback) {
-    let index = 0;
+// async function processQueue(arr, queueInterval, intervalCallback, endIntervalQueueCallback) {
+//     let index = 0;
 
-    const endQueueProcessing = async (intervalID) => {
-        clearInterval(intervalID);
-        return await endIntervalQueueCallback();
-    };
+//     const endQueueProcessing = async (intervalID) => {
+//         clearInterval(intervalID);
+//         return await endIntervalQueueCallback();
+//     };
 
-    const intervalID = setInterval(async () => {
-        intervalCallback(arr[index]);
-        index++
+//     const intervalID = setInterval(async () => {
+//         intervalCallback(arr[index]);
+//         index++
 
-        if (arr[index] === undefined) return endQueueProcessing(intervalID);
-    }, queueInterval);
-}
+//         if (arr[index] === undefined) return endQueueProcessing(intervalID);
+//     }, queueInterval);
+// }
 
 module.exports = { releaseOfflineDraftResults }

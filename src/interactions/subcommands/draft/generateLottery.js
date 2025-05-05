@@ -4,16 +4,16 @@ const { LeagueStatus, ContractStatus, MatchType } = require(`@prisma/client`);
 const { Player, Team, ControlPanel } = require(`../../../../prisma`);
 const { EmbedBuilder, ChatInputCommandInteraction, } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
-
+const { CHANNELS, ROLES } = require(`../../../../utils/enums`)
 
 // 2.5 pts - First Place
-const first = [`Celestial Calzones`, `Prophetic Paninis`, `Surge`, `Orion`];
+const first = [`Snake Eyes`, `Red Rose`, `Purple Iris`, `Blue Lotus`];
 
 // 2 pts - Second Place
-const second = [`Pink Azalea`, `Cold Brew`, `Purple Iris`, `Blue Lotus`];
+const second = [`Havoc`, `Crest`, `Espresso`, `Orion`];
 
 // 1 pts - Third/Fourth Place
-const thirdfourth = [`Pegasus`, `Swell`, `Enforcers`, `Crest`, `Espresso`, `The Mafiosos`, `Bearzerkers`, `Royal Flush`];
+const thirdfourth = [`Jesters`, `Decaf`, `Yahtzee`, `Nymph's Nightmare`, `Draco`, `Surge`, `Riptide`, `Royal Flush`];
 
 
 async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
@@ -50,9 +50,10 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         activeTeamsWinLoss.push({ ...activeTeams[i], win: gw, loss: gl });
     }
 
-    console.log(activeTeamsWinLoss)
+    // console.log(activeTeamsWinLoss)
     // return
-
+    await interaction.editReply({ content: `Generating team odds...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Generating team odds...`);
     const allTeams = await prisma.teams.findMany();
     const postPoints = [];
 
@@ -73,10 +74,15 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
     }
 
     const teamWinLoss = activeTeamsWinLoss.filter(r => r.win !== 0 && r.loss !== 0);
-    const newTeam = teamWinLoss.filter(r => r.win === 0 && r.loss === 0);
+    const newTeam = activeTeamsWinLoss.filter(r => r.win == 0 && r.loss == 0);
 
-    console.log(teamWinLoss)
+    // console.log(teamWinLoss)
     // console.log(newTeam)
+    // return
+
+
+    await interaction.editReply({ content: `Getting info from the database...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Getting info from the database...`);
 
     // get MMR tier lines from the database
     const tierMMR = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
@@ -98,6 +104,9 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
     let teamScore = [];
     let lotteryScore = 0;
 
+
+    await interaction.editReply({ content: `Processing last season stats...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Processing last season stats...`);
     // const tierGames = await Games.getAllBy({ tier: tier });
     let teamWins = [];
     draftTeams.forEach((team) => {
@@ -115,9 +124,11 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         }
     });
 
-    console.log(teamWins)
+    // console.log(teamWins)
 
 
+    await interaction.editReply({ content: `Creating weights...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Creating weights...`);
     // return
     let teamWinPercent = [];
     teamWins.forEach((team) => {
@@ -159,8 +170,8 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         }
     });
 
-    console.log(`HIGHEST`, highest)
-    console.log(`TWP`, teamWinPercent)
+    // console.log(`HIGHEST`, highest)
+    // console.log(`TWP`, teamWinPercent)
 
     let teamCheck = [];
 
@@ -169,14 +180,14 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         if (newTeamCheck[0]?.id === team.id) {
             const score = highest + 0.02 * (teamWinPercent.length / 12);
 
-            console.log(`score` + score, team.name);
+            // console.log(`score`, score, team.name);
 
             teamCheck.push({ ...team, score: score });
             lotteryScore += score;
         } else {
             const score = team.score;
 
-            console.log(`score` + score, team.name);
+            // console.log(`score`, score, team.name);
             lotteryScore += score;
 
             teamCheck.push({ ...team, score: score });
@@ -210,8 +221,8 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
     while (teamLottery.length > 0) {
         const lottery = Math.floor(Math.random() * teamLottery.length);
-        console.log(`Lottery`);
-        console.log(lottery);
+        // console.log(`Lottery`);
+        // console.log(lottery);
         const team = teamLottery[lottery];
         //cut from teams add to snakedTeams
         snakedTeams.push(team);
@@ -226,7 +237,7 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         if (i % 2) {
             //run the picks in normal order
             for (let j = 0; j < snakedTeams.length; j++) {
-                console.log(`Franchise:`, snakedTeams[j].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+                // console.log(`F:`, snakedTeams[j].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
                 draftLottery.push({
                     season: season,
                     tier: tier,
@@ -240,7 +251,7 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         } else {
             //run picks in reverse order
             for (let l = snakedTeams.length - 1; l >= 0; l--) {
-                console.log(`Franchise:`, snakedTeams[l].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+                // console.log(`F:`, snakedTeams[l].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
                 draftLottery.push({
                     season: season,
                     tier: tier,
@@ -254,14 +265,18 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         }
         round++;
         pick = 1;
-        console.log(`-----`);
+        // console.log(`-----`);
     }
     //running the remaining picks
 
+
+    await interaction.editReply({ content: `Generating database info...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Generating database info...`);
+    // NON-KEEPER ROUND
     if (remainingPicks != 0) {
         if (Math.ceil(rounds) % 2 == 1) {
             for (let i = 0; i < remainingPicks; i++) {
-                console.log(`Franchise:`, snakedTeams[i].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+                // console.log(`F:`, snakedTeams[i].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
                 draftLottery.push({
                     season: season,
                     tier: tier,
@@ -275,7 +290,7 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         } else {
             const stopPicks = snakedTeams.length - remainingPicks - 1;
             for (let l = snakedTeams.length - 1; l > stopPicks; l--) {
-                console.log(`Franchise:`, snakedTeams[l].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
+                // console.log(`F:`, snakedTeams[l].franchise, `Season:`, season, `Pick:`, pick, `round:`, round, tier);
                 draftLottery.push({
                     season: season,
                     tier: tier,
@@ -288,12 +303,14 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
             }
         }
         pick = 1;
-        console.log(`-----`);
+        // console.log(`-----`);
     }
-    snakedTeams.forEach((team) => {
-        console.log(`Franchise:`, team.franchise, `Season:`, season, `Pick:`, pick, `round:`, 99, tier, `Keeper:`, true);
 
-        console.log(team)
+    // KEEPER ROUND
+    snakedTeams.forEach((team) => {
+        // console.log(`F:`, team.franchise, `Season:`, season, `Pick:`, pick, `round:`, 99, tier, `Keeper:`, true);
+
+        // console.log(team)
         draftLottery.push({
             season: season,
             tier: tier,
@@ -315,9 +332,41 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         });
     });
 
+    await interaction.editReply({ content: `Writing results & sending to the database...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Writing results & sending to the database...`);
     fs.writeFileSync(`./cache/draft_lottery_${tier}.json`, JSON.stringify(draftLottery, ` `, 2));
     // console.log(teamOrder);
-    await prisma.draft.createMany({ data: draftLottery });
+
+    // return
+    // await prisma.draft.createMany({ data: draftLottery });
+
+    // console.log(draftLottery)
+
+    await interaction.editReply({ content: `Posting results in <#${CHANNELS.ANNOUNCEMENTS.FM}>...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in <#${CHANNELS.ANNOUNCEMENTS.FM}>...`);
+
+    const delay /** in MS */ = 15 * 1000;
+
+    const gmAccouncements = await interaction.guild.channels.fetch(CHANNELS.ANNOUNCEMENTS.FM);
+    await gmAccouncements.send({ content: `### Hey <@&${ROLES.OPERATIONS.GM}>/<@&${ROLES.OPERATIONS.AGM}> - The \`${tier}\` Draft Lottery is beginning!` });
+    for (let i = 0; i < teamOrder.length; i++) {
+        const team = draftTeams.find(t => t.name == teamOrder[i].value)
+
+        // await new Promise(resolve => setTimeout(resolve, delay));
+
+        const msg = await gmAccouncements.send({
+            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (<t:${(Math.round(Date.now() / 1000)) + (delay / 1000)
+                }:R>)`
+        });
+
+        await new Promise(resolve => setTimeout(resolve, delay));
+        await msg.edit({
+            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to: <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - ${team.name}!`
+        })
+        // console.log(`Pick ${i + 1} goes to... <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - **${team.name}**!`);
+        // await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    await gmAccouncements.send({ content: `-# The \`${tier}\` Draft Lottery has been generated! There are \`${amountOfPlayers}\` draftable players, resulting in \`${Math.ceil(rounds)}\` rounds` });
 
     const embed = new EmbedBuilder({
         author: { name: `VDC Draft Generator` },
@@ -331,7 +380,8 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         footer: { text: `Valorant Draft Circuit - Draft` },
     });
 
-    return await interaction.editReply({ embeds: [embed], files: [`./cache/draft_lottery_${tier}.json`], });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Done!`);
+    return await interaction.editReply({ content: ``, embeds: [embed], files: [`./cache/draft_lottery_${tier}.json`] });
 }
 
 module.exports = { generateLottery }
