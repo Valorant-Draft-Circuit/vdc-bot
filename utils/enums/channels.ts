@@ -14,6 +14,10 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
             PROSPECT: `1059244366671118487`
         },
 
+        ANNOUNCEMENTS: {
+            FM: `1234719001616056370`
+        },
+
         VC: {
             // LOBBY: `1027754353970389067`,
             COMBINES: {
@@ -52,6 +56,10 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
             EXPERT: `1173394810170790019`,
             APPRENTICE: `1173394850905853952`,
             PROSPECT: `1173394893297696788`
+        },
+
+        ANNOUNCEMENTS: {
+            FM: `966212909703237662`
         },
 
         VC: {
