@@ -332,16 +332,16 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         });
     });
 
+
+
+    // Create the entries in the database
     await interaction.editReply({ content: `Writing results & sending to the database...` });
     logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Writing results & sending to the database...`);
     fs.writeFileSync(`./cache/draft_lottery_${tier}.json`, JSON.stringify(draftLottery, ` `, 2));
-    // console.log(teamOrder);
+    await prisma.draft.createMany({ data: draftLottery });
 
-    // return
-    // await prisma.draft.createMany({ data: draftLottery });
 
-    // console.log(draftLottery)
-
+    // POST THE RESULTS
     await interaction.editReply({ content: `Posting results in <#${CHANNELS.ANNOUNCEMENTS.FM}>...` });
     logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in <#${CHANNELS.ANNOUNCEMENTS.FM}>...`);
 
@@ -350,24 +350,21 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
     const gmAccouncements = await interaction.guild.channels.fetch(CHANNELS.ANNOUNCEMENTS.FM);
     await gmAccouncements.send({ content: `### Hey <@&${ROLES.OPERATIONS.GM}>/<@&${ROLES.OPERATIONS.AGM}> - The \`${tier}\` Draft Lottery is beginning!` });
     for (let i = 0; i < teamOrder.length; i++) {
-        const team = draftTeams.find(t => t.name == teamOrder[i].value)
-
-        // await new Promise(resolve => setTimeout(resolve, delay));
+        const team = draftTeams.find(t => t.name == teamOrder[i].value);
 
         const msg = await gmAccouncements.send({
-            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (<t:${(Math.round(Date.now() / 1000)) + (delay / 1000)
-                }:R>)`
+            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (<t:${(Math.round(Date.now() / 1000)) + (delay / 1000)}:R>)`
         });
 
         await new Promise(resolve => setTimeout(resolve, delay));
         await msg.edit({
             content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to: <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - ${team.name}!`
         })
-        // console.log(`Pick ${i + 1} goes to... <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - **${team.name}**!`);
-        // await new Promise(resolve => setTimeout(resolve, 3000));
     }
     await gmAccouncements.send({ content: `-# The \`${tier}\` Draft Lottery has been generated! There are \`${amountOfPlayers}\` draftable players, resulting in \`${Math.ceil(rounds)}\` rounds` });
 
+
+    // output
     const embed = new EmbedBuilder({
         author: { name: `VDC Draft Generator` },
         description: `Teams for ${tier} pick in the following order. The database has been updated to show these picks.`,
