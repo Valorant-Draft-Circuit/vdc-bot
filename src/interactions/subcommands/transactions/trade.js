@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelect
 const { ChatInputCommandInteraction, ButtonInteraction, StringSelectMenuInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Franchise, Player, Transaction } = require(`../../../../prisma`);
+const { Franchise, Player, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { CHANNELS, ROLES, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier, LeagueStatus } = require("@prisma/client");
@@ -681,6 +681,7 @@ async function executeDraftPickTrade(draftPicks, recievingFranchise) {
 async function executePlayerTrade(interaction, players, recievingFranchise) {
 	const franchiseTeamsToReceive = recievingFranchise.Teams;
 
+	const leagueState = await ControlPanel.getLeagueState();
 	const playerDataArray = await prisma.user.findMany({
 		where: { OR: players.map(player => { return { name: player.name } }) },
 		include: { Accounts: true, PrimaryRiotAccount: { include: { MMR: true } } }
@@ -751,9 +752,9 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 			]);
 			await guildMember.roles.add([
 				ROLES.LEAGUE.LEAGUE,
-				ROLES.TIER[playerToUpdate.tier],
 				franchise.roleID
 			]);
+			if (leagueState !== `COMBINES`) await guildMember.roles.add(ROLES.TIER[playerToUpdate.tier]);
 		} else {
 			logger.log(`ALERT`, `Bot has insufficent permissions to update ${guildMember.user.username}'s roles. Please update their role(s) to \`${[`League`, playerToUpdate.tier, franchise.name].join(`, `)}\` manually!`);
 		}
