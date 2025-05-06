@@ -3,6 +3,9 @@ const { prisma } = require(`../../../../prisma/prismadb`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 
 async function fulfillFutureTrade(interaction, round, tier, franchiseFromName, franchiseToName) {
+	const userRoles = interaction.member._roles;
+	if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.reply({ content: `You don't have the Admin role and cannot use this command!` });
+
 	if (franchiseFromName === franchiseToName) return await interaction.editReply(`A franchise cannot give a future trade to themselves!`);
 
 	// get current season from the database
