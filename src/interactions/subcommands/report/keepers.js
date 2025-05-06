@@ -7,10 +7,10 @@ const center = (str, length) => str.padStart((length + str.length) / 2, ` `).pad
 
 module.exports = {
     name: `keepers`, // this is the name/value of the command
-    readable: `Draft Keeper Picks`, // this shows in the selection option
+    readable: `Keeper Picks`, // this shows in the selection option
 
     helpResponse: [
-        `Use the \`Draft Keeper Picks\` report to generate a report of all the keeper picks for the draft for a given tier. The report outputs the __lowest round__ keeper picks can be in.\n\nLet's look at the following example:\n- \`PROSPECT\` tier lines are [\`0\`, \`90\`)\n- There are \`10\` teams in prospect\n- Since there are \`10\` teams and \`90\` players, there will be \`9\` rounds\n- Player \`Travestey#7227\` has an MMR of \`75\`\n\nThe **minimum** tier \`Travestey#7227\` can be a keeper in is round \`2\`, but __can__ be a keeper in round \`1\` as well if circumstances call for/require. A franchise CANNOT set a keeper for a round LOWER than their MMR allows.`,
+        `Use the \`Keeper Picks\` report to generate a report of all the keeper picks for the draft for a given tier. The report outputs the __lowest round__ keeper picks can be in.\n\nLet's look at the following example:\n- \`PROSPECT\` tier lines are [\`0\`, \`90\`)\n- There are \`10\` teams in prospect\n- Since there are \`10\` teams and \`90\` players, there will be \`9\` rounds\n- Player \`Travestey#7227\` has an MMR of \`75\`\n\nThe **minimum** tier \`Travestey#7227\` can be a keeper in is round \`2\`, but __can__ be a keeper in round \`1\` as well if circumstances call for/require. A franchise CANNOT set a keeper for a round LOWER than their MMR allows.`,
         [
             `**REQUIRED** : Use \`--tier-<TIER>\` to select a single tier to display. (e.g. \`--tier-PROSPECT\`)`
         ].map(data => `> ${data}`).join(`\n`),
@@ -67,9 +67,6 @@ module.exports = {
             for (let r = 0; r < roundsDivided.length; r++) {
                 const round = roundsDivided[r];
 
-                // if the round has no keepers, continue
-                if (round.filter(p => p.Status.contractStatus === ContractStatus.SIGNED) == 0) continue;
-
                 // if it does, add round text and process keepers
                 out += `Round ${r + 1}\n`
                 out += `${``.padEnd(65, `—`)}\n`;
@@ -78,17 +75,14 @@ module.exports = {
                 for (let p = 0; p < round.length; p++) {
                     const player = round[p];
 
-                    if (player.Status.contractStatus === ContractStatus.SIGNED) {
-                        const name = player.name;
-                        // const ls = player.Status.leagueStatus;
-                        const mmr = String(player.PrimaryRiotAccount.MMR.mmrEffective).padStart(3, ` `);
-                        const ign = player.PrimaryRiotAccount.riotIGN;
-                        const slug = player.Team.Franchise.slug.padStart(3, ` `);
+                    const name = player.name;
+                    const mmr = String(player.PrimaryRiotAccount.MMR.mmrEffective).padStart(3, ` `);
+                    const ign = player.PrimaryRiotAccount.riotIGN;
+                    const slug = (player.team ? player.Team.Franchise.slug : ``).padStart(3, ` `);
 
-                        out += `${center(name, 25)} | ${mmr} | ${slug} | ${ign}\n`;
-                    }
+                    out += `${center(name, 25)} | ${mmr} | ${slug} | ${ign}\n`;
                 }
-                out += `\n`;
+                if (r < roundsDivided.length - 1) out += `\n\n`;
             }
             return { text: out };
         } else {
