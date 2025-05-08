@@ -21,6 +21,8 @@ async function modifyAccolades(/** @type ChatInputCommandInteraction */ interact
     const tierFormatted = tier[0].toUpperCase() + tier.substring(1).toLowerCase();
     const accoladeData = decodeAccoladeData(shorthand, tierFormatted, season);
 
+    const cmdRunBy = interaction.user;
+
     if (operation == `add`) {
         const toAdd = await prisma.accolades.findFirst({
             where: {
@@ -44,10 +46,8 @@ async function modifyAccolades(/** @type ChatInputCommandInteraction */ interact
             }
         });
 
-        const cmdRunBy = interaction.user;
-
-        logger.log(`INFO`, `${cmdRunBy} (\`${cmdRunBy.username}\`, \`${cmdRunBy.id}\`) added accolade ${accoladeData.title} (${accoladeData.emote}) to ${guildMember} (${guildMember.user.username}, \`${guildMember.id}\`)`);
-        return await interaction.editReply({ content: `Added accolade \`${accoladeData.title}\` (${accoladeData.emote}) to ${guildMember} (${guildMember.user.username}, \`${guildMember.id}\`)` });
+        logger.log(`VERBOSE`, `${cmdRunBy} (\`${cmdRunBy.username}\`, \`${cmdRunBy.id}\`) added accolade ${accoladeData.title} (${accoladeData.emote}) to ${guildMember} (\`${guildMember.user.username}\`, \`${guildMember.id}\`)`);
+        return await interaction.editReply({ content: `Added accolade \`${accoladeData.title}\` (${accoladeData.emote}) to ${guildMember} (\`${guildMember.user.username}\`, \`${guildMember.id}\`)` });
 
     } else {
         const toRemove = await prisma.accolades.findFirst({
@@ -63,8 +63,8 @@ async function modifyAccolades(/** @type ChatInputCommandInteraction */ interact
         if (toRemove == null) return await interaction.editReply({ content: `This player (${guildMember}, \`${guildMember.user.username}\`, \`${guildMember.id}\`) does not have this accolade!` });
         else {
             await prisma.accolades.delete({ where: { id: toRemove.id } });
-            logger.log(`INFO`, `${cmdRunBy} (\`${cmdRunBy.username}\`, \`${cmdRunBy.id}\`) removed accolade ${accoladeData.title} (${accoladeData.emote}) from ${guildMember} (${guildMember.user.username}, \`${guildMember.id}\`)`);
-            return await interaction.editReply({ content: `Removed accolade \`${accoladeData.title}\` (${accoladeData.emote}) from ${guildMember} (${guildMember.user.username}, \`${guildMember.id}\`)` });
+            logger.log(`VERBOSE`, `${cmdRunBy} (\`${cmdRunBy.username}\`, \`${cmdRunBy.id}\`) removed accolade ${accoladeData.title} (${accoladeData.emote}) from ${guildMember} (\`${guildMember.user.username}\`, \`${guildMember.id}\`)`);
+            return await interaction.editReply({ content: `Removed accolade \`${accoladeData.title}\` (${accoladeData.emote}) from ${guildMember} (\`${guildMember.user.username}\`, \`${guildMember.id}\`)` });
         }
     }
 }
