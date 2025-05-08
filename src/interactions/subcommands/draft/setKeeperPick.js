@@ -6,7 +6,7 @@ const { ROLES } = require("../../../../utils/enums");
 async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 
 	const userRoles = interaction.member._roles;
-	if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.reply({ content: `You don't have the Admin role and cannot use this command!` });
+	if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
 
 	// get current season from the database
 	const season = await ControlPanel.getSeason();

@@ -23,7 +23,7 @@ const releaseInterval = 5 * 1000; // in ms
 async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction */ interaction, /** @type Tier */ tier) {
 
     const userRoles = interaction.member._roles;
-    if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.reply({ content: `You don't have the Admin role and cannot use this command!` });
+    if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
 
     const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
     const season = await ControlPanel.getSeason();
