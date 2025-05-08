@@ -1,6 +1,7 @@
 const { Franchise, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
+const { ROLES } = require("../../../../utils/enums");
 
 async function fulfillFutureTrade(interaction, round, tier, franchiseFromName, franchiseToName) {
 	const userRoles = interaction.member._roles;
