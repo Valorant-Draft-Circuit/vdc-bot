@@ -45,7 +45,7 @@ async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 	logger.log(`VERBOSE`, `<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick`)
 	if (updatedPick.userID !== player.id) return await interaction.editReply(`There was an error. The database was not updated`);
 	else {
-		await refreshDraftBoardChannel(interaction);
+		// await refreshDraftBoardChannel(interaction);
 		return await interaction.editReply(`<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round \`${pick.round}\`, pick \`${pick.pick}\` (overall pick: \`${overallPickNumber}\`)`)
 	};
 }

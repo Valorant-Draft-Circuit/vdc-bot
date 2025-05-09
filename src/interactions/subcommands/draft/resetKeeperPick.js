@@ -36,7 +36,7 @@ async function resetKeeperPick(interaction, discordID) {
 	logger.log(`VERBOSE`, `<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed as \`${updatedPick.Franchise.name}\`'s keeper pick`)
 	if (updatedPick.userID !== null) return await interaction.editReply(`There was an error. The database was not updated`);
 	else {
-		await refreshDraftBoardChannel(interaction);
+		// await refreshDraftBoardChannel(interaction);
 		return await interaction.editReply(`<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed from the R: \`${keeperSearch.round}\`, P: \`${keeperSearch.pick}\` keeper slot.`);
 	}
 }
