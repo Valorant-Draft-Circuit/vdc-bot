@@ -1,4 +1,3 @@
-// const lobby = ; // ID for `new vc` button
 const channelNames = [
 	// pistols
 	`Classic`, `Shorty`, `Frenzy`, `Ghost`, `Sheriff`,
@@ -19,9 +18,12 @@ const channelNames = [
 	`Ares`, `Odin`,
 ];
 
-const { ChannelType, BaseClient, VoiceState, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require(`discord.js`);
+const { ChannelType, BaseClient, GuildMember, VoiceState, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, StringSelectMenuBuilder } = require(`discord.js`);
 const { CHANNELS, GUILD, ROLES } = require(`../../utils/enums`);
 const { LeagueStatus } = require(`@prisma/client`);
+
+const category = `963274331864047617`; 	// ID for VC category
+const afk = `1328972180549013596`;		// ID for AFK channel
 
 const botCommandsChannelID = `966216243986194432`;
 const enableSort = (/true/i).test(process.env.COMBINES_SORT);
@@ -59,19 +61,38 @@ module.exports = {
 
 		/** Standard Join/Leave Button (The Range) */
 		/* ########################################################################### */
-		const joinedLobbyBool = newState.channelId === CHANNELS.VC.LOBBY;
+
+		// join paramaters
+		const joinedCategoryBool = newState.channel?.parentId === category;		// true if user joins the VC category
+		const joinedLobbyBool = newState.channelId === CHANNELS.VC.LOBBY;		// true if user joins the lobby VC
+		const joinedAFKBool = newState.channelId === afk;						// true if user joins AFK VC
+
+		// leave paramaters
 		const leftVCBool = channelNames.includes(oldState.channel?.name);
 		const leftChannelMemberCount = oldState.channel?.members.map(m => m).length;
 
+
+		// dynamic VC logic
 		if (leftVCBool && joinedLobbyBool && leftChannelMemberCount === 0) {
 			await voiceDelete(client, oldState);
 			return await voiceCreate(client, oldState, newState);
 		};
 		if (joinedLobbyBool) {
-			return voiceCreate(client, oldState, newState);
+			return await voiceCreate(client, oldState, newState);
 		};
 		if (leftVCBool && leftChannelMemberCount === 0) {
-			return voiceDelete(client, oldState);
+			return await voiceDelete(client, oldState);
+		};
+
+
+		// modify channel perms - happens last for optimization- if user is last in channel & leaves- no reason to modify channel perms before deleting
+		if (joinedCategoryBool && !joinedAFKBool && !joinedLobbyBool) {
+			const user = newState.member;
+			await modifyChannelPerms(newState, user, `ADD`);
+		};
+		if (leftVCBool) {
+			const user = oldState.member;
+			await modifyChannelPerms(oldState, user, `REMOVE`);
 		};
 		/* ########################################################################### */
 
@@ -252,5 +273,24 @@ async function sendDM(player, dmMessage) {
 		await player.send({ content: dmMessage });
 	} catch (e) {
 		logger.log(`WARNING`, `User ${player} (\`${player.user.username}\`, \`${player.id}\`) does not have DMs open & will not receive the combines join error messages`);
+	}
+}
+
+/** Modify channel permissions */
+async function modifyChannelPerms(
+	/** @type VoiceState */ voiceChannel,
+	/** @type GuildMember */ member,
+	/** @type {`ADD`|`REMOVE`} */ type
+) {
+	if (type === `ADD`) {
+		logger.log(`VERBOSE`, `Added permission overrides for \`${member.user.username}\` in \`${voiceChannel.channel.name}\``);
+		return await voiceChannel.channel.permissionOverwrites.create(member, {
+			ViewChannel: true,
+			Connect: true,
+			SendMessages: true,
+		});
+	} else {
+		logger.log(`VERBOSE`, `Removed permission overrides for \`${member.user.username}\` in \`${voiceChannel.channel.name}\``);
+		return await voiceChannel.channel.permissionOverwrites.delete(member);
 	}
 }
