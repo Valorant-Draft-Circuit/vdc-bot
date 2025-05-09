@@ -36,6 +36,11 @@ const allowedLeagueStatuses = [
 	LeagueStatus.SIGNED
 ];
 
+// voiceState properties to ignore
+const IGNORED_PROPERTIES = [
+	`selfMute`, `selfDeaf`, `selfVideo`, `serverMute`, `serverDeaf`, `streaming`, `suppress`,
+];
+
 
 module.exports = {
 
@@ -58,6 +63,14 @@ module.exports = {
 	) {
 		if (oldState.guild.id !== GUILD) return;
 		if (!Boolean(Number(process.env.PROD))) return;
+
+
+		// If no relevant (non-ignored) changes, skip. only relevant actions should be join/leave
+		const hasNonIgnoredChange = Object.keys(newState).some(key => {
+			return oldState[key] !== newState[key] && !IGNORED_PROPERTIES.includes(key);
+		});
+		if (!hasNonIgnoredChange) return;
+
 
 		/** Standard Join/Leave Button (The Range) */
 		/* ########################################################################### */
