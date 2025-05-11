@@ -1,4 +1,4 @@
-const { ButtonInteraction } = require(`discord.js`);
+const { ButtonInteraction, MessageFlags } = require(`discord.js`);
 const { ButtonOptions } = require(`../../../utils/enums`);
 const { cancelDraft, executeDraft } = require("../subcommands/draft/draftPlayer");
 
@@ -6,7 +6,7 @@ module.exports = {
     id: `draftManager`,
 
     async execute(/** @type ButtonInteraction */ interaction, args) {
-        await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral }); // defer as early as possible
 
         switch (Number(args)) {
             case ButtonOptions.DRAFT_CANCEL: {
