@@ -1,6 +1,6 @@
 const { ButtonInteraction, MessageFlags } = require(`discord.js`);
 const { ButtonOptions } = require(`../../../utils/enums`);
-const { cancelDraft, executeDraft } = require("../subcommands/draft/draftPlayer");
+const { cancelDraft, executeDraft } = require(`../subcommands/draft/draftPlayer`);
 
 module.exports = {
     id: `draftManager`,
