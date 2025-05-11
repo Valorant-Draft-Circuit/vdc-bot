@@ -3,7 +3,7 @@ const { LeagueStatus, } = require(`@prisma/client`);
 const { Franchise, Player, ControlPanel } = require(`../../../../prisma`);
 const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
-const { CHANNELS, ButtonOptions } = require(`../../../../utils/enums`);
+const { CHANNELS, ButtonOptions, ROLES } = require(`../../../../utils/enums`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 
 const draftableLeagueStatuses = [LeagueStatus.FREE_AGENT, LeagueStatus.DRAFT_ELIGIBLE];
@@ -101,23 +101,17 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
         );
 
     // get the draft board and the current pick
-    const fullDraftBoard = await prisma.draft.findMany({
-        where: { AND: [{ season: season }, { tier: tier }, { round: { not: 99 } }] },
-        include: { Franchise: true },
-    })
+    // const fullDraftBoard = await prisma.draft.findMany({
+    //     where: { AND: [{ season: season }, { tier: tier }, { round: { not: 99 } }] },
+    //     include: { Franchise: true },
+    // })
     const draftBoard = (await prisma.draft.findMany({
         where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
-        include: { Franchise: true },
+        include: { Franchise: { include: { Brand: true } } },
     })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
     const pick = draftBoard[0];
 
     if (draftBoard.length == 0 || draftablePlayers.length == 0) return await interaction.editReply(`There are no more draftable players or available draft slots, and so the season ${season} ${tier} draft has concluded!`);
-
-    // check to make sure the drafter is allowed to draft for this tier
-    // const drafterDiscordID = interaction.user.id;
-    // const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    // const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
-    // if (!allowedDrafters.includes(drafter.id)) return await interaction.editReply(`You are not a GM or AGM of ${pick.Franchise.name} and cannot draft for this pick.`);
 
     // check to make sure the player is draftable
     const player = await Player.getBy({ discordID: discordID });
@@ -129,7 +123,14 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     if (player.primaryRiotAccountID == null) return await interaction.editReply(`This player does not have a primary Riot account set and cannot be drafted.`);
     if (riotAccount.mmr == null) return await interaction.editReply(`This player does not have an MMR entry and cannot be drafted.`);
     if (riotAccount.MMR.mmrEffective == null) return await interaction.editReply(`This player does not have an \`mmrEffective\` value and cannot be drafted.`);
-    if (mmrEffective < tierBounds.min || mmrEffective > tierBounds.max) return await interaction.editReply(`This player's effectiveMMR (${mmrEffective}) does not fall within the tier bounds for ${tier} (${tierBounds.min} - ${tierBounds.max}) and cannot be drafted in this tier!`);
+    if (mmrEffective < tierBounds.min || mmrEffective > tierBounds.max) return await interaction.editReply(`This player's effectiveMMR (\`${mmrEffective}\`) does not fall within the tier bounds for \`${tier}\` (\`${tierBounds.min}\` - \`${tierBounds.max}\`) and cannot be drafted in this tier!`);
+
+    // check to make sure the drafter is allowed to draft for this tier
+    const drafterDiscordID = interaction.user.id;
+    const drafterRoles = interaction.member._roles;
+    const drafter = await Player.getBy({ discordID: drafterDiscordID });
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    if (!allowedDrafters.includes(drafter.id) || !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot draft for this pick.`);
 
     const franchise = await Franchise.getBy({ id: pick.franchise })
     const team = franchise.Teams.find(t => t.tier == tier);
@@ -185,23 +186,20 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
 }
 
 async function cancelDraft(/** @type ButtonInteraction */ interaction) {
-    // get season, tier & bounds
-    // const season = await ControlPanel.getSeason();
-    // const tierID = interaction.channelId;
-    // const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
 
     // get the draft board and the current pick
-    // const draftBoard = (await prisma.draft.findMany({
-    //     where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
-    //     include: { Franchise: true },
-    // })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
-    // const pick = draftBoard[0];
+    const draftBoard = (await prisma.draft.findMany({
+        where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
+        include: { Franchise: { include: { Brand: true } } },
+    })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
+    const pick = draftBoard[0];
 
     // check to make sure the drafter is allowed to draft for this tier (if they aren't they can't cancel)
-    // const drafterDiscordID = interaction.user.id;
-    // const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    // const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
-    // if (!allowedDrafters.includes(drafter.id)) return await interaction.editReply(`You are not a GM or AGM of ${pick.Franchise.name} and cannot cancel this draft pick.`);
+    const drafterDiscordID = interaction.user.id;
+    const drafterRoles = interaction.member._roles;
+    const drafter = await Player.getBy({ discordID: drafterDiscordID });
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    if (!allowedDrafters.includes(drafter.id) || !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot cancel this pick.`);
 
     // delete the reply...
     await interaction.deleteReply();
@@ -228,18 +226,19 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     // get the draft board and the current pick
     const draftBoard = (await prisma.draft.findMany({
         where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
-        include: { Franchise: true },
+        include: { Franchise: { include: { Brand: true } } },
     })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
     // const pick = draftBoard[0];
     const nextPick = draftBoard[1];
     // console.log(nextPick)
 
     // check to make sure the drafter is allowed to draft for this tier  (if they aren't they can't confirm)
-    // const drafterDiscordID = interaction.user.id;
-    // const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    // const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
+    const drafterDiscordID = interaction.user.id;
+    const drafterRoles = interaction.member._roles;
+    const drafter = await Player.getBy({ discordID: drafterDiscordID });
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
     // if (!allowedDrafters.includes(drafter.id)) return await interaction.editReply(`You are not a GM or AGM of ${pick.Franchise.name} and so you cannot confirm this draft pick.`);
-
+    if (!allowedDrafters.includes(drafter.id) || !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and so you cannot confirm this draft pick.`);
 
     const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID, nextPick.Franchise.agm3ID]
         .filter(id => id !== null)
