@@ -290,9 +290,9 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
 
     // filter by tier
     const draftableInTier = playersWithDraftableStatuses.filter(p => {
-        return p.PrimaryRiotAccount.MMR.mmrEffective >= tierBounds.min &&
-            p.PrimaryRiotAccount.MMR.mmrEffective <= tierBounds.max;
-    }).map(u => u.id);
+        return p?.PrimaryRiotAccount?.MMR?.mmrEffective >= tierBounds.min &&
+            p?.PrimaryRiotAccount?.MMR?.mmrEffective <= tierBounds.max;
+    }).map(u => u?.id);
 
     // get drafted players
     const draftedPlayers = (await prisma.draft.findMany({
