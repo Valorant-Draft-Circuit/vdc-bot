@@ -239,7 +239,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     const drafterDiscordID = interaction.user.id;
     const drafterRoles = interaction.member._roles;
     const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
     if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and so you cannot confirm this draft pick.`);
 
     const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID, nextPick.Franchise.agm3ID]
