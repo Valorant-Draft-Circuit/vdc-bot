@@ -62,7 +62,9 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
         // update nickname
         const playerTag = playerIGN.split(`#`)[0];
-        let guildMember = await interaction.guild.members.fetch(playerDiscordID);
+        let guildMember;
+        try { guildMember = await interaction.guild.members.fetch(playerDiscordID) }
+        catch { logger.log(`WARNING`, `Can't find \`${playerIGN}\` (\`${player.name}\`, \`${playerDiscordID}\`) in \`${interaction.guild.name}\`!`) };
 
         // checks to make sure the bot doesn't crash lmfao
         if (guildMember == undefined) {
@@ -105,7 +107,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             footer: { text: `Valorant Draft Circuit Draft` }
         })
 
-        // Attempt to send a message to the user once they are cut
+        // Attempt to send a message to the user once they are drafted
         try {
             const gmIDs = [
                 franchise.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
@@ -136,12 +138,12 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
         } catch (e) {
-            logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the drafted message`);
+            logger.log(`WARNING`, `User \`${playerIGN}\` (\`${player.name}\`, \`${playerDiscordID}\`) does not have DMs open & will not receive the drafted message`);
         }
 
         // send the update
         await transactionsChannel.send({ embeds: [pickEmbed] });
-        console.log(`REL: R: ${draftPick.round}, P: ${draftPick.pick}, ${playerIGN}`)
+        logger.log(`VERBOSE`, `Releasing \`${tier}\` — R: \`${draftPick.round}\`, P: \`${draftPick.pick}\`, \`${playerIGN}\` (\`${player.name}\`, \`${playerDiscordID}\`)`);
     };
 
     /** Callback function to update the embed once the entire queue is finished processing */
