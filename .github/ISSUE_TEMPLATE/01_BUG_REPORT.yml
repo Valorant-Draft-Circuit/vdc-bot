@@ -8,7 +8,7 @@ body:
     attributes:
       value: |
         > [!IMPORTANT]
-        > Please make sure an issue for this has not already been created!
+        > Please make sure a bug report for the issue you're having hasn't already been created!
 
   - type: textarea
     attributes:
