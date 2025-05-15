@@ -1,0 +1,35 @@
+name: 🐞 Bug Report
+description: "File a new bug report."
+title: "[Bug]: "
+labels: ["Bug"]
+project: ["valorant-draft-circuit/2"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > Please make sure an issue for this has not already been created!
+
+  - type: textarea
+    attributes:
+      label: Error Message and Logs
+      description: Provide a detailed description of the error or exception you encountered, along with any relevant log output.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: Please provide a step-by-step guide to reproduce the issue. Be as detailed as possible, otherwise we may not be able to assist you.
+      value: |
+        1.
+        2.
+        3.
+        4.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: Any other relevant details about the issue.
