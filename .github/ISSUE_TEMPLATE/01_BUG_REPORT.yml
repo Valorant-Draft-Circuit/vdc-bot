@@ -2,7 +2,7 @@ name: 🐞 Bug Report
 description: "File a new bug report."
 title: "[Bug]: "
 labels: ["Bug"]
-project: ["valorant-draft-circuit/2"]
+projects: ["valorant-draft-circuit/2"]
 body:
   - type: markdown
     attributes:
