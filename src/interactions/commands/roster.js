@@ -45,7 +45,13 @@ module.exports = {
 
       // process db data and organize for display
       const refinedRoster = await refinedRosterData(interaction, teamRoster);
-      refinedRoster.sort((a, b) => a.mmr - b.mmr)
+      refinedRoster.sort((a, b) => {
+         if (showMMR) {
+            return a.mmr - b.mmr;
+         } else {
+            return a.riotIDPlain.localeCompare(b.riotIDPlain);
+         }
+      });
       // filter by rostered/IR & suvs and format with Riot ID, Tracker link & add emotes
       const rosteredPlayers = refinedRoster
          .filter(player => (player.leagueStatus === LeagueStatus.SIGNED || player.leagueStatus === LeagueStatus.GENERAL_MANAGER) && player.contractStatus !== ContractStatus.INACTIVE_RESERVE)
