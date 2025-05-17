@@ -90,16 +90,16 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 	if (leagueState !== `COMBINES`) {
 		switch (team.tier) {
 			case Tier.PROSPECT:
-				await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
+				await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
 				break;
 			case Tier.APPRENTICE:
-				await guildMember.roles.add(ROLES.TIER.APPRENTICE_FREE_AGENT);
+				await guildMember.roles.add([ROLES.TIER.APPRENTICE, ROLES.TIER.APPRENTICE_FREE_AGENT]);
 				break;
 			case Tier.EXPERT:
-				await guildMember.roles.add(ROLES.TIER.EXPERT_FREE_AGENT);
+				await guildMember.roles.add([ROLES.TIER.EXPERT, ROLES.TIER.EXPERT_FREE_AGENT]);
 				break;
 			case Tier.MYTHIC:
-				await guildMember.roles.add(ROLES.TIER.MYTHIC_FREE_AGENT);
+				await guildMember.roles.add([ROLES.TIER.MYTHIC, ROLES.TIER.MYTHIC_FREE_AGENT]);
 				break;
 		}
 	}
