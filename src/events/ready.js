@@ -17,6 +17,9 @@ module.exports = {
 		// register slash commands
 		client.registerSlashCommands(client, `./utils/commandsStructure`);
 
+		const emotes = (await client.application.emojis.fetch()).map(e => e);
+		logger.log(`INFO`, `Found \`${emotes.length}\` application emote(s)`);
+
 		// initialize logger logdrain needs
 		return await logger.init();
 	},

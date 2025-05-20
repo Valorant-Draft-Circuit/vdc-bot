@@ -58,7 +58,6 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
     // create outputs
     const roundsWonBar = createRoundsWonBar((({ PlayerStats, ...o }) => o)(game));
 
-    await client.application.emojis.fetch();
     const dataOutput = game.PlayerStats.map(p => createMatchPlayerStats(p, game.Match.home, p.Player.team));
     const date = new Date(game.datePlayed).toLocaleString(`en-US`, { dateZone: `CST`, month: `short`, day: `2-digit` });
 
@@ -95,7 +94,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         return { ...s, rounds: rounds, totalDamage: s.damage }
     });
 
-    const agentEmotes = await client.application.emojis.fetch();
+    const agentEmotes = client.application.emojis.cache;
     const allAgentsPicked = processedPlayerStats.map(ps => ps.agent);
     const agentPercentage = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(a => {
         const agentSanatized = a.toLowerCase().replace(/[^a-z]/, ``);
