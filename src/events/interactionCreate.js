@@ -19,6 +19,13 @@ module.exports = {
     once: false,
 
     async execute(client, /** @type BaseInteraction */ interaction) {
+
+        // Ignore DMs
+        if (interaction.channel.isDMBased()) {
+            logger.log(`WARNING`, `User ${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) tried to use a command in DMs`);
+            return await interaction.reply({ content: `You cannot use this command in direct messages` });
+        }
+
         try {
             if (interaction.isCommand()) return await executeCommand(client, interaction);
             if (interaction.isButton()) return await executeButton(client, interaction);

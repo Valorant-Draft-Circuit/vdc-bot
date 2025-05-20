@@ -176,7 +176,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
 }
 
 async function updateTransactionsPerms(/** @type ChatInputCommandInteraction */ interaction, guildMember, franchise, /** @type {`ADD`|`REMOVE`} type */ type) {
-    const channelID = process.env.ENVIRONMENT ? devTransactionsChannel : franchise.transactionsChannelID;
+    const channelID = !Boolean(Number(process.env.PROD)) ? devTransactionsChannel : franchise.transactionsChannelID;
     const channel = await interaction.guild.channels.fetch(channelID);
 
     if (type == `REMOVE`) return await channel.permissionOverwrites.delete(guildMember.user.id);

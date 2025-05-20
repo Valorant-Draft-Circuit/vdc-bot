@@ -1,19 +1,27 @@
 require(`dotenv`).config();
 
-// initalize logger
+// MODULE REQUIREMENTS ----------------------------------------------------------------------------
+const fs = require(`fs`);
 const Logger = require(`./src/core/logger.js`);
-global.logger = new Logger();
+const BotClient = require(`./src/core/botClient.js`);
+// ################################################################################################
 
+
+// INITIALIZE LOGGER & CLEAR CONSOLE --------------------------------------------------------------
+global.logger = new Logger();
 
 console.clear();
 logger.log(`VERBOSE`, `Starting...`);
+// ################################################################################################
 
-// initialize client
-const BotClient = require(`./src/core/botClient.js`);
+
+// INITALIZE CLIENT -------------------------------------------------------------------------------
 global.client = new BotClient();
-logger.log(`DEBUG`, `Initalized client!`);
+logger.log(`DEBUG`, `Initialized client!`);
+// ################################################################################################
 
 
+// CREATE WATCHERS/LISTENERS ----------------------------------------------------------------------
 // catch exceptions and log to console
 process.on(`uncaughtException`, (err) => {
     return logger.log(`ERROR`, err.cause, err.stack);
@@ -23,8 +31,36 @@ process.on(`uncaughtException`, (err) => {
 process.on(`warning`, (warning) => {
     return logger.log(`WARNING`, warning.name, warning.stack);
 });
+// ################################################################################################
 
 
+// START HOTRELOAD FILES --------------------------------------------------------------------------
+// create hotreloading for cache
+const mmrCachePath = `./cache/mmrCache.json`;
+const mmrTierLinesCache = `./cache/mmrTierLinesCache.json`;
+
+// initial requires
+global.mmrCache = require(mmrCachePath);
+global.mmrTierLinesCache = require(mmrTierLinesCache);
+
+// create watch files for hot-reloading
+fs.watchFile(mmrCachePath, () => {
+    delete require.cache[require.resolve(mmrCachePath)];
+    global.mmrCache = require(mmrCachePath);
+
+    return logger.log(`INFO`, `Reloaded file: \`${mmrCachePath}\``);
+});
+
+fs.watchFile(mmrTierLinesCache, () => {
+    delete require.cache[require.resolve(mmrTierLinesCache)];
+    global.mmrTierLinesCache = require(mmrTierLinesCache);
+
+    return logger.log(`INFO`, `Reloaded file: \`${mmrTierLinesCache}\``);
+});
+// ################################################################################################
+
+
+// LOAD COMMANDS, INTERACTIONS & EVENTS -----------------------------------------------------------
 logger.log(`VERBOSE`, `Loading slash commands...`);
 client.loadSlashCommands(`src/interactions/commands`);
 
@@ -39,7 +75,15 @@ client.loadAutocomplete(`src/interactions/autocomplete`);
 
 logger.log(`VERBOSE`, `Loading events...`);
 client.loadEvents(`src/events`);
+// ################################################################################################
 
 
+// LOGIN ------------------------------------------------------------------------------------------
 client.login(process.env.TOKEN);
 logger.log(`VERBOSE`, `Logging in with token...`);
+// ################################################################################################
+
+
+// FUNCTIONS --------------------------------------------------------------------------------------
+
+// ################################################################################################

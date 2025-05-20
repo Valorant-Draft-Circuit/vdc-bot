@@ -1,70 +1,40 @@
-/** @enum {Number} Pull the enums from ApplicationCommandOptionType
- * @option Subcommand
- * @option SubcommandGroup
- * @option String
- * @option Integer
- * @option Boolean,
- * @option User
- * @option Channel
- * @option Role
- * @option Mentionable
- * @option Number
- * @option Attachment
- */
-const { LeagueStatus, ContractStatus } = require("@prisma/client");
-const { ApplicationCommandOptionType } = require(`discord.js`);
+const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
+const { ApplicationCommandOptionType, InteractionContextType, PermissionFlagsBits } = require(`discord.js`);
 
+/** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
-    name: "debug",
-    description: "Access debug commands here!",
-    default_member_permissions: process.env.ENVIRONMENT == `DEV` ? `0x0` : `0x0000000000002000`,
+    name: `debug`,
+    description: `Access debug commands here!`,
+    default_member_permissions: !Boolean(Number(process.env.PROD)) ? `0x0` : PermissionFlagsBits.BanMembers,
+    contexts: [InteractionContextType.Guild],
     options: [
         {
-            name: "user",
-            description: "Get all information about a user",
+            name: `user`,
+            description: `Get all information about a user`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
-                    name: "player",
-                    description: "The player to debug",
+                    name: `player`,
+                    description: `The player to debug`,
                     type: ApplicationCommandOptionType.User,
                     required: true
                 },
             ],
         },
         {
-            name: "report",
-            description: "Generate a report for all player's LeagueStatuses",
+            name: `force-update`,
+            description: `Forcefully update a user's information`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
-                    name: `type`,
-                    description: "The type of report to generate",
-                    type: ApplicationCommandOptionType.String,
-                    required: true,
-                    choices: [
-                        { name: `Player League Status`, value: `PLAYER_LEAGUE_STATUS` },
-                        { name: `Franchise Information`, value: `FRANCHISE_INFORMATION` },
-                        { name: `Admin Tier List`, value: `ADMIN_TIER_LIST` },
-                        { name: `Expiring Contracts`, value: `EXPIRING_CONTRACTS` },
-                    ]
-                },
-            ]
-        },
-        {
-            name: "force-update",
-            description: "Forcefully update a user's information",
-            type: ApplicationCommandOptionType.Subcommand,
-            options: [
-                {
-                    name: "player",
-                    description: "The player to debug",
+                    name: `player`,
+                    description: `The player to debug`,
                     type: ApplicationCommandOptionType.User,
                     required: true
                 },
                 {
                     name: `league-status`,
-                    description: "The league status to update to",
+                    description: `The league status to update to`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     choices: [
@@ -82,7 +52,7 @@ module.exports = {
                 },
                 {
                     name: `contract-status`,
-                    description: "The contract status to update to",
+                    description: `The contract status to update to`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     choices: [
@@ -94,7 +64,7 @@ module.exports = {
                 },
                 {
                     name: `contract-remaining`,
-                    description: "The contract status to update to",
+                    description: `The contract status to update to`,
                     type: ApplicationCommandOptionType.Number,
                     required: false,
                     choices: [
@@ -106,7 +76,7 @@ module.exports = {
                 },
                 {
                     name: `team`,
-                    description: "The team to update the player to",
+                    description: `The team to update the player to`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     autocomplete: true
@@ -114,19 +84,19 @@ module.exports = {
             ],
         },
         {
-            name: "update-by-ign",
-            description: "Forcefully update a user's information",
+            name: `update-by-ign`,
+            description: `Forcefully update a user's information`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
-                    name: "ign",
-                    description: "The player to update",
+                    name: `ign`,
+                    description: `The player to update`,
                     type: ApplicationCommandOptionType.String,
                     required: true
                 },
                 {
                     name: `league-status`,
-                    description: "The league status to update to",
+                    description: `The league status to update to`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     choices: [
@@ -144,7 +114,7 @@ module.exports = {
                 },
                 {
                     name: `contract-status`,
-                    description: "The contract status to update to",
+                    description: `The contract status to update to`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     choices: [
@@ -156,7 +126,7 @@ module.exports = {
                 },
                 {
                     name: `contract-remaining`,
-                    description: "The contract status to update to",
+                    description: `The contract status to update to`,
                     type: ApplicationCommandOptionType.Number,
                     required: false,
                     choices: [
@@ -168,50 +138,73 @@ module.exports = {
                 },
                 {
                     name: `team`,
-                    description: "The team to update the player to",
+                    description: `The team to update the player to`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
                     autocomplete: true
                 },
                 {
                     name: `set-team-null`,
-                    description: "Set the player's team to null!",
+                    description: `Set the player's team to null!`,
                     type: ApplicationCommandOptionType.Boolean,
                     required: false,
                 }
             ],
         },
         {
-            name: "process-inactive",
-            description: "Process the inactive state for a user",
+            name: `process-inactive`,
+            description: `Process the inactive state for a user`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
-                    name: "player",
-                    description: "The player to process the inactive state for",
+                    name: `player`,
+                    description: `The player to process the inactive state for`,
                     type: ApplicationCommandOptionType.User,
                     required: true
                 },
             ],
         },
         {
-            name: "update-mmr",
-            description: "Update a player's effectiveMMR",
+            name: `update-mmr`,
+            description: `Update a player's effectiveMMR`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
-                    name: "player",
-                    description: "The player whose mmr to update",
+                    name: `player`,
+                    description: `The player whose mmr to update`,
                     type: ApplicationCommandOptionType.User,
                     required: true
                 },
                 {
-                    name: "new-mmr",
-                    description: "The new MMR of the player",
+                    name: `new-mmr`,
+                    description: `The new MMR of the player`,
                     type: ApplicationCommandOptionType.Number,
                     required: true
                 },
             ],
+        },
+        {
+            name: `profile-update`,
+            description: `Forcefully update a player's profile in discord`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `player`,
+                    description: `The player to update`,
+                    type: ApplicationCommandOptionType.User,
+                    required: true
+                },
+            ],
+        },
+        {
+            name: `refresh-cache`,
+            description: `Update the bot's MMR cache`,
+            type: ApplicationCommandOptionType.Subcommand
+        },
+        {
+            name: `profile-update-server`,
+            description: `WARNING: This will update the profile of all players in the server!`,
+            type: ApplicationCommandOptionType.Subcommand
         },
     ]
 }

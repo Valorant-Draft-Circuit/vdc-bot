@@ -1,36 +1,50 @@
-const { Games } = require(`../../../prisma`);
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, WebhookClient, Message } = require("discord.js");
+const { GameType } = require("@prisma/client");
+const { Games, ControlPanel } = require(`../../../prisma`);
+const { EmbedBuilder } = require("discord.js");
 
 const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
-const webhookURL = `https://discord.com/api/webhooks/1224147441712889988/mIgidbXQbZP_LarMLrn7oqbYzQvRF9xH_ii3HYogTwAIm5DHyhcbSYUYPvvkqAyZQuDZ`;
 const iconURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png`;
+const riotMatchesV1 = `https://na.api.riotgames.com/val/match/v1/matches`;
 
 module.exports = {
 
    name: `submit`,
 
    async execute(/** @type ChatInputCommandInteraction */ interaction) {
+      await interaction.deferReply();
       const { _hoistedOptions } = interaction.options;
 
       const tier = _hoistedOptions[0].value;
-      const type = _hoistedOptions[1].value;
-      const url = _hoistedOptions[2].value;
+      const url = _hoistedOptions[1].value;
 
       // check URL integrity - if it doesn't look like a valid URL, send an error message
-      if (!validMatchRegex.test(url)) return interaction.reply({ content: `That doesn't look like a valid match URL! Please try again or reach out to Travestey!`, ephemeral: true });
+      if (!validMatchRegex.test(url)) return await interaction.editReply({ content: `That doesn't look like a valid match URL! Please try again or open a tech ticket!` });
 
       // check to see if the match was already submitted. if it was, send an error message
-      const matchID = url.replace(`https://tracker.gg/valorant/match/`, ``);
-      const exists = await Games.exists({ id: matchID });
-      if (exists) return interaction.reply({ content: `Looks like this match was already submitted!`, ephemeral: true });
+      const gameID = url.replace(`https://tracker.gg/valorant/match/`, ``);
+      const exists = await Games.exists({ id: gameID });
+      if (exists) return await interaction.editReply({ content: `Looks like this match was already submitted!` });
+
+      // hit the matches endpoint to check if the match exists using fetch
+      const response = await fetch(`${riotMatchesV1}/${gameID}?api_key=${process.env.VDC_API_KEY}`);
+      const data = await response.json();
+      if (data.matchInfo === undefined) return await interaction.editReply({ content: `There was a problem checking Riot's servers! Please try again or open a tech ticket!` });
+      if (data.matchInfo.provisioningFlowId !== `CustomGame`) return await interaction.editReply({ content: `The match you submitted ([\`${gameID}\`](${url})) doesn't look like a custom game! Please double check your match and try again` });
+
+      let type;
+      const state = await ControlPanel.getLeagueState();
+      if (state === `COMBINES`) type = GameType.COMBINE;
+      else if (state === `REGULAR_SEASON`) type = GameType.SEASON;
+      else if (state === `PLAYOFFS`) type = GameType.PLAYOFF;
+      else return await interaction.editReply({ content: `The league state enum in the control panel is set incorrectly. Please open a tech ticket.` });
 
       // save the match to the database
-      Games.saveMatch({ id: matchID, tier: tier, type: type });
+      Games.saveMatch({ id: gameID, tier: tier, type: type });
 
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
          author: { name: `VDC Match Submission` },
-         // description: `Your match was successfully submitted!`,
+         description: `Your match was successfully submitted!`,
          thumbnail: { url: iconURL },
          color: 0xE92929,
          fields: [
@@ -41,23 +55,16 @@ module.exports = {
             },
             {
                name: `\u200B`,
-               value: `${tier}\n${type}\n[${matchID}](${url})`,
+               value: `${tier}\n${type}\n[\`${gameID}\`](${url})`,
                inline: true
             }
          ],
          footer: { text: `Valorant Draft Circuit — Match Result Submissions` }
       });
 
-      // forward the webhook to the thread
-      const webhookClient = new WebhookClient({ url: webhookURL });
-      await webhookClient.send({
-         username: `${type} - ${tier}`,
-         avatarURL: iconURL,
-         embeds: [embed],
-      });
-      webhookClient.destroy();
-
-      embed.setDescription(`Your match was successfully submitted!`)
-      return interaction.reply({ embeds: [embed] });
+      logger.matchdrain(`<t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Match submission** - __Tier__: \`${tier}\`, __Type__: \`${type}\`, __Match ID__: [\`${gameID}\`](${url})`);
+      logger.log(`VERBOSE`, `Match submission - Tier: \`${tier}\`, Type: \`${type}\`, Match ID: [\`${gameID}\`](${url})`);
+      return await interaction.editReply({ embeds: [embed] });
    }
 };
+

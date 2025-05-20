@@ -1,8 +1,13 @@
 const { Player, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
+const { ROLES } = require("../../../../utils/enums");
 
 async function resetKeeperPick(interaction, discordID) {
+
+	const userRoles = interaction.member._roles;
+	if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
+
 	// get current season from the database
 	const season = await ControlPanel.getSeason();
 
@@ -28,10 +33,11 @@ async function resetKeeperPick(interaction, discordID) {
 		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } },
 	});
 
+	logger.log(`VERBOSE`, `<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed as \`${updatedPick.Franchise.name}\`'s keeper pick`)
 	if (updatedPick.userID !== null) return await interaction.editReply(`There was an error. The database was not updated`);
 	else {
-		await refreshDraftBoardChannel(interaction);
-		return await interaction.editReply(`${player.PrimaryRiotAccount.riotIGN} (${player.name}) has been removed from the R:${keeperSearch.round}, P:${keeperSearch.pick} keeper slot.`);
+		// await refreshDraftBoardChannel(interaction);
+		return await interaction.editReply(`<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed from the R: \`${keeperSearch.round}\`, P: \`${keeperSearch.pick}\` keeper slot.`);
 	}
 }
 

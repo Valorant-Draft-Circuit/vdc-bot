@@ -45,7 +45,13 @@ module.exports = {
 
       // process db data and organize for display
       const refinedRoster = await refinedRosterData(interaction, teamRoster);
-      refinedRoster.sort((a, b) => a.mmr - b.mmr)
+      refinedRoster.sort((a, b) => {
+         if (showMMR) {
+            return a.mmr - b.mmr;
+         } else {
+            return a.riotIDPlain.localeCompare(b.riotIDPlain);
+         }
+      });
       // filter by rostered/IR & suvs and format with Riot ID, Tracker link & add emotes
       const rosteredPlayers = refinedRoster
          .filter(player => (player.leagueStatus === LeagueStatus.SIGNED || player.leagueStatus === LeagueStatus.GENERAL_MANAGER) && player.contractStatus !== ContractStatus.INACTIVE_RESERVE)
@@ -116,15 +122,16 @@ module.exports = {
          const map1 = m.Games[0];
          const map2 = m.Games[1];
 
+         if (map1 == null || map2 == null) return;
+
          const label = [
             `Match Day ${md}`,
             `${m.Home.Franchise.slug} v. ${m.Away.Franchise.slug}`,
-            map1.map,
-            `${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.roundsWonHome}-${map2.roundsWonAway}`
+            `${map1.map} : ${map1.roundsWonHome}-${map1.roundsWonAway}, ${map2.map} : ${map2.roundsWonHome}-${map2.roundsWonAway}`
          ].filter(v => v != null).join(` | `);
          md++;
          return { label: label, value: String(map1.matchID), emoji: team.Franchise.Brand.discordEmote };
-      });
+      }).filter(v => v != null);
 
       // create the action row, add the component to it & then reply with all the data
       const homeRow = new ActionRowBuilder({
@@ -135,8 +142,12 @@ module.exports = {
          })]
       });
 
+      // safely add the components to the reply object if there are any matches played
+      const replyObject = { embeds: [embed] };
+      if (matchesPlayedOptions.length > 0) replyObject.components = [homeRow];
+
       // send the embed
-      return await interaction.editReply({ embeds: [embed], components: [homeRow] });
+      return await interaction.editReply(replyObject);
    }
 };
 

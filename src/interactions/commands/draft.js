@@ -1,12 +1,6 @@
-const fs = require("fs");
-const { LeagueStatus, ContractStatus, Tier } = require("@prisma/client");
-
-const { Franchise, Player, Team, Games, ControlPanel } = require("../../../prisma");
-const { EmbedBuilder, ChatInputCommandInteraction, } = require("discord.js");
-const { prisma } = require("../../../prisma/prismadb");
-const { CHANNELS } = require("../../../utils/enums");
-const { generateLottery, awardCompPicks, fulfillFutureTrade, viewTierDraftBoard, setKeeperPick, resetKeeperPick, draftPlayer, releaseOfflineDraftResults, refreshDraftBoardChannel } = require("../subcommands/draft");
-const { beginOfflineDraft } = require("../subcommands/draft/draftPlayer");
+const { ChatInputCommandInteraction, } = require(`discord.js`);
+const { CHANNELS } = require(`../../../utils/enums`);
+const { generateLottery, awardCompPicks, fulfillFutureTrade, viewTierDraftBoard, setKeeperPick, resetKeeperPick, draftPlayer, releaseOfflineDraftResults, refreshDraftBoardChannel, beginOfflineDraft } = require(`../subcommands/draft`);
 
 
 module.exports = {
@@ -76,7 +70,6 @@ module.exports = {
 
 				return await releaseOfflineDraftResults(interaction, tier);
 			}
-
 			case `refresh-draft-board`: {
 				await refreshDraftBoardChannel(interaction);
 				return await interaction.editReply(`The <#${CHANNELS.DRAFT_BOARD}> channel has been updated!`)

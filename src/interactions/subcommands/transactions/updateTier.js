@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
+const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier } = require("@prisma/client");
 
@@ -96,22 +96,26 @@ async function confirmUpdateTier(interaction) {
 	]);
 	await guildMember.roles.add([
 		ROLES.LEAGUE.LEAGUE,
-		ROLES.TIER[newTeam.tier],
 		franchise.roleID
 	]);
-	switch (newTeam.tier) {
-		case Tier.PROSPECT:
-			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
-			break;
-		case Tier.APPRENTICE:
-			await guildMember.roles.add(ROLES.TIER.APPRENTICE_FREE_AGENT);
-			break;
-		case Tier.EXPERT:
-			await guildMember.roles.add(ROLES.TIER.EXPERT_FREE_AGENT);
-			break;
-		case Tier.MYTHIC:
-			await guildMember.roles.add(ROLES.TIER.MYTHIC_FREE_AGENT);
-			break;
+
+	const leagueState = await ControlPanel.getLeagueState();
+	if (leagueState !== `COMBINES`) {
+		await guildMember.roles.add(ROLES.TIER[newTeam.tier]);
+		switch (newTeam.tier) {
+			case Tier.PROSPECT:
+				await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
+				break;
+			case Tier.APPRENTICE:
+				await guildMember.roles.add(ROLES.TIER.APPRENTICE_FREE_AGENT);
+				break;
+			case Tier.EXPERT:
+				await guildMember.roles.add(ROLES.TIER.EXPERT_FREE_AGENT);
+				break;
+			case Tier.MYTHIC:
+				await guildMember.roles.add(ROLES.TIER.MYTHIC_FREE_AGENT);
+				break;
+		}
 	}
 
 	// create & send the "successfully completed" embed

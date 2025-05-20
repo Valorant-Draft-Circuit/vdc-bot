@@ -2,7 +2,6 @@ const fs = require(`fs`);
 
 const { ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
-const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 
 async function viewTierDraftBoard(interaction, tier) {
 	// get current season from the database
@@ -59,8 +58,6 @@ async function viewTierDraftBoard(interaction, tier) {
 		content: `The ${tier} tier's draft board is attached!`,
 		files: [`./cache/draft_board_${tier}.js`],
 	});
-
-	// return await refreshDraftBoardChannel(interaction);
 }
 
 module.exports = { viewTierDraftBoard }
