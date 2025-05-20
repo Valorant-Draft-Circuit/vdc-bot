@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { Franchise, ControlPanel } = require(`../prisma`);
 const { prisma } = require('../prisma/prismadb');
+const { Client, Application } = require('discord.js');
 
 // this is needed to correctly sort the tiers
 const tierSortWeights = {
@@ -18,6 +19,7 @@ const tierSortWeights = {
 (async () => {
     await clearCache();
     await generateCache();
+    await emoteSync();
     await buildMMRCache();
 })();
 
@@ -52,6 +54,40 @@ async function generateCache() {
     // build cache (write to internal files)
     fs.writeFileSync(`./cache/franchises.json`, JSON.stringify(fc));
     fs.writeFileSync(`./cache/teams.json`, JSON.stringify(tc));
+}
+
+/** Sync application emotes with discord for agents */
+async function emoteSync() {
+
+    // login to discord with client token
+    const client = new Client({ intents: [] });
+    await client.login(process.env.TOKEN);
+
+    // fetch all existing application emotes
+    const existingEmotes = (await client.application.emojis.fetch()).map(e => e.name);
+
+    // 
+    const response = await fetch(`https://valorant-api.com/v1/agents?isPlayableCharacter=true`);
+    if (!response.ok) return console.log(`There was an error fetching agent data!`)
+    const activeAgents = await response.json();
+
+    // create blank object to store data & sanatize name
+    const agentData = {};
+    const sanatizeName = (name) => name.toLowerCase().replace(/[^a-z]/, ``);
+    activeAgents.data.map(a => agentData[sanatizeName(a.displayName)] = { name: sanatizeName(a.displayName), icon: a.displayIcon });
+
+    // filter agents who already exist in the bot's emote list
+    const filteredAgents = Object.keys(agentData).filter((agent) => { return existingEmotes.indexOf(agent) == -1; });
+
+    // for every agent that doesn't exist, 
+    for (let i = 0; i < filteredAgents.length; i++) {
+        const agent = agentData[filteredAgents[i]];
+        await client.application.emojis.create({ attachment: agent.icon, name: agent.name });
+        console.log(`Added ${agent.name} as an emote from url: ${agent.icon}`);
+    }
+
+    // destroy the client instance
+    client.destroy();
 }
 
 /** Query the database to get MMRs */

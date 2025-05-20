@@ -3,7 +3,6 @@
  * To compile this, type one of the following commands into the root of the project directory 
  * 
  * @option npm run compile
- * @option tsc ./utils/enums/playerStatusCodes.ts
  */
 
 export const ROLES = !Boolean(Number(process.env.PROD)) ?
