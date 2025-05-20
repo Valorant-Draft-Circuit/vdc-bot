@@ -17,8 +17,8 @@ const tierSortWeights = {
 // run at startup
 (async () => {
     console.clear()
-    // await clearCache();
-    // await generateCache();
+    await clearCache();
+    await generateCache();
     await emoteSync();
 })();
 
