@@ -1,6 +1,1 @@
-blank_issues_enabled: false
-
-contact_links:
-  - name: 🐛 Bug Report
-    url: https://github.com/valorant-draft-circuit/vdc-bot/.github/ISSUE_TEMPLATE/01_BUG_REPORT.yml
-    about: Report a bug with the VDC Bot
+blank_issues_enabled: true
