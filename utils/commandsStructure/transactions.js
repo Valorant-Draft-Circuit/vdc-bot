@@ -1,22 +1,11 @@
-/** @enum {Number} Pull the enums from ApplicationCommandOptionType
- * @option Subcommand
- * @option SubcommandGroup
- * @option String
- * @option Integer
- * @option Boolean,
- * @option User
- * @option Channel
- * @option Role
- * @option Mentionable
- * @option Number
- * @option Attachment
- */
 const { Tier } = require(`@prisma/client`);
-const { ApplicationCommandOptionType } = require(`discord.js`);
+const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
 
+/** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
     name: `transactions`,
     description: `Access transactions commands here!`,
+    contexts: [InteractionContextType.Guild],
     options: [
         {
             name: `sub`,
@@ -80,6 +69,16 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     autocomplete: true
+                },
+                {
+                    name: `length`,
+                    description: `The length of the contract`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        { name: `1`, value: "1" },
+                        { name: `2`, value: "2" },
+                    ]
                 }
             ]
         },

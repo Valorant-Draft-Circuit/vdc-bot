@@ -1,21 +1,10 @@
-/** @enum {Number} Pull the enums from ApplicationCommandOptionType
- * @option Subcommand
- * @option SubcommandGroup
- * @option String
- * @option Integer
- * @option Boolean,
- * @option User
- * @option Channel
- * @option Role
- * @option Mentionable
- * @option Number
- * @option Attachment
- */
-const { ApplicationCommandOptionType } = require(`discord.js`);
+const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
 
+/** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
-    name : `historybooks`,
-    description : `View the VDC history books!`,
+    name: `historybooks`,
+    description: `View the VDC history books!`,
+    contexts: [InteractionContextType.Guild],
     options: [
         {
             name: `player`,

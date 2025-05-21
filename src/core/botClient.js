@@ -96,7 +96,7 @@ module.exports = class BotClient extends Client {
         });
 
         /** @todo create filters to register VDC servers, franchise servers and other */
-        if (process.env.ENVIRONMENT === `DEV`) {
+        if (!Boolean(Number(process.env.PROD))) {
             const serverID = `1027754353207033966`;
             readyClient.guilds.cache.get(serverID).commands.set(commandStructures);
 
@@ -165,7 +165,7 @@ module.exports = class BotClient extends Client {
             success++;
         });
 
-        
+
         logger.log(`DEBUG`, `Loaded ${success} select menu(s) from (${directory}/)!`);
     };
 
@@ -186,11 +186,11 @@ module.exports = class BotClient extends Client {
             if (autocomplete.alias) {
                 autocomplete.alias.forEach(alias => this.autocompletes.set(alias, autocomplete));
             }
-            
+
             success++;
         });
 
-        
+
         logger.log(`DEBUG`, `Loaded ${success} autocomplete queries from (${directory}/)!`);
     };
 };

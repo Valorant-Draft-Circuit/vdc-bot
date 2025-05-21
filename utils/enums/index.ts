@@ -9,9 +9,7 @@
 export { CHANNELS } from "./channels";
 export { ROLES } from "./roles";
 export { GUILD } from "./guild";
-export { AgentEmotes, StatusEmotes } from "./emotes";
+export { StatusEmotes } from "./emotes";
 
-
-export { PlayerStatusCode, ContractStatus } from "./playerStatusCodes";
 export { ButtonOptions } from "./buttonOptions";
 export { TransactionsNavigationOptions } from "./transactions";

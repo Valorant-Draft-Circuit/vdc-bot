@@ -1,8 +1,7 @@
-const { ChatInputCommandInteraction, GuildMember, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
+const { ChatInputCommandInteraction, GuildMember, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require(`discord.js`);
 
-const { Games, Team, Player, ControlPanel } = require("../../../prisma");
-const { AgentEmotes, PlayerStatusCode } = require("../../../utils/enums");
-const { GameType, LeagueStatus } = require("@prisma/client");
+const { Games, Team, Player, ControlPanel } = require(`../../../prisma`);
+const { GameType, LeagueStatus } = require(`@prisma/client`);
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 const avg = (array) => array.reduce((s, v) => s += v, 0) / array.length;
@@ -58,8 +57,9 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 
     // create outputs
     const roundsWonBar = createRoundsWonBar((({ PlayerStats, ...o }) => o)(game));
+
     const dataOutput = game.PlayerStats.map(p => createMatchPlayerStats(p, game.Match.home, p.Player.team));
-    const date = new Date(game.datePlayed).toLocaleString("en-US", { dateZone: `CST`, month: `short`, day: `2-digit` });
+    const date = new Date(game.datePlayed).toLocaleString(`en-US`, { dateZone: `CST`, month: `short`, day: `2-digit` });
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -80,7 +80,6 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
 
     if (season > currentSeason) return await interaction.editReply(`Season ${season} hasn't happened yet!`);
 
-
     const player = await Player.getBy({ discordID: guildMember.user.id });
     if (player == null) return await interaction.editReply(`This player does not exist in our database!`);
 
@@ -96,11 +95,14 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     });
 
     // get agent pool & save as emotes
+    const agentEmotes = client.application.emojis.cache;
     const allAgentsPicked = processedPlayerStats.map(ps => ps.agent);
     const agentPercentage = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(a => {
+        const agentSanatized = a.toLowerCase().replace(/[^a-z]/, ``);
+        const agentEmoteObject = agentEmotes.find(ae => ae.name === agentSanatized);
         return {
             agentName: a,
-            agentIcon: `<:${a.toLowerCase().replace(/[^a-z]/, ``)}:${AgentEmotes[a.toLowerCase().replace(/[^a-z]/, ``)]}>`,
+            agentIcon: `<:${agentSanatized}:${agentEmoteObject.id}>`,
             pickRate: allAgentsPicked.filter(agent => agent === a).length / allAgentsPicked.length
         }
     }).sort((a, b) => b.pickRate - a.pickRate);
@@ -123,7 +125,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         clutches: sum(processedPlayerStats.map(ps => ps.clutches)),
         ratingAttack: avg(processedPlayerStats.map(ps => ps.ratingAttack)),
         ratingDefense: avg(processedPlayerStats.map(ps => ps.ratingDefense)),
-    }
+    };
 
     // do calculations and formatting
     const ratingAttack = (summedStats.ratingAttack || 0).toFixed(2)
@@ -230,15 +232,20 @@ function createRoundsWonBar(match) {
     return `\`\`\`ansi\n${t1bar + t2bar}\n\`\`\``;
 }
 
-/** Create the stats "module" for a player */
+/** Create the stats `module` for a player */
 function createMatchPlayerStats(player, home, team) {
     const ign = player.Player.PrimaryRiotAccount.riotIGN;
 
     // collect & organize data for outputs
     const trackerLink = `[${ign.split(`#`)[0]}](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ign)})`
     const color = team === null ? `[0;30m` : team === home ? `[0;31m` : `[0;34m`; // gray > red > blue
-    const agentSatatized = player.agent.toLowerCase().replace(/[^a-z]/, ``);
-    const agentEmote = `<:${agentSatatized}:${AgentEmotes[agentSatatized]}>`;
+
+    // agent information
+    const agentSanatized = player.agent.toLowerCase().replace(/[^a-z]/, ``);
+    const agentEmotes = client.application.emojis.cache;
+    const agentEmoteObject = agentEmotes.find(ae => ae.name === agentSanatized);
+    const agentEmote = `<:${agentSanatized}:${agentEmoteObject.id}>`;
+    
     const teamName = player.Player.Team ? player.Player.Team.name : `Substitute`;
     const rating = `ATK : \`${player.ratingAttack}\` / DEF : \`${player.ratingDefense}\``;
 
@@ -268,12 +275,12 @@ function createMatchPlayerStats(player, home, team) {
         String(player.firstDeaths).padStart(3, ` `),
     ];
 
-    // return a stats "module" for the specified player
+    // return a stats `module` for the specified player
     return `${agentEmote} ${trackerLink} | ${rating} | ${teamName}` + `\n` +
         `\`\`\`ansi\n\u001b${color}${headings.join(` |`)}\n${data.join(` |`)}\`\`\``;
 }
 
-/** Create the standings "module" for a franchise if the player is signed to one */
+/** Create the standings `module` for a franchise if the player is signed to one */
 async function createFranchiseStatsModule(player, season) {
     const team = player.Team;
     const franchise = team.Franchise;
@@ -311,12 +318,12 @@ async function createFranchiseStatsModule(player, season) {
         color + `${((100 * teamStats.roundsWon / teamStats.totalRounds) || 0).toFixed(2)}% `.padStart(6, ` `),
     ];
 
-    // and then format & return the "module"
+    // and then format & return the `module`
     return `\n${emote} **${franchiseName}** - ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()}` + `\n` +
         `\`\`\`ansi\n${color}${data.join(`${color} | `)}\n\`\`\``;
 }
 
-/** Create the overview "module" for a sub if the player not on a team */
+/** Create the overview `module` for a sub if the player not on a team */
 async function createSubOverview(player) {
     /** @todo When we have extra sub data, we can return sub stats here */
 

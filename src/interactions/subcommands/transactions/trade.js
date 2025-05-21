@@ -2,11 +2,12 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelect
 const { ChatInputCommandInteraction, ButtonInteraction, StringSelectMenuInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Franchise, Player, Transaction } = require(`../../../../prisma`);
+const { Franchise, Player, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { CHANNELS, ROLES, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier, LeagueStatus } = require("@prisma/client");
 
+const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 let notAllowedOperation = false;
@@ -680,6 +681,7 @@ async function executeDraftPickTrade(draftPicks, recievingFranchise) {
 async function executePlayerTrade(interaction, players, recievingFranchise) {
 	const franchiseTeamsToReceive = recievingFranchise.Teams;
 
+	const leagueState = await ControlPanel.getLeagueState();
 	const playerDataArray = await prisma.user.findMany({
 		where: { OR: players.map(player => { return { name: player.name } }) },
 		include: { Accounts: true, PrimaryRiotAccount: { include: { MMR: true } } }
@@ -730,20 +732,79 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 		const guildMember = await interaction.guild.members.fetch(player.Accounts.find(a => a.provider == `discord`).providerAccountId);
 		const accolades = guildMember.nickname?.match(emoteregex);
 
-		await guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+		// check to make sure the bot can update the user's nickname
+		if (guildMember.manageable) {
+			await guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+		} else {
+			logger.log(`ALERT`, `Bot has insufficent permissions to update ${guildMember.user.username}'s nickname. Please update their name to \`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}\` manually!`);
+		}
+
 
 		// remove all league roles and then add League & franchise role
 		const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
-		await guildMember.roles.remove([
-			...Object.values(ROLES.LEAGUE),
-			...Object.values(ROLES.TIER),
-			...franchiseRoleIDs
-		]);
-		await guildMember.roles.add([
-			ROLES.LEAGUE.LEAGUE,
-			ROLES.TIER[playerToUpdate.tier],
-			franchise.roleID
-		]);
+
+		// check to make sure the bot can update the user's nickname
+		if (guildMember.manageable) {
+			await guildMember.roles.remove([
+				...Object.values(ROLES.LEAGUE),
+				...Object.values(ROLES.TIER),
+				...franchiseRoleIDs
+			]);
+			await guildMember.roles.add([
+				ROLES.LEAGUE.LEAGUE,
+				franchise.roleID
+			]);
+			if (leagueState !== `COMBINES`) await guildMember.roles.add(ROLES.TIER[playerToUpdate.tier]);
+		} else {
+			logger.log(`ALERT`, `Bot has insufficent permissions to update ${guildMember.user.username}'s roles. Please update their role(s) to \`${[`League`, playerToUpdate.tier, franchise.name].join(`, `)}\` manually!`);
+		}
+
+		// Attempt to send a message to the user alerting them of the trade
+		try {
+			const fchse = await prisma.franchise.findFirst({
+				where: { id: franchise.id },
+				include: {
+					Teams: true, Brand: true,
+					GM: { include: { Accounts: true } },
+					AGM1: { include: { Accounts: true } },
+					AGM2: { include: { Accounts: true } },
+					AGM3: { include: { Accounts: true } },
+				}
+			});
+
+			const gmIDs = [
+				fchse.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			].filter(v => v !== undefined);
+
+			const agmIDs = [
+				fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+				fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+				fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+			].filter(v => v !== undefined);
+
+
+			const dmEmbed = new EmbedBuilder({
+				description: `Your contract has been transferred to ${franchise.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}` : ``}. Feel free to reach out to them if you have any more questions!`,
+				thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
+				color: Number(franchise.Brand.colorPrimary)
+			});
+
+			// create the action row and add the button to it
+			const dmRow = new ActionRowBuilder({
+				components: [
+					new ButtonBuilder({
+						label: `${franchise.name} Discord`,
+						style: ButtonStyle.Link,
+						url: franchise.Brand.urlDiscord
+					})
+				]
+			});
+			await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
+
+		} catch (e) {
+			console.log(e)
+			logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the sign message`);
+		}
 	}
 
 	return;

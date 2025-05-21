@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
-const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
+const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
@@ -18,7 +18,7 @@ const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[
  * @param {GuildMember} player 
  * @param {String} team 
  */
-async function requestSign(interaction, player, teamName) {
+async function requestSign(interaction, player, teamName, contractLength) {
 
 	const playerData = await Player.getBy({ discordID: player.value });
 	const team = await Team.getBy({ name: teamName });
@@ -36,12 +36,12 @@ async function requestSign(interaction, player, teamName) {
 		fields: [
 			{
 				name: `\u200B`,
-				value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \``,
+				value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`        Team: \`\n\`   Franchise: \`\n\`      Length: \``,
 				inline: true
 			},
 			{
 				name: `\u200B`,
-				value: `SIGN\n${player.user}\n\`${player.value}\`\n${team.name}\n${franchise.name}`,
+				value: `SIGN\n${player.user}\n\`${player.value}\`\n${team.name}\n${franchise.name}\n${contractLength} Season(s)`,
 				inline: true
 			}
 		],
@@ -77,7 +77,8 @@ async function confirmSign(interaction) {
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const team = await Team.getBy({ name: data[3] });
 	const franchise = await Franchise.getBy({ teamID: team.id });
-
+	const contractLength = Number(data[5].split(` `)[0]);
+	const leagueState = await ControlPanel.getLeagueState();
 
 	// update nickname
 	const playerTag = playerIGN.split(`#`)[0];
@@ -95,13 +96,13 @@ async function confirmSign(interaction) {
 	]);
 	await guildMember.roles.add([
 		ROLES.LEAGUE.LEAGUE,
-		ROLES.TIER[team.tier],
 		franchise.roleID
 	]);
+	if (leagueState !== `COMBINES`) await guildMember.roles.add(ROLES.TIER[team.tier]);
 
 	// sign the player & ensure that the player's team property is now null
 	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
-	const player = await Transaction.sign({ userID: playerData.id, teamID: team.id, isGM: isGM });
+	const player = await Transaction.sign({ userID: playerData.id, teamID: team.id, isGM: isGM, contractLength: contractLength });
 	if (player.team !== team.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
 
 	const embed = interaction.message.embeds[0];
@@ -113,7 +114,7 @@ async function confirmSign(interaction) {
 	// create the base embed
 	const announcement = new EmbedBuilder({
 		author: { name: `VDC Transactions Manager` },
-		description: `${guildMember} (${playerTag}) has been signed to ${franchise.name}`,
+		description: `${guildMember} (${playerTag}) has been signed to ${franchise.name} for a ${contractLength} season contract!`,
 		thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}` },
 		color: 0xE92929,
 		fields: [
@@ -132,7 +133,7 @@ async function confirmSign(interaction) {
 		timestamp: Date.now(),
 	});
 
-	// Attempt to send a message to the user once they are cut
+	// Attempt to send a message to the user once they are signed
 	try {
 		const fchse = await prisma.franchise.findFirst({
 			where: { id: franchise.id },
@@ -146,18 +147,18 @@ async function confirmSign(interaction) {
 		});
 
 		const gmIDs = [
-            fchse.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-        ].filter(v => v !== undefined);
+			fchse.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+		].filter(v => v !== undefined);
 
-        const agmIDs = [
-            fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-            fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-            fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
-        ].filter(v => v !== undefined);
+		const agmIDs = [
+			fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+		].filter(v => v !== undefined);
 
 
 		const dmEmbed = new EmbedBuilder({
-			description: `Congratulations, you've been signed to ${franchise.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)} & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}. Feel free to reach out to them if you have any more questions!`,
+			description: `Congratulations, you've been signed to ${franchise.name} for a ${contractLength} season contract! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}` : ``}. Feel free to reach out to them if you have any more questions!`,
 			thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
 			color: Number(franchise.Brand.colorPrimary)
 		});

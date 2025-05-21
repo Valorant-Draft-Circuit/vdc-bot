@@ -1,0 +1,23 @@
+name: ✨ Enhancement/Feature Request
+description: "Create a request for a new enhancement/feature."
+title: "[feat]: "
+labels: ["Enhancement"]
+projects: ["valorant-draft-circuit/2"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > Please make sure an enhancement request for your feature hasn't already been created!
+
+  - type: textarea
+    attributes:
+      label: Feature details
+      description: Provide a detailed description of the feature you're looking to add
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: Any other relevant details about the issue.

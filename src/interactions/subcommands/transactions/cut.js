@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`
 const { ChatInputCommandInteraction, GuildMember, ButtonInteraction } = require(`discord.js`);
 
 
-const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
+const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
@@ -77,6 +77,7 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 	const guildMember = await interaction.guild.members.fetch(playerID);
 	const team = await Team.getBy({ id: playerData.team });
 	const franchise = await Franchise.getBy({ teamID: team.id });
+	const leagueState = await ControlPanel.getLeagueState();
 
 	// remove all league roles and then add League & franchise role
 	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);
@@ -86,20 +87,23 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 		...franchiseRoleIDs
 	]);
 	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.FREE_AGENT]);
-	switch (team.tier) {
-		case Tier.PROSPECT:
-			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
-			break;
-		case Tier.APPRENTICE:
-			await guildMember.roles.add(ROLES.TIER.APPRENTICE_FREE_AGENT);
-			break;
-		case Tier.EXPERT:
-			await guildMember.roles.add(ROLES.TIER.EXPERT_FREE_AGENT);
-			break;
-		case Tier.MYTHIC:
-			await guildMember.roles.add(ROLES.TIER.MYTHIC_FREE_AGENT);
-			break;
+	if (leagueState !== `COMBINES`) {
+		switch (team.tier) {
+			case Tier.PROSPECT:
+				await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
+				break;
+			case Tier.APPRENTICE:
+				await guildMember.roles.add([ROLES.TIER.APPRENTICE, ROLES.TIER.APPRENTICE_FREE_AGENT]);
+				break;
+			case Tier.EXPERT:
+				await guildMember.roles.add([ROLES.TIER.EXPERT, ROLES.TIER.EXPERT_FREE_AGENT]);
+				break;
+			case Tier.MYTHIC:
+				await guildMember.roles.add([ROLES.TIER.MYTHIC, ROLES.TIER.MYTHIC_FREE_AGENT]);
+				break;
+		}
 	}
+
 
 	// get player info (IGN, Accolades) & update their nickname
 	const playerTag = playerIGN.split(`#`)[0];
@@ -158,7 +162,7 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 				})
 			]
 		});
-		await guildMember.send({embeds: [dmEmbed], components: [dmRow]});
+		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
 	} catch (e) {
 		logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the cut message`);

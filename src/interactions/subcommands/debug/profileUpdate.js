@@ -1,8 +1,6 @@
-const { EmbedBuilder, GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
-const { Player, Franchise, ControlPanel } = require(`../../../../prisma`);
-// const { prisma } = require(`../../../prisma`);
-const { LeagueStatus, ContractStatus } = require("@prisma/client");
-// const { StatusEmotes, ROLES } = require("../../../utils/enums");
+const { GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
+const { Player, ControlPanel } = require(`../../../../prisma`);
+const { LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES } = require("../../../../utils/enums");
 

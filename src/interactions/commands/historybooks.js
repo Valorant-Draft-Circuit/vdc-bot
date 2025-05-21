@@ -143,7 +143,7 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
     const season = interaction.options.getNumber(`season`);
 
     const accolades = await prisma.accolades.findMany({ where: { season: season }, include: { Player: { include: { Accounts: true, PrimaryRiotAccount: true } } } });
-    if (accolades.length == 0) return await interaction.reply(`There are no accolades for season ${season}!`);
+    if (accolades.length == 0) return await interaction.editReply(`There are no accolades for season ${season}!`);
 
 
 

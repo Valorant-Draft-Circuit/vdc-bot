@@ -1,10 +1,9 @@
-const { LeagueStatus, } = require(`@prisma/client`);
+const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
 
 const { Franchise, Player, ControlPanel } = require(`../../../../prisma`);
 const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
-const { CHANNELS, ButtonOptions } = require(`../../../../utils/enums`);
-const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
+const { CHANNELS, ButtonOptions, ROLES } = require(`../../../../utils/enums`);
 
 const draftableLeagueStatuses = [LeagueStatus.FREE_AGENT, LeagueStatus.DRAFT_ELIGIBLE];
 
@@ -92,44 +91,46 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     const tierBounds = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
     // if (!TIER_DRAFT_ENABLE[tier]) return await interaction.editReply(`The ${tier} draft has not begun yet!`);
 
-    // get all draftable players & filter to make sure they have an MMR and fall within the MMR range for the tier
-    const draftablePlayers = (await Player.filterAllByStatus(draftableLeagueStatuses))
-        .filter(dp => dp.primaryRiotAccountID !== null)
-        .filter(dp => dp.PrimaryRiotAccount.mmr !== null)
-        .filter(dp => dp.PrimaryRiotAccount.MMR.mmrEffective >= tierBounds.min &&
-            dp.PrimaryRiotAccount.MMR.mmrEffective <= tierBounds.max
-        );
-
     // get the draft board and the current pick
-    const fullDraftBoard = await prisma.draft.findMany({
-        where: { AND: [{ season: season }, { tier: tier }, { round: { not: 99 } }] },
-        include: { Franchise: true },
-    })
+    // const fullDraftBoard = await prisma.draft.findMany({
+    //     where: { AND: [{ season: season }, { tier: tier }, { round: { not: 99 } }] },
+    //     include: { Franchise: true },
+    // })
     const draftBoard = (await prisma.draft.findMany({
         where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
-        include: { Franchise: true },
+        include: { Franchise: { include: { Brand: true } } },
     })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
     const pick = draftBoard[0];
 
-    if (draftBoard.length == 0 || draftablePlayers.length == 0) return await interaction.editReply(`There are no more draftable players or available draft slots, and so the season ${season} ${tier} draft has concluded!`);
+    const draftedPlayers = (await prisma.draft.findMany({
+        where: { AND: [{ season: season }, { tier: tier }] },
+        include: { Franchise: true },
+    })).filter(p => p.userID !== null);
+    const draftedPlayerIDs = draftedPlayers.map(u => u.userID);
 
-    // check to make sure the drafter is allowed to draft for this tier
-    // const drafterDiscordID = interaction.user.id;
-    // const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    // const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
-    // if (!allowedDrafters.includes(drafter.id)) return await interaction.editReply(`You are not a GM or AGM of ${pick.Franchise.name} and cannot draft for this pick.`);
 
     // check to make sure the player is draftable
     const player = await Player.getBy({ discordID: discordID });
-    const riotAccount = player.PrimaryRiotAccount;
-    const mmrEffective = riotAccount.MMR.mmrEffective;
+    const riotAccount = player?.PrimaryRiotAccount;
+    const mmrEffective = riotAccount?.MMR?.mmrEffective;
 
-    if (draftBoard.map(db => db.userID).includes(player.id)) return await interaction.editReply(`The player you're trying to draft has already been picked up by another franchise and cannot be drafted by yours.`);
-    if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
+    // console.log(draftedPlayerIDs)
+    // console.log(player.id)
+
+    if (!player) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> is not in our database.`);
+    if (draftedPlayerIDs.includes(player.id)) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> (\`${player.name}\`, \`${riotAccount.riotIGN}\`) has already been picked up by another franchise (\`${draftedPlayers.find(dp => dp.userID == player.id).Franchise.name}\`) and cannot be drafted by \`${pick.Franchise.name}\`.`);
     if (player.primaryRiotAccountID == null) return await interaction.editReply(`This player does not have a primary Riot account set and cannot be drafted.`);
     if (riotAccount.mmr == null) return await interaction.editReply(`This player does not have an MMR entry and cannot be drafted.`);
     if (riotAccount.MMR.mmrEffective == null) return await interaction.editReply(`This player does not have an \`mmrEffective\` value and cannot be drafted.`);
-    if (mmrEffective < tierBounds.min || mmrEffective > tierBounds.max) return await interaction.editReply(`This player's effectiveMMR (${mmrEffective}) does not fall within the tier bounds for ${tier} (${tierBounds.min} - ${tierBounds.max}) and cannot be drafted in this tier!`);
+    if (mmrEffective < tierBounds.min || mmrEffective > tierBounds.max) return await interaction.editReply(`This player's mmr (\`${mmrEffective}\`) does not fall within the tier bounds for \`${tier}\` (\`${tierBounds.min}\` - \`${tierBounds.max}\`) and cannot be drafted in this tier!`);
+    if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> (\`${player.name}\`, \`${riotAccount?.riotIGN}\`) is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
+
+    // check to make sure the drafter is allowed to draft for this tier
+    const drafterDiscordID = interaction.user.id;
+    const drafterRoles = interaction.member._roles;
+    const drafter = await Player.getBy({ discordID: drafterDiscordID });
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot draft for this pick.`);
 
     const franchise = await Franchise.getBy({ id: pick.franchise })
     const team = franchise.Teams.find(t => t.tier == tier);
@@ -145,7 +146,7 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
         ``,
         `Franchise ID : `,
         `Pick ID : `
-    ].map(f => `\`${f.padStart(20, ` `)}\``)
+    ].map(f => `\`${f.padStart(20, ` `)}\``);
 
     // create the base embed
     const embed = new EmbedBuilder({
@@ -185,23 +186,23 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
 }
 
 async function cancelDraft(/** @type ButtonInteraction */ interaction) {
-    // get season, tier & bounds
-    // const season = await ControlPanel.getSeason();
-    // const tierID = interaction.channelId;
-    // const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
+    const season = await ControlPanel.getSeason();
+    const tierID = interaction.channelId;
+    const tier = Object.entries(CHANNELS.DRAFT_CHANNEL).find(e => e[1] === tierID)[0];
 
     // get the draft board and the current pick
-    // const draftBoard = (await prisma.draft.findMany({
-    //     where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
-    //     include: { Franchise: true },
-    // })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
-    // const pick = draftBoard[0];
+    const draftBoard = (await prisma.draft.findMany({
+        where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
+        include: { Franchise: { include: { Brand: true } } },
+    })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
+    const pick = draftBoard[0];
 
     // check to make sure the drafter is allowed to draft for this tier (if they aren't they can't cancel)
-    // const drafterDiscordID = interaction.user.id;
-    // const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    // const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
-    // if (!allowedDrafters.includes(drafter.id)) return await interaction.editReply(`You are not a GM or AGM of ${pick.Franchise.name} and cannot cancel this draft pick.`);
+    const drafterDiscordID = interaction.user.id;
+    const drafterRoles = interaction.member._roles;
+    const drafter = await Player.getBy({ discordID: drafterDiscordID });
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot cancel this pick.`);
 
     // delete the reply...
     await interaction.deleteReply();
@@ -228,18 +229,18 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     // get the draft board and the current pick
     const draftBoard = (await prisma.draft.findMany({
         where: { AND: [{ season: season }, { tier: tier }, { userID: null }, { round: { not: 99 } }] },
-        include: { Franchise: true },
+        include: { Franchise: { include: { Brand: true } } },
     })).sort((a, b) => a.pick - b.pick).sort((a, b) => a.round - b.round);
-    // const pick = draftBoard[0];
+    const pick = draftBoard[0];
     const nextPick = draftBoard[1];
     // console.log(nextPick)
 
     // check to make sure the drafter is allowed to draft for this tier  (if they aren't they can't confirm)
-    // const drafterDiscordID = interaction.user.id;
-    // const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    // const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID].filter(id => id !== null);
-    // if (!allowedDrafters.includes(drafter.id)) return await interaction.editReply(`You are not a GM or AGM of ${pick.Franchise.name} and so you cannot confirm this draft pick.`);
-
+    const drafterDiscordID = interaction.user.id;
+    const drafterRoles = interaction.member._roles;
+    const drafter = await Player.getBy({ discordID: drafterDiscordID });
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and so you cannot confirm this draft pick.`);
 
     const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID, nextPick.Franchise.agm3ID]
         .filter(id => id !== null)
@@ -249,23 +250,17 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     const nextDrafterUsers = await prisma.user.findMany({
         where: { OR: nextDrafters },
         include: { Accounts: true }
-    })
-
-    const nextDraftersDiscordIDs = nextDrafterUsers.map(ndu => ndu.Accounts.find(a => a.provider == `discord`).providerAccountId)
-    // console.log(discordIDs)
-    // console.log(nextDrafterUsers.map(u=> u.))
-
+    });
+    const nextDraftersDiscordIDs = nextDrafterUsers.map(ndu => ndu.Accounts.find(a => a.provider == `discord`).providerAccountId);
 
     const data = interaction.message.embeds[0].fields[1].value.replaceAll(`\``, ``).split(`\n`);
     const drafteeID = data[1];
     const franchiseID = Number(data[8]);
     const pickID = Number(data[9]);
 
-
     // console.log(drafteeID, franchiseID, pickID)
 
     const draftee = await Player.getBy({ discordID: drafteeID });
-
     const updatedPick = await prisma.draft.update({
         where: { id: pickID },
         data: { userID: draftee.id },
@@ -280,27 +275,47 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
         footer: { text: `Draft — ${tier}` }
     });
 
+    // send the success message
+    await interaction.message.edit({ embeds: [embed], components: [] });
+    await interaction.editReply(`Success!`);
+
+
+    // get all draftable players & filter out non-playing GMs
     const tierBounds = (await ControlPanel.getMMRCaps(`PLAYER`))[tier];
+    const draftableStatuses = [LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.SIGNED, LeagueStatus.GENERAL_MANAGER];
+    const playersWithDraftableStatuses = (await prisma.user.findMany({
+        where: { Status: { leagueStatus: { in: draftableStatuses } } },
+        include: { Status: true }
+    })).filter(p => !(p.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER && p.Status.contractStatus !== ContractStatus.SIGNED));
 
-    // get all draftable players & filter to make sure they have an MMR and fall within the MMR range for the tier
-    const draftablePlayers = (await Player.filterAllByStatus(draftableLeagueStatuses))
-        .filter(dp => dp.primaryRiotAccountID !== null)
-        .filter(dp => dp.PrimaryRiotAccount.mmr !== null)
-        .filter(dp => dp.PrimaryRiotAccount.MMR.mmrEffective >= tierBounds.min &&
-            dp.PrimaryRiotAccount.MMR.mmrEffective <= tierBounds.max
-        );
+    // filter by tier
+    const draftableInTier = playersWithDraftableStatuses.filter(p => {
+        return p?.PrimaryRiotAccount?.MMR?.mmrEffective >= tierBounds.min &&
+            p?.PrimaryRiotAccount?.MMR?.mmrEffective <= tierBounds.max;
+    }).map(u => u?.id);
 
-    if (draftBoard.length == 0 || draftablePlayers.length == 0) return await interaction.editReply(`There are no more draftable players or available draft slots, and so the season ${season} ${tier} draft has concluded!`);
+    // get drafted players
+    const draftedPlayers = (await prisma.draft.findMany({
+        where: { AND: [{ season: season }, { tier: tier }, { NOT: { userID: null } }] },
+        select: { userID: true }
+    })).map(u => u.userID);
 
-    await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => `<@${nddi}>`).join(`, `)}! It's \`${nextPick.Franchise.name}\`'s turn to draft for for their round \`${nextPick.round}\`, pick \`${nextPick.pick}\` slot!`);
-    await interaction.editReply(`Success!`)
-    // await refreshDraftBoardChannel(interaction);
-    return await interaction.message.edit({ embeds: [embed], components: [] });
+
+    const remaining = getExclusiveValues(draftableInTier, draftedPlayers);
+
+    // console.log(`DRAFTABLE`, draftableInTier, draftableInTier.length
+    // console.log(`DRAFTED`, draftedPlayers, draftedPlayers.length)
+    // const confirmDrafted = draftableInTier.filter(d => draftedPlayers.includes(d));
+    // console.log(`DRAFTED VALIDATED`, confirmDrafted, confirmDrafted.length)
+    // console.log(`REMAINING`, remaining, remaining.length)
+
+    if (remaining.length == 0) {
+        return await interaction.channel.send(`There are no more draftable players or available draft slots, and so the season ${season} ${tier} draft has concluded!`);
+    } else {
+        return await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => `<@${nddi}>`).join(`, `)}! It's \`${nextPick.Franchise.name}\`'s turn to draft for for their round \`${nextPick.round}\`, pick \`${nextPick.pick}\` slot!`);
+    }
 }
 
-// async function executeDefaultPick() {
-
-// }
 
 module.exports = {
     beginOfflineDraft: beginOfflineDraft,
@@ -308,4 +323,11 @@ module.exports = {
     draftPlayer: draftPlayer,
     cancelDraft: cancelDraft,
     executeDraft: executeDraft
+}
+
+
+function getExclusiveValues(arr1, arr2) {
+    const set1 = new Set(arr1);
+    const set2 = new Set(arr2);
+    return [...arr1, ...arr2].filter(x => !set1.has(x) || !set2.has(x));
 }
