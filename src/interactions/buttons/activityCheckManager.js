@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, ButtonInteraction } = require("discord.js");
 
 const { Player } = require(`../../../prisma`);
 const { ROLES, ButtonOptions } = require(`../../../utils/enums`);
@@ -23,7 +23,7 @@ module.exports = {
     }
 };
 
-async function confirm(interaction) {
+async function confirm(/** @type {ButtonInteraction} */ interaction) {
     await interaction.deferUpdate(); // defer as early as possible
     await interaction.guild.members.fetch();
 
@@ -57,12 +57,14 @@ async function confirm(interaction) {
         const embed = interaction.message.embeds[0];
         const embedEdits = new EmbedBuilder(embed);
 
+        logger.log(`VERBOSE`, `The activity check setup is complete! Gave ${sharedMemberIDs.length} member(s) the \`Inactive\` role!`);
         embedEdits.setDescription(`This operation is complete. ${sharedMemberIDs.length} member(s) were given the <@&${ROLES.LEAGUE.INACTIVE}> role.`);
 
         return await interaction.message.edit({ embeds: [embedEdits], components: [] });
     }
 
     // begin processing the queue
+    logger.log(`VERBOSE`, `User ${interaction.user} (\`${interaction.user.username}\`) has begun the activity check! Giving  ${sharedMemberIDs.length} member(s) the \`Inactive\` role!`);
     processQueue(sharedMemberIDs, MS_PER_API_CALL, addInactiveRole, finishProcessingMessage);
 
     // update the embed with the expected runtime & remove all the components
@@ -95,17 +97,19 @@ async function cancel(interaction) {
  * @param {Function} endIntervalQueueCallback Callback function to execute once the queue is finished processing
  */
 async function processQueue(arr, queueInterval, intervalCallback, endIntervalQueueCallback) {
-    let index = 0;
+    const numItems = arr.length - 1;
+    const p25 = Math.round(numItems * 0.25);
+    const p50 = Math.round(numItems * 0.50);
+    const p75 = Math.round(numItems * 0.75);
+    const p00 = Math.round(numItems * 1.00);
 
-    const endQueueProcessing = async (intervalID) => {
-        clearInterval(intervalID);
-        return await endIntervalQueueCallback();
-    };
+    for (let i = 0; i < arr.length; i++) {
+        await intervalCallback(arr[i]);
 
-    const intervalID = setInterval(async () => {
-        intervalCallback(arr[index]);
-        index++
-
-        if (arr[index] === undefined) return endQueueProcessing(intervalID);
-    }, queueInterval);
+        if (i === p25) await logger.log(`VERBOSE`, `25% of the activity check setup queue has been processed!`);
+        if (i === p50) await logger.log(`VERBOSE`, `50% of the activity check setup queue has been processed!`);
+        if (i === p75) await logger.log(`VERBOSE`, `75% of the activity check setup queue has been processed!`);
+        if (i === p00) await logger.log(`VERBOSE`, `100% of the activity check setup queue has been processed!`);
+    }
+    return await endIntervalQueueCallback();
 }

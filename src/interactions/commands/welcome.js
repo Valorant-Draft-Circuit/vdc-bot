@@ -2,7 +2,8 @@ const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { Player, Transaction, Flags, ControlPanel, Roles } = require("../../../prisma");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES } = require(`../../../utils/enums`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
+const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const fs = require(`fs`);
 
 const validStatusesToDE = [
     LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT
@@ -34,15 +35,41 @@ module.exports = {
 
 async function singleWelcome(/** @type ChatInputCommandInteraction */ interaction, discordID, bulkWelcomeFlag = false) {
 
-    // get player information from DB and guild info (guildMember & channel)
-    const playerData = await Player.getBy({ discordID: discordID });
-    const guildMember = await interaction.guild.members.fetch(discordID);
-    const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
-
     // editreply vs normal message send (for bulk welcone)
     const replyFunction = (obj) => !bulkWelcomeFlag ?
         interaction.editReply(obj) :
         interaction.channel.send(obj);
+
+    // get player information from DB and guild info (guildMember & channel)
+    const playerData = await Player.getBy({ discordID: discordID });
+    let guildMember;
+    try {
+        guildMember = await interaction.guild.members.fetch(discordID);
+    } catch (e) {
+        if (playerData) {
+            await prisma.user.update({
+                where: { id: playerData.id },
+                data: {
+                    team: null,
+                    Status: {
+                        update: {
+                            leagueStatus: LeagueStatus.UNREGISTERED,
+                            contractStatus: null,
+                            contractRemaining: null
+                        }
+                    }
+                }
+            });
+            return await replyFunction({
+                content: `I can't find <@${discordID}> (dID : \`${discordID}\`)- they may have left the discord server! Attempting to set them to \`UNREGISTERED\``
+            });
+        } else {
+            return await replyFunction({
+                content: `I can't find <@${discordID}> (dID : \`${discordID}\`)- they may have left the discord server & they aren't in our database!`
+            });
+        }
+    }
+    const acceptedChannel = await interaction.guild.channels.fetch(CHANNELS.ACCEPTED_MEMBERS);
 
     // status checks
     // check to see if the bot can perform any actions on this user (i.e. if the bot isn't high enough in role hierarchy)
@@ -143,7 +170,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 
             welcomeSlug = franchise.slug;
             franchiseRoleID = franchise.roleID;
-            
+
             await guildMember.roles.add(ROLES.OPERATIONS.AGM);
             await acceptedChannel.send({
                 content: `Welcome ${guildMember.user} back as an Assistant General Manager for ${franchise.name}!`
@@ -216,7 +243,10 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     // console.log(`${playerData.name} => ${welcomeSlug} | ${ign}`);
 
     // if it's not a bulk welcome, send a reply
-    if (!bulkWelcomeFlag) return await interaction.editReply({ content: `${guildMember.user} was welcomed to the league!` });
+    if (!bulkWelcomeFlag) {
+        buildMMRCache();
+        return await interaction.editReply({ content: `${guildMember.user} was welcomed to the league!` });
+    }
     else return;
 }
 
@@ -227,10 +257,14 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
         return p.Accounts.find((a) => a.provider == `discord`).providerAccountId;
     });
 
+    if (playersToWelcome.length === 0) {
+        return await interaction.editReply({ content: `There are no players to welcome!` });
+    }
+
     const embed = new EmbedBuilder({
         title: `Bulk Welcome`,
         description:
-            `I'm on it! I'll be welcoming: \`${playersToWelcome.length} \` players to the league!\n` +
+            `I'm on it! I'll be welcoming: \`${playersToWelcome.length}\` players to the league!\n` +
             `This will take about \` ${playersToWelcome.length * rateLimitinMS / 1000} \` seconds. I'll let you know when I'm done!`
         ,
         color: 0xE92929,
@@ -243,6 +277,7 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
         // console.log(`${playersToWelcome[i]}, ${i}/${playersToWelcome.length}`);
 
         if (i === playersToWelcome.length - 1) {
+            buildMMRCache();
             await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed to the league!` });
             return clearInterval(int);
         };
@@ -250,4 +285,29 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
     }, rateLimitinMS);
 
     return await interaction.editReply({ embeds: [embed] });
+}
+
+/** Query the database to get MMRs */
+async function buildMMRCache() {
+    const playerMMRs = await prisma.user.findMany({
+        include: {
+            Accounts: { where: { provider: `discord` } },
+            PrimaryRiotAccount: { include: { MMR: true } },
+            Status: true
+        }
+    });
+
+    const mapped = playerMMRs.map((p) => {
+        const disc = p.Accounts[0].providerAccountId;
+        const mmr = p.PrimaryRiotAccount?.MMR?.mmrEffective;
+        return { discordID: disc, mmr: mmr, ls: p.Status.leagueStatus, cs: p.Status.contractStatus };
+    }).filter((p => p.mmr !== null && p.mmr !== undefined));
+
+    const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
+
+    fs.writeFileSync(`./cache/mmrCache.json`, JSON.stringify(mapped));
+    fs.writeFileSync(`./cache/mmrTierLinesCache.json`, JSON.stringify({
+        ...tierLines, pulled: new Date()
+    }));
+    return playerMMRs;
 }

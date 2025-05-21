@@ -21,6 +21,10 @@ const releaseInterval = 5 * 1000; // in ms
 
 
 async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction */ interaction, /** @type Tier */ tier) {
+
+    const userRoles = interaction.member._roles;
+    if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
+
     const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
     const season = await ControlPanel.getSeason();
     const draftBoard = (await prisma.draft.findMany({
@@ -58,7 +62,9 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
         // update nickname
         const playerTag = playerIGN.split(`#`)[0];
-        let guildMember = await interaction.guild.members.fetch(playerDiscordID);
+        let guildMember;
+        try { guildMember = await interaction.guild.members.fetch(playerDiscordID) }
+        catch { logger.log(`WARNING`, `Can't find \`${playerIGN}\` (\`${player.name}\`, \`${playerDiscordID}\`) in \`${interaction.guild.name}\`!`) };
 
         // checks to make sure the bot doesn't crash lmfao
         if (guildMember == undefined) {
@@ -101,7 +107,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             footer: { text: `Valorant Draft Circuit Draft` }
         })
 
-        // Attempt to send a message to the user once they are cut
+        // Attempt to send a message to the user once they are drafted
         try {
             const gmIDs = [
                 franchise.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
@@ -132,12 +138,12 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
         } catch (e) {
-            logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the drafted message`);
+            logger.log(`WARNING`, `User \`${playerIGN}\` (\`${player.name}\`, \`${playerDiscordID}\`) does not have DMs open & will not receive the drafted message`);
         }
 
         // send the update
         await transactionsChannel.send({ embeds: [pickEmbed] });
-        console.log(`REL: R: ${draftPick.round}, P: ${draftPick.pick}, ${playerIGN}`)
+        logger.log(`VERBOSE`, `Releasing \`${tier}\` — R: \`${draftPick.round}\`, P: \`${draftPick.pick}\`, \`${playerIGN}\` (\`${player.name}\`, \`${playerDiscordID}\`)`);
     };
 
     /** Callback function to update the embed once the entire queue is finished processing */
@@ -168,8 +174,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
     await transactionsChannel.send({ embeds: [tierBeginEmbed] });
 
     // begin processing the queue
-    processQueue(draftBoard, releaseInterval, executeSign, finishProcessingMessage);
-
+    // processQueue(draftBoard, releaseInterval, executeSign, finishProcessingMessage);
 
     // update the embed with the expected runtime & remove all the components
     const expectedRuntime = Math.round((releaseInterval * draftBoard.length / 10)) / 100;
@@ -177,7 +182,16 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
         color: COLORS[tier],
         description: `Releasing the season ${season} ${tier} offline draft results. This operation should take approximately ${expectedRuntime} second(s).`
     });
-    return await interaction.editReply({ embeds: [debugEmbed] });
+    await interaction.editReply({ embeds: [debugEmbed] });
+
+    // executing the draft signs
+    for (let i = 0; i < draftBoard.length; i++) {
+        const pick = draftBoard[i];
+        await executeSign(pick);
+    }
+    await finishProcessingMessage();
+
+    return await interaction.channel.send({ content: `The season ${season} ${tier} offline draft results have been released!` })
 }
 
 
@@ -187,20 +201,20 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
  * @param {Function} intervalCallback Callback function to execute every <queueInterval> ms with an index of <arr> as the argument
  * @param {Function} endIntervalQueueCallback Callback function to execute once the queue is finished processing
  */
-async function processQueue(arr, queueInterval, intervalCallback, endIntervalQueueCallback) {
-    let index = 0;
+// async function processQueue(arr, queueInterval, intervalCallback, endIntervalQueueCallback) {
+//     let index = 0;
 
-    const endQueueProcessing = async (intervalID) => {
-        clearInterval(intervalID);
-        return await endIntervalQueueCallback();
-    };
+//     const endQueueProcessing = async (intervalID) => {
+//         clearInterval(intervalID);
+//         return await endIntervalQueueCallback();
+//     };
 
-    const intervalID = setInterval(async () => {
-        intervalCallback(arr[index]);
-        index++
+//     const intervalID = setInterval(async () => {
+//         intervalCallback(arr[index]);
+//         index++
 
-        if (arr[index] === undefined) return endQueueProcessing(intervalID);
-    }, queueInterval);
-}
+//         if (arr[index] === undefined) return endQueueProcessing(intervalID);
+//     }, queueInterval);
+// }
 
 module.exports = { releaseOfflineDraftResults }

@@ -6,6 +6,7 @@ const ccolor = {
     VERBOSE: chalk.magenta,
     DEBUG: chalk.blue,
     WARNING: chalk.yellow,
+    ALERT: chalk.keyword(`orange`),
     ERROR: chalk.red
 };
 
@@ -14,11 +15,20 @@ const ldemote = {
     VERBOSE: `🟪`,
     DEBUG: `🟦`,
     WARNING: `🟨`,
+    ALERT: `🟧`,
     ERROR: `🟥`
 }
 
+const TECH_LEAD_ROLE = `1172963557504209027`;
+const VDC_ALERTS_ROLE = `1355227407778451476`;
+
+const ALERT_ROLE_ID = !Boolean(Number(process.env.PROD)) ? TECH_LEAD_ROLE : VDC_ALERTS_ROLE; // role ID for alert pings
+
 const channels = {
-    matchDrainID: `1224147409899225140`
+    matchDrainID: `1224147409899225140`,    // #submitted-games
+    memberlogs: !Boolean(Number(process.env.PROD)) ?
+        `1328952835932684400`   :           // #logdrain-test
+        `966986710204428291`    ,           // #logdrain-bot
 }
 
 module.exports = class Logger {
@@ -26,6 +36,7 @@ module.exports = class Logger {
         /** @member {Object} logdrain channel object for bot logs */
         this.logdrain;
         this.matchDrain;
+        this.memberlogDrain;
 
         this.logdrainReady = false;
         this.outqueue = [];
@@ -50,6 +61,14 @@ module.exports = class Logger {
         const matchdrainchannel = await loggingServer.channels.cache.get(channels.matchDrainID);
         if (matchdrainchannel === undefined) await this.log(`WARNING`, `Failed to fetch channel for matchdrain, skipping matchdrain initialization`);
         if (matchdrainchannel) this.matchDrain = matchdrainchannel;
+        if (matchdrainchannel) await this.log(`DEBUG`, `Fetched matchdrain channel - (name: ${matchdrainchannel.name}, id: ${matchdrainchannel.id})`);
+
+        // fetch member log drain channel
+        const mainServer = await client.guilds.cache.get(process.env.SERVER_ID);
+        const memberlogdrainchannel = await mainServer.channels.cache.get(channels.memberlogs);
+        if (memberlogdrainchannel === undefined) await this.log(`WARNING`, `Failed to fetch channel for memberlogs, skipping memberlogs initialization`);
+        if (memberlogdrainchannel) this.memberlogDrain = memberlogdrainchannel;
+        if (memberlogdrainchannel) await this.log(`DEBUG`, `Fetched memberlog channel - (name: ${memberlogdrainchannel.name}, id: ${memberlogdrainchannel.id})`);
 
         const logdrainchannel = await loggingServer.channels.cache.get(process.env.LOGGING_CHANNEL);
         if (logdrainchannel === undefined) return await this.log(`WARNING`, `Failed to fetch channel for logdrain, skipping logdrain initialization`);
@@ -62,13 +81,19 @@ module.exports = class Logger {
     };
 
     matchdrain(message) {
+        if (!this.matchDrain) return this.log(`WARNING`, `Attempted to send a message to the matchdrain channel, but it hasn't been initialized!`);
         this.matchDrain.send(message);
+    }
+
+    memberdrain(message) {
+        if (!this.memberlogDrain) return this.log(`WARNING`, `Attempted to send a message to the memberlogdrain channel, but it hasn't been initialized!`);
+        this.memberlogDrain.send(message);
     }
 
     /**
      * Push console events to stdout & forward to channel
      * @param {Object} obj The object to be parsed and outputted to the console
-     * @param {`INFO`|`VERBOSE`|`DEBUG`|`WARNING`|`ERROR`} level log level
+     * @param {`INFO`|`VERBOSE`|`DEBUG`|`WARNING`|`ALERT`|`ERROR`} level log level
      * @param {String} title title of message to log to console
      * @param {String} message details as string (single line) or array (for multi-line output)
      * @param {Stack} stack stack
@@ -77,7 +102,7 @@ module.exports = class Logger {
 
         // date & time
         const time = new Date(timestamp).toLocaleString("en-US", { timeZone: `CST`, month: `short`, day: `2-digit`, hour: `numeric`, minute: `numeric` });
-        const timestampDate = Math.round(Date.now()/1000);
+        const timestampDate = Math.round(Date.now() / 1000);
 
         const levelOut = level.padStart(8, ` `);
 
@@ -89,8 +114,8 @@ module.exports = class Logger {
         if (stack) console.log(tidyStack);
 
         // discord logdrain
-        let logmsg = `${ldemote[level]} <t:${timestampDate}:d> <t:${timestampDate}:T> \` ${levelOut} \` : ${message}`;
-        
+        let logmsg = `${ldemote[level]} <t:${timestampDate}:d> <t:${timestampDate}:T> \` ${levelOut} \` : ${level == `ALERT` ? `<@&${ALERT_ROLE_ID}> ` : ``}${message}`;
+
         if (stack) logmsg += `\n\`\`\`js\n${tidyStack}\n\`\`\``;
         this.outqueue.push(logmsg);
         return this.processLogQueue();

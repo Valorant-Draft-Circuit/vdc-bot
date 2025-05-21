@@ -1,5 +1,5 @@
 const { awardCompPicks } = require(`./awardCompPicks`);
-const { draftPlayer } = require(`./draftPlayer`);
+const { draftPlayer, beginOfflineDraft } = require(`./draftPlayer`);
 const { fulfillFutureTrade } = require(`./fulfillFutureTrade`);
 const { generateLottery } = require(`./generateLottery`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
@@ -17,5 +17,6 @@ module.exports = {
     resetKeeperPick: resetKeeperPick,
     draftPlayer: draftPlayer,
     releaseOfflineDraftResults: releaseOfflineDraftResults,
-    refreshDraftBoardChannel: refreshDraftBoardChannel
+    refreshDraftBoardChannel: refreshDraftBoardChannel,
+    beginOfflineDraft: beginOfflineDraft
 }
