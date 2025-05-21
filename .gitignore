@@ -23,5 +23,6 @@ package-lock.json
 .DS_Store
 utils/commandsStructure/test.js
 src/interactions/commands/test.js
+*.DS_Store
 pnpm-lock.yaml
 ################################################################
