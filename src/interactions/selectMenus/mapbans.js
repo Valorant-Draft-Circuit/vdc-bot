@@ -55,8 +55,7 @@ module.exports = {
 
 
         // check for if the player is allowed/rostered
-        const team = await Team.getBy({ name: teamName });
-        const roster = (await Team.getRosterBy({ id: team.id })).roster;
+        const roster = (await Team.getRosterBy({ name: teamName })).roster;
         const rosterDiscordAccountIDs = roster.map(p => p.Accounts.find(a => a.provider == `discord`)).map(rda => rda.providerAccountId);
         const isOnTeam = rosterDiscordAccountIDs.includes(interaction.member.id);
 
@@ -146,7 +145,17 @@ module.exports = {
 
         // STORE DATA #########################################################
         // find the mapbans info
-        const banDBEntries = await prisma.mapBans.findMany({ where: { matchID: matchID }, include: { Team: { include: { Franchise: { include: { Brand: true } } } } } });
+        const banDBEntries = await prisma.mapBans.findMany({
+            where: { matchID: matchID },
+            include: {
+                Team: {
+                    include: {
+                        Franchise: { include: { Brand: true } },
+                        Roster: { include: { Accounts: true } }
+                    }
+                }
+            }
+        });
         const nextMapBanEntry = banDBEntries.filter(e => e.map == null)[0];
         const updatedDB = await prisma.mapBans.update({
             where: { id: nextMapBanEntry.id },
@@ -155,7 +164,7 @@ module.exports = {
 
 
         // if the next state is a DISCARD or DECIDER, end here ################
-        if (nextBanState == MapBanType.DISCARD || nextBanState == `DECIDER`) {
+        if (nextBanState == MapBanType.DISCARD || nextBanState == MapBanType.DECIDER) {
 
             // update the last map in the database
             const mapData = maps.find(m => m.displayName == remainingMaps[0]);
@@ -168,14 +177,16 @@ module.exports = {
             await interaction.channel.send({ content: `\`${remainingMaps[0]}\` remains as the \`${nextBanState}\``, components: [], files: [mapData.listViewIcon] });
 
             // get the side selection data
-            const nonBans = banDBEntries.filter(e => !e.type.includes(`BAN`) && e.type != MapBanType.DISCARD);
+            const nonBans = banDBEntries.filter(e => e.type == MapBanType.PICK || e.type == MapBanType.DECIDER);
             const firstPick = nonBans[0];
 
-            const teamIDs = Array.from(new Set(nonBans.map(nb => nb.Team.id)));
+            console.log(nonBans)
+
+            const teamIDs = Array.from(new Set(banDBEntries.map(nb => nb.team)));
             const pickingTeamId = teamIDs.filter(tid => tid != firstPick.team)[0];
             const teams = [
-                nonBans.find(nb => nb.team == pickingTeamId).Team,
-                nonBans.find(nb => nb.team != pickingTeamId).Team
+                banDBEntries.find(nb => nb.team == pickingTeamId).Team,
+                banDBEntries.find(nb => nb.team != pickingTeamId).Team
             ];
 
             const pickingTeam = teams.find(t => t.id = pickingTeamId);
@@ -195,12 +206,18 @@ module.exports = {
             });
             const subrow = new ActionRowBuilder({ components: [attack, defense] });
 
+            // return await interaction.channel.send({
+            //     content: `<@&${pickingTeam.Franchise.roleID}>, it's (<${pickingTeam.Franchise.Brand.discordEmote}> \`${pickingTeam.name}\`)'s turn to pick a side for \`${firstPick.map}\`!`,
+            //     components: [subrow]
+            // });
             return await interaction.channel.send({
-                content: `<@&${pickingTeam.Franchise.roleID}>, it's (<${pickingTeam.Franchise.Brand.discordEmote}> \`${pickingTeam.name}\`)'s turn to pick a side for \`${firstPick.map}\`!`,
+                content:
+                    `It's <${pickingTeam.Franchise.Brand.discordEmote}> \`${pickingTeam.name}\`'s turn to pick a side for \`${firstPick.map}\`!\n` +
+                    `-# ||${pickingTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
                 components: [subrow]
             });
 
-            console.log(nonBans)
+            // console.log(nonBans)
 
 
 
@@ -239,7 +256,7 @@ module.exports = {
         // const nextTeam = nextBanState.includes(`HOME`) ? homeTeamName : awayTeamName;
         const nextTeam = await Team.getBy({ name: nextTeamName });
         const nextEmote = nextTeam.Franchise.Brand.discordEmote
-        const nextMatchRole = nextTeam.Franchise.roleID;
+        // const nextMatchRole = nextTeam.Franchise.roleID;
 
         const mapOptions = remainingMaps.map(m => {
             return { label: m, value: m.toLowerCase() }
@@ -253,8 +270,14 @@ module.exports = {
             })]
         });
 
+        // return await interaction.channel.send({
+        //     content: `<@&${nextMatchRole}>, it's (<${nextEmote}> \`${nextTeam.name}\`)'s turn to \`${selectionType}\`!`,
+        //     components: [mapbansRow]
+        // });
         return await interaction.channel.send({
-            content: `<@&${nextMatchRole}>, it's (<${nextEmote}> \`${nextTeam.name}\`)'s turn to \`${selectionType}\`!`,
+            content:
+                `It's <${nextEmote}> \`${nextTeam.name}\`'s turn to \`${selectionType}\`!\n` +
+                `-# ||${nextTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
             components: [mapbansRow]
         });
         // ####################################################################

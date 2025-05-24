@@ -1,6 +1,6 @@
-const { EmbedBuilder, ChatInputCommandInteraction, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { EmbedBuilder, ChatInputCommandInteraction, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, PermissionFlagsBits } = require("discord.js");
 const { Games, Team, ControlPanel, Player } = require("../../../prisma");
-const { GameType, MatchType } = require("@prisma/client");
+const { GameType, MatchType, MapBanType } = require("@prisma/client");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS } = require("../../../utils/enums/channels");
 
@@ -27,85 +27,127 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply({ ephemeral: true });
 
+        // PLAYER CHECKS ##########################################################################
         const player = await Player.getBy({ discordID: interaction.user.id });
         if (player == null) return await interaction.editReply(`You are not in our database!`);
         if (player.team == null) return await interaction.editReply(`You are not on a team!`);
 
+        // ########################################################################################
 
+
+        // EXIST CHECKS ###########################################################################
+        // grab player team and the team's matches
+        const team = player.Team;
         const season = await ControlPanel.getSeason();
         const matches = await prisma.matches.findMany({
             where: {
-                OR: [
-                    { home: player.team },
-                    { away: player.team },
+                AND: [
+                    {
+                        OR: [{ home: player.team }, { away: player.team }
+                        ]
+                    },
+                    {
+                        OR: [{ matchType: MatchType.BO2 }, { matchType: MatchType.BO3 }, { matchType: MatchType.BO5 }],
+                    }
                 ],
                 season: season,
-                matchType: MatchType.BO2,
+                tier: team.tier
             },
             include: {
-                Home: { include: { Franchise: true } },
-                Away: { include: { Franchise: true } },
+                Home: {
+                    include: {
+                        Franchise: { include: { Brand: true } },
+                        Roster: { include: { Accounts: true } }
+                    }
+                },
+                Away: {
+                    include: {
+                        Franchise: { include: { Brand: true } },
+                        Roster: { include: { Accounts: true } }
+                    }
+                },
+                MapBans: true
             }
         });
 
+        // get the next match for the player
         const nextMatch = matches.filter(m => m.dateScheduled > Date.now())[0];
+
+        // check to not begin too early
+        const nextMatchDate = nextMatch.dateScheduled;
+        const isWithin12Hours = (new Date(nextMatchDate) - Date.now()) <= 12 * 60 * 60 * 1000;
+        // if (!isWithin12Hours) return await interaction.editReply(`You cannot begin map bans greater than 12 hours in advance!`);
+
         const channelName = `bans│${player.Team.tier[0]}│${nextMatch.Home.Franchise.slug}-${nextMatch.Away.Franchise.slug}`.toLowerCase();
 
-        console.log(channelName)
-
+        // check channels in the server for if it exists already
         const activebans = (await interaction.guild.channels.fetch())
-            .filter(c => c.parentId == CHANNELS.CATEGORIES.MAPBANS).map(c => { return { name: c.name, id: c.id } });
+            .filter(c => c.parentId == CHANNELS.CATEGORIES.MAPBANS)
+            .map(c => { return { name: c.name, id: c.id } });
+        const banExists = activebans.map(ab => ab.name).includes(channelName);
 
 
-        console.log(activebans)
-        console.log(channelName)
+        // if the channel exists, direct them to it
+        if (banExists) return await interaction.editReply({
+            content: `The mapban for this match (\`${nextMatch.tier}\` - <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} vs. <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name}) exists already: <#${activebans.find(ab => ab.name == channelName).id}>`
+        });
 
-        const mp = await ControlPanel.getBansInfo(nextMatch.matchType);
+        // if the ban has already been completed, send this
+        if (nextMatch.MapBans.length != 0) return await interaction.editReply({
+            content: `The mapbans for this match has already begun and/or completed!`
+        });
+        // ########################################################################################
 
-        const banOrderReadable = mp.banOrderReadable;
-        const mapPool = mp.mapPool;
 
-        console.log(mp)
+        // DATA PULL ##############################################################################
+        const [banOrderStr, mapPoolStr] = await Promise.all([
+            await ControlPanel.getBanOrder(nextMatch.matchType),
+            await ControlPanel.getMapPool()
+        ]);
+        const banOrder = banOrderStr.split(`,`);
+        const mapPool = mapPoolStr.split(`,`);
 
-
-        // for (let i = 0; i < activebans.length; i++) {
-        //     console.log(activebans[i], channelName, activebans[i] == channelName)
-
-        // }
-        // console.log()
-
-        // return
-        // // .guild.channels.exists('name', channelName)
-        if (activebans.map(c => c.name).includes(channelName)) {
-            //checks if there in an item in the channels collection that corresponds with the supplied parameters, returns a boolean
-            return await interaction.editReply({
-                content: `The <#${activebans.find(c => c.name == channelName).id}> channel already exists in this guild.`
-            });
-        }
+        // TIME ---------------------------------------------------------------
+        const date = Math.round(Date.parse(nextMatch.dateScheduled) / 1000);
+        const timeStampString = `<t:${date}:f> (<t:${date}:R>)`; // ex: May 28, 2025 8:00 PM (in 5 days)
+        // --------------------------------------------------------------------
 
 
         const embed = new EmbedBuilder({
-            title: `Map Bans: ${nextMatch.Home.name} v. ${nextMatch.Away.name}`,
+            title: `Map Bans: <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} v. <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name}`,
             description:
-                `**Home** : ${nextMatch.Home.Franchise.name} - ${nextMatch.Home.name}\n` +
-                `**Away** : ${nextMatch.Away.Franchise.name} - ${nextMatch.Away.name}\n\n` +
-                `**Ban Order** :\n${banOrderReadable.join(`, `)}\n` +
-                `**Map Pool** :\n${mapPool.join(`, `)}\n`,
+                `\`Home\` : <${nextMatch.Home.Franchise.Brand.discordEmote}> \`${nextMatch.Home.Franchise.slug.padStart(3, ` `)}\` - \`${nextMatch.Home.name}\`\n` +
+                `\`Away\` : <${nextMatch.Away.Franchise.Brand.discordEmote}> \`${nextMatch.Away.Franchise.slug.padStart(3, ` `)}\` - \`${nextMatch.Away.name}\`\n` +
+                `\`Match ID\` : \`${nextMatch.matchID}\`\n` +
+                `\`Date\` : ${timeStampString}\n\n` +
+                `**Ban Order** :\n${banOrder.map(o => `\`${o}\``).join(`, `)}\n\n` +
+                `**Map Pool** :\n${mapPool.map(mp => `\`${mp}\``).join(`, `)}\n`,
             color: COLORS[nextMatch.Home.tier]
         });
 
 
+        // create database entries
+        const dbOut = generateDatabaseInfo(nextMatch.matchID, banOrder, nextMatch.Home, nextMatch.Away);
+        await prisma.mapBans.createMany({ data: dbOut });
 
+        // create the channel with the roster permission overrides
+        const channelOverrides = [
+            nextMatch.Home.Roster.map(p => p.Accounts.find(a => a.provider == `discord`).providerAccountId),
+            nextMatch.Away.Roster.map(p => p.Accounts.find(a => a.provider == `discord`).providerAccountId),
+        ].flat().map(discordID => {
+            return {
+                id: discordID,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
 
-
-
+            }
+        });
         const newchannel = await interaction.guild.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
             parent: CHANNELS.CATEGORIES.MAPBANS,
+            permissionOverwrites: channelOverrides
         });
-
-        newchannel.send({
+        await newchannel.send({
             embeds: [embed],
             components: [new ActionRowBuilder({
                 components: [
@@ -116,10 +158,64 @@ module.exports = {
                     })
                 ]
             })]
-        })
+        });
+
+        const isHome = banOrder[0].toUpperCase().includes(`HOME`);
+        const selectionType = banOrder[0].split(`_`)[banOrder[0].split(`_`).length - 1].toUpperCase();
+
+        // console.log(`home?`, isHome);
+        // console.log(selectionType);
 
 
+        // send the next ban message ##########################################
+        const nextTeam = isHome ? nextMatch.Home : nextMatch.Away;
+        const nextEmote = nextTeam.Franchise.Brand.discordEmote
+        // const nextMatchRole = nextTeam.Franchise.roleID;
+
+        const mapOptions = mapPool.map(m => {
+            return { label: m, value: m.toLowerCase() }
+        });
+
+        const mapbansRow = new ActionRowBuilder({
+            components: [new StringSelectMenuBuilder({
+                customId: `mapbans`,
+                placeholder: `${nextTeam.name}'s ${selectionType.toLowerCase()}`,
+                options: mapOptions,
+            })]
+        });
+
+        await newchannel.send({
+            content: `It's <${nextEmote}> \`${nextTeam.name}\`'s turn to \`${selectionType}\`!\n` +
+                `-# ||${nextTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
+            components: [mapbansRow]
+        });
 
         return await interaction.editReply(`ok: ${newchannel}`);
     }
+}
+
+function generateDatabaseInfo(matchID, banOrder, home, away) {
+    let dbOut = [];
+    for (let i = 0; i < banOrder.length; i++) {
+
+        const currentMapBanState = banOrder[i];
+
+        // isolate MapBanType & cast to type
+        let type;
+        if (currentMapBanState.includes(`PICK`)) type = MapBanType.PICK;
+        if (currentMapBanState.includes(`BAN`)) type = MapBanType.BAN;
+        if (currentMapBanState.includes(`DISCARD`)) type = MapBanType.DISCARD;
+        if (currentMapBanState.includes(`DECIDER`)) type = MapBanType.DECIDER;
+
+        const teamID = currentMapBanState.includes(`HOME`) ? home.id : away.id;
+        const isDefault = currentMapBanState.includes(`DISCARD`) || currentMapBanState.includes(`DECIDER`);
+
+        dbOut.push({
+            matchID: matchID,
+            order: i,
+            type: type,
+            team: isDefault ? null : teamID,
+        });
+    }
+    return dbOut;
 }
