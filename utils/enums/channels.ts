@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.CHANNELS = void 0;
-exports.CHANNELS = !Boolean(Number(process.env.PROD)) ?
+export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
     /** @development */
     {
         TRANSACTIONS: "1057088094312091678",
@@ -39,6 +36,9 @@ exports.CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     PROSPECT: "1360365712828535085",
                 }
             },
+        },
+        CATEGORIES: {
+            MAPBANS: "1318651615699402802"
         }
     } :
     /** @production */
@@ -78,5 +78,8 @@ exports.CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     PROSPECT: "1052001442979905586",
                 }
             },
+        },
+        CATEGORIES: {
+            MAPBANS: "1375628817103716503"
         }
     };
