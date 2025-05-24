@@ -147,18 +147,7 @@ module.exports = {
             parent: CHANNELS.CATEGORIES.MAPBANS,
             permissionOverwrites: channelOverrides
         });
-        await newchannel.send({
-            embeds: [embed],
-            components: [new ActionRowBuilder({
-                components: [
-                    new ButtonBuilder({
-                        customId: `del`,
-                        style: ButtonStyle.Danger,
-                        label: `DELETE`
-                    })
-                ]
-            })]
-        });
+        await newchannel.send({ embeds: [embed] });
 
         const isHome = banOrder[0].toUpperCase().includes(`HOME`);
         const selectionType = banOrder[0].split(`_`)[banOrder[0].split(`_`).length - 1].toUpperCase();
