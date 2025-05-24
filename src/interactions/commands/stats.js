@@ -94,6 +94,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         return { ...s, rounds: rounds, totalDamage: s.damage }
     });
 
+    // get agent pool & save as emotes
     const agentEmotes = client.application.emojis.cache;
     const allAgentsPicked = processedPlayerStats.map(ps => ps.agent);
     const agentPercentage = [...new Set(processedPlayerStats.map(ps => ps.agent))].map(a => {
