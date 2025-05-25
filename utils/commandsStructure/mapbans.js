@@ -16,6 +16,8 @@ const { ApplicationCommandOptionType } = require(`discord.js`);
 module.exports = {
     name: 'mapbans',
     description: 'Run mapbans',
+
+    /** Leaving this here just in case but this honestly seems impossible if I want to reuse code. Might need to rewrite a bunch of shit. Future project maybe */
     // options: [
     //     {
     //         name: 'unlinked',
