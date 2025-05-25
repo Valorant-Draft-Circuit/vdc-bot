@@ -76,7 +76,7 @@ module.exports = {
         // check to not begin too early
         const nextMatchDate = nextMatch.dateScheduled;
         const isWithin12Hours = (new Date(nextMatchDate) - Date.now()) <= 12 * 60 * 60 * 1000;
-        // if (!isWithin12Hours) return await interaction.editReply(`You cannot begin map bans greater than 12 hours in advance!`);
+        if (!isWithin12Hours) return await interaction.editReply(`You cannot begin map bans greater than 12 hours in advance!`);
 
         const channelName = `bans│${player.Team.tier[0]}│${nextMatch.Home.Franchise.slug}-${nextMatch.Away.Franchise.slug}`.toLowerCase();
 
@@ -111,10 +111,12 @@ module.exports = {
         const date = Math.round(Date.parse(nextMatch.dateScheduled) / 1000);
         const timeStampString = `<t:${date}:f> (<t:${date}:R>)`; // ex: May 28, 2025 8:00 PM (in 5 days)
         // --------------------------------------------------------------------
+        // ########################################################################################
 
 
+        // CHANNEL CREATION #######################################################################
         const embed = new EmbedBuilder({
-            title: `Map Bans: <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} v. <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name}`,
+            title: `Map Bans: <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} vs. <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name}`,
             description:
                 `\`Home\` : <${nextMatch.Home.Franchise.Brand.discordEmote}> \`${nextMatch.Home.Franchise.slug.padStart(3, ` `)}\` - \`${nextMatch.Home.name}\`\n` +
                 `\`Away\` : <${nextMatch.Away.Franchise.Brand.discordEmote}> \`${nextMatch.Away.Franchise.slug.padStart(3, ` `)}\` - \`${nextMatch.Away.name}\`\n` +
@@ -122,7 +124,7 @@ module.exports = {
                 `\`Date\` : ${timeStampString}\n\n` +
                 `**Ban Order** :\n${banOrder.map(o => `\`${o}\``).join(`, `)}\n\n` +
                 `**Map Pool** :\n${mapPool.map(mp => `\`${mp}\``).join(`, `)}\n`,
-            color: COLORS[nextMatch.Home.tier]
+            color: COLORS[nextMatch.tier]
         });
 
 
@@ -148,15 +150,13 @@ module.exports = {
             permissionOverwrites: channelOverrides
         });
         await newchannel.send({ embeds: [embed] });
+        // ########################################################################################
 
+
+
+        // send the next ban message ##############################################################
         const isHome = banOrder[0].toUpperCase().includes(`HOME`);
         const selectionType = banOrder[0].split(`_`)[banOrder[0].split(`_`).length - 1].toUpperCase();
-
-        // console.log(`home?`, isHome);
-        // console.log(selectionType);
-
-
-        // send the next ban message ##########################################
         const nextTeam = isHome ? nextMatch.Home : nextMatch.Away;
         const nextEmote = nextTeam.Franchise.Brand.discordEmote
         // const nextMatchRole = nextTeam.Franchise.roleID;
@@ -179,7 +179,9 @@ module.exports = {
             components: [mapbansRow]
         });
 
-        return await interaction.editReply(`ok: ${newchannel}`);
+        logger.log(`VERBOSE`, `${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) began mapbans for \`${nextMatch.tier}\` Match Day \`${nextMatch.matchDay}\` — \`${nextMatch.Home.name}\` vs. \`${nextMatch.Away.name}\``);
+        return await interaction.editReply({ content: `Mapbans for \`${nextMatch.tier}\` Match Day \`${nextMatch.matchDay}\` — \`${nextMatch.Home.name}\` vs. \`${nextMatch.Away.name}\` have been created here: ${newchannel}` });
+        // ########################################################################################
     }
 }
 
