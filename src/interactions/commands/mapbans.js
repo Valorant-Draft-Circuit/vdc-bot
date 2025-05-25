@@ -149,8 +149,7 @@ module.exports = {
         const isHome = banOrder[0].toUpperCase().includes(`HOME`);
         const selectionType = banOrder[0].split(`_`)[banOrder[0].split(`_`).length - 1].toUpperCase();
         const nextTeam = isHome ? nextMatch.Home : nextMatch.Away;
-        const nextEmote = nextTeam.Franchise.Brand.discordEmote
-        // const nextMatchRole = nextTeam.Franchise.roleID;
+        const nextEmote = nextTeam.Franchise.Brand.discordEmote;
 
         const mapOptions = mapPool.map(m => {
             return { label: m, value: m.toLowerCase() }
