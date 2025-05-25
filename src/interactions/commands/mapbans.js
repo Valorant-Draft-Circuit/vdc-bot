@@ -1,24 +1,15 @@
-const { EmbedBuilder, ChatInputCommandInteraction, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, PermissionFlagsBits } = require("discord.js");
-const { Games, Team, ControlPanel, Player } = require("../../../prisma");
-const { GameType, MatchType, MapBanType } = require("@prisma/client");
-const { prisma } = require("../../../prisma/prismadb");
-const { CHANNELS } = require("../../../utils/enums/channels");
-
-const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
-const playoffsCutoff = {
-    prospect: 4,
-    apprentice: 6,
-    expert: 6,
-    mythic: 4
-};
+const { EmbedBuilder, ChatInputCommandInteraction, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, PermissionFlagsBits } = require(`discord.js`);
+const { ControlPanel, Player } = require(`../../../prisma`);
+const { MatchType, MapBanType } = require(`@prisma/client`);
+const { prisma } = require(`../../../prisma/prismadb`);
+const { CHANNELS } = require(`../../../utils/enums/channels`);
 
 const COLORS = {
     PROSPECT: 0xFEC335,
     APPRENTICE: 0x72C357,
     EXPERT: 0x04AEE4,
     MYTHIC: 0xA657A6,
-}
-
+};
 
 module.exports = {
 
