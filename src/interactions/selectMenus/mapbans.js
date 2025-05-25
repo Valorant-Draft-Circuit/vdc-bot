@@ -1,9 +1,8 @@
-const { Collection, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Collection, EmbedBuilder, ActionRowBuilder, StringSelectMenuInteraction, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
 
 const { prisma } = require(`../../../prisma/prismadb`);
-const { StringSelectMenuInteraction } = require(`discord.js`);
-const { Team, Player, ControlPanel } = require('../../../prisma');
-const { MatchType, MapBanType } = require('@prisma/client');
+const { Team } = require(`../../../prisma`);
+const { MapBanType } = require(`@prisma/client`);
 
 
 module.exports = {
@@ -16,10 +15,14 @@ module.exports = {
         const { values, message } = interaction;
 
 
+        // DATA FETCHING ##########################################################################
 
-
-
-
+        /** 
+         * Full transparency- this is probably the worst way to have done it.... 
+         * it probably would have been a better idea to encode information in the
+         * channel topic instead of fetching every message and getting the
+         * first one. Maybe in an update.... 
+         */
 
         // get every message in the channel
         const messages = await fetchAllMessages(interaction);
@@ -38,39 +41,39 @@ module.exports = {
         const matchID = Number(splitDesc[2].match(/`(\d+)/)[1]);
         const homeTeamName = splitDesc[0].split(`\``)[5];
         const awayTeamName = splitDesc[1].split(`\``)[5];
-
-        console.log(homeTeamName, awayTeamName)
-
-        // ban order state (BAN, PICK)
-        const currentBanState = banOrder[0];
-        const nextBanState = banOrder[1];
+        // ########################################################################################
 
 
+
+        // DATA PROCESSING ########################################################################
         // extract data from the interaction message
         const splitInteractionMessage = message.content.split(`\``);
         const emote = splitInteractionMessage[0].match(/(<:\w+:)\d+>/)[0];
         const teamName = splitInteractionMessage[1];
         const mapBanType = splitInteractionMessage[3];
         const mapSelection = values[0][0].toUpperCase() + values[0].substring(1).toLowerCase();
+        // ########################################################################################
 
 
+
+        // CHECKS #################################################################################
         // check for if the player is allowed/rostered
         const roster = (await Team.getRosterBy({ name: teamName })).roster;
         const rosterDiscordAccountIDs = roster.map(p => p.Accounts.find(a => a.provider == `discord`)).map(rda => rda.providerAccountId);
         const isOnTeam = rosterDiscordAccountIDs.includes(interaction.member.id);
 
         if (!isOnTeam) return await interaction.channel.send({ content: `${interaction.member}, you are not a rostered player for \`${teamName}\`, and cannot make this selection` });
+        // ########################################################################################
 
 
+
+        // EMBED EDITING ##########################################################################
         // "cross out" as the map bans progress
         const selectionIndex = allMaps.indexOf(mapSelection);
         allMaps[selectionIndex] = `||${mapSelection}||`;
         const banOrderSelectionIndex = allBanOrders.findIndex(e => !e.includes(`||`));
         allBanOrders[banOrderSelectionIndex] = `||${banOrder[banOrderSelectionIndex]}||`;
 
-
-        // console.log(splitDesc)
-        // console.log(allMaps)
 
         splitDesc[6] = allBanOrders.map(abo => {
             if (abo.includes(`||`)) {
@@ -93,57 +96,27 @@ module.exports = {
 
         const remainingMaps = splitDesc[9].replaceAll(`\``, ``).split(`, `).filter(e => !e.includes(`||`));
 
-        const embed = embedMessage;
-        const embedEdits = new EmbedBuilder(embed);
+        const embedEdits = new EmbedBuilder(embedMessage);
         embedEdits.setDescription(splitDesc.join(`\n`));
-        // const firstMessageFetch = await interaction.channel.messages.fetch({id: firstMessage.id})
+
         const firstMessageFetch = interaction.channel.messages.cache.get(firstMessage.id);
         await firstMessageFetch.edit({ embeds: [embedEdits] });
-
-
-        // console.log(splitDesc)
-
-        // console.log(teamName, mapBanType);
-        // console.log(matchID);
-        // console.log(currentBanState, nextBanState);
-        // console.log(remainingMaps);
+        // ########################################################################################
 
 
 
-        // console.log(maps)
-        // console.log(mapData)
+        // FETCH DATA #############################################################################
         const response = await fetch(`https://valorant-api.com/v1/maps`);
         if (!response.ok) return logger.log(`ERROR`, `There was an error fetching map data!`)
         const maps = (await response.json()).data;
 
         const mapData = maps.find(m => m.displayName == mapSelection);
-        // console.log(mapData)
-
-
-        // if (mapBanType == `PICK`) {
-        //     const attack = new ButtonBuilder({
-        //         customId: `mapbans_attack`,
-        //         label: `attack`,
-        //         style: ButtonStyle.Secondary,
-        //         emoji: `⚔️`
-        //     });
-
-        //     const defense = new ButtonBuilder({
-        //         customId: `mapbans_defense`,
-        //         label: `defense`,
-        //         style: ButtonStyle.Secondary,
-        //         emoji: `🛡️`
-        //     });
-        //     const subrow = new ActionRowBuilder({ components: [attack, defense] });
-        //     await interaction.message.edit({ content: `${emote} \`${teamName}\` select \`${mapSelection}\` as their \`${mapBanType}\``, components: [subrow], files: [mapData.listViewIcon] });
-        // } else {
-        //     await interaction.message.edit({ content: `${emote} \`${teamName}\` select \`${mapSelection}\` as their \`${mapBanType}\``, components: [], files: [mapData.listViewIcon] });
-        // }
-
         await interaction.message.edit({ content: `${emote} \`${teamName}\` select \`${mapSelection}\` as their \`${mapBanType}\``, components: [], files: [mapData.listViewIcon] });
+        // ########################################################################################
 
 
-        // STORE DATA #########################################################
+
+        // STORE DATA #############################################################################
         // find the mapbans info
         const banDBEntries = await prisma.mapBans.findMany({
             where: { matchID: matchID },
@@ -163,7 +136,8 @@ module.exports = {
         });
 
 
-        // if the next state is a DISCARD or DECIDER, end here ################
+        // if the next state is a DISCARD or DECIDER, end here ####################################
+        const nextBanState = banOrder[1];
         if (nextBanState == MapBanType.DISCARD || nextBanState == MapBanType.DECIDER) {
 
             // update the last map in the database
@@ -174,13 +148,16 @@ module.exports = {
             });
 
             // send the last map in the mapbans channel
-            await interaction.channel.send({ content: `\`${remainingMaps[0]}\` remains as the \`${nextBanState}\``, components: [], files: [mapData.listViewIcon] });
+            await interaction.channel.send({
+                content: `\`${remainingMaps[0]}\` remains as the \`${nextBanState}\``,
+                components: [],
+                files: [mapData.listViewIcon]
+            });
 
             // get the side selection data
             const nonBans = banDBEntries.filter(e => e.type == MapBanType.PICK || e.type == MapBanType.DECIDER);
             const firstPick = nonBans[0];
 
-            console.log(nonBans)
 
             const teamIDs = Array.from(new Set(banDBEntries.map(nb => nb.team)));
             const pickingTeamId = teamIDs.filter(tid => tid != firstPick.team)[0];
@@ -189,8 +166,7 @@ module.exports = {
                 banDBEntries.find(nb => nb.team != pickingTeamId).Team
             ];
 
-            const pickingTeam = teams.find(t => t.id = pickingTeamId);
-
+            // CREATE ATK/DEF BUTTONS
             const attack = new ButtonBuilder({
                 customId: `mapbans_attack-${firstPick.matchID}-${firstPick.order}`,
                 label: `Attack`,
@@ -206,57 +182,26 @@ module.exports = {
             });
             const subrow = new ActionRowBuilder({ components: [attack, defense] });
 
-            // return await interaction.channel.send({
-            //     content: `<@&${pickingTeam.Franchise.roleID}>, it's (<${pickingTeam.Franchise.Brand.discordEmote}> \`${pickingTeam.name}\`)'s turn to pick a side for \`${firstPick.map}\`!`,
-            //     components: [subrow]
-            // });
+
+
+            const pickingTeam = teams.find(t => t.id = pickingTeamId);
             return await interaction.channel.send({
                 content:
                     `It's <${pickingTeam.Franchise.Brand.discordEmote}> \`${pickingTeam.name}\`'s turn to pick a side for \`${firstPick.map}\`!\n` +
                     `-# ||${pickingTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
                 components: [subrow]
             });
-
-            // console.log(nonBans)
-
-
-
         }
-        // ####################################################################
+        // ########################################################################################
 
 
 
-        // send the next ban message ##########################################
-        // const player = await Player.getBy({ discordID: interaction.user.id });
-        // const season = await ControlPanel.getSeason();
-        // const matches = await prisma.matches.findMany({
-        //     where: {
-        //         AND: [
-        //             {
-        //                 OR: [{ home: player.team }, { away: player.team }
-        //                 ]
-        //             },
-        //             {
-        //                 OR: [{ matchType: MatchType.BO2 }, { matchType: MatchType.BO3 }, { matchType: MatchType.BO5 }],
-        //             }
-        //         ],
-        //         season: season,
-        //         tier: team.tier
-        //     },
-        //     include: {
-        //         Home: { include: { Franchise: { include: { Brand: true } } } },
-        //         Away: { include: { Franchise: { include: { Brand: true } } } },
-        //     }
-        // });
-
+        // GO NEXT SELECTION ######################################################################
         const selectionType = nextBanState.split(`_`)[nextBanState.split(`_`).length - 1].toUpperCase();
-        // const nextMatch = matches.filter(m => m.dateScheduled > Date.now())[0];
         const nextTeamName = nextBanState.includes(`HOME`) ? homeTeamName : awayTeamName;
-        // console.log(nextTeam)
-        // const nextTeam = nextBanState.includes(`HOME`) ? homeTeamName : awayTeamName;
         const nextTeam = await Team.getBy({ name: nextTeamName });
-        const nextEmote = nextTeam.Franchise.Brand.discordEmote
-        // const nextMatchRole = nextTeam.Franchise.roleID;
+        const nextEmote = nextTeam.Franchise.Brand.discordEmote;
+
 
         const mapOptions = remainingMaps.map(m => {
             return { label: m, value: m.toLowerCase() }
@@ -270,19 +215,13 @@ module.exports = {
             })]
         });
 
-        // return await interaction.channel.send({
-        //     content: `<@&${nextMatchRole}>, it's (<${nextEmote}> \`${nextTeam.name}\`)'s turn to \`${selectionType}\`!`,
-        //     components: [mapbansRow]
-        // });
         return await interaction.channel.send({
             content:
                 `It's <${nextEmote}> \`${nextTeam.name}\`'s turn to \`${selectionType}\`!\n` +
                 `-# ||${nextTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
             components: [mapbansRow]
         });
-        // ####################################################################
-
-
+        // ########################################################################################
     }
 };
 
