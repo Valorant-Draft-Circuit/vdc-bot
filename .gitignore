@@ -21,6 +21,7 @@ utils/commandsStructure/stash
 # Ignored Files ################################################
 package-lock.json
 .DS_Store
+*.DS_Store
 utils/commandsStructure/test.js
 src/interactions/commands/test.js
 pnpm-lock.yaml

@@ -1,30 +1,26 @@
 export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
     /** @development */
     {
-        TRANSACTIONS: "1234719001616056370",
-        ACCEPTED_MEMBERS: "1057088139711234078",
-        MEMBER_LOGS: "1057088287719817256",
-        FRANCHISES: "1250480424031879188",
-        DRAFT_BOARD: "1300688313988022272",
-
+        TRANSACTIONS: `1057088094312091678`,
+        ACCEPTED_MEMBERS: `1057088139711234078`,
+        MEMBER_LOGS: `1057088287719817256`,
+        FRANCHISES: `1250480424031879188`,
+        DRAFT_BOARD: `1300688313988022272`,
         DRAFT_CHANNEL: {
-            MYTHIC: `1300688313988022272`,
-            EXPERT: `1300688313988022272`,
-            APPRENTICE: `1300688313988022272`,
-            PROSPECT: `1300688313988022272`
+            MYTHIC: `1059244366671118487`,
+            EXPERT: `1059244366671118487`,
+            APPRENTICE: `1059244366671118487`,
+            PROSPECT: `1059244366671118487`
         },
-
         ANNOUNCEMENTS: {
             FM: `1234719001616056370`
         },
-
         VC: {
             // LOBBY: `1027754353970389067`,
             COMBINES: {
                 SORT_CHANNEL: `1360365081325600849`,
                 // LOBBY_CHANNEL: `1360365391121223882`,
                 // NEW_TEAM_CHANNEL: `1360365436839133251`,
-
                 /** WAITING ROOMS */
                 WAITING_ROOM: {
                     MYTHIC: `1360365299672682496`,
@@ -32,7 +28,6 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     APPRENTICE: `1360365176347557898`,
                     PROSPECT: `1360365121154842774`,
                 },
-
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
                     MYTHIC: `1360365496276353105`,
@@ -41,34 +36,33 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     PROSPECT: `1360365712828535085`,
                 }
             },
+        },
+        CATEGORIES: {
+            MAPBANS: `1318651615699402802`
         }
     } :
     /** @production */
     {
-        TRANSACTIONS: "963553611051319316",
-        ACCEPTED_MEMBERS: "1049259805379924058",
-        MEMBER_LOGS: "966986710204428291",
-        FRANCHISES: "1047026056126812212",
-        DRAFT_BOARD: "1311521719932157993",
-
+        TRANSACTIONS: `963553611051319316`,
+        ACCEPTED_MEMBERS: `1049259805379924058`,
+        MEMBER_LOGS: `966986710204428291`,
+        FRANCHISES: `1047026056126812212`,
+        DRAFT_BOARD: `1311521719932157993`,
         DRAFT_CHANNEL: {
             MYTHIC: `1173394756680822854`,
             EXPERT: `1173394810170790019`,
             APPRENTICE: `1173394850905853952`,
             PROSPECT: `1173394893297696788`
         },
-
         ANNOUNCEMENTS: {
             FM: `966212909703237662`
         },
-
         VC: {
             LOBBY: `963274331864047619`,
             COMBINES: {
                 SORT_CHANNEL: `1361090565223088269`,
                 // LOBBY_CHANNEL: `1360365391121223882`,
                 // NEW_TEAM_CHANNEL: `1360365436839133251`,
-
                 /** WAITING ROOMS */
                 WAITING_ROOM: {
                     MYTHIC: `1052005788765401169`,
@@ -76,7 +70,6 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     APPRENTICE: `1165389054938980394`,
                     PROSPECT: `1052002652688486554`,
                 },
-
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
                     MYTHIC: `1052001654569975888`,
@@ -85,5 +78,8 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     PROSPECT: `1052001442979905586`,
                 }
             },
+        },
+        CATEGORIES: {
+            MAPBANS: `1375628817103716503`
         }
     };
