@@ -101,8 +101,8 @@ module.exports = {
 
         // DATA PULL ##############################################################################
         const [banOrderStr, mapPoolStr] = await Promise.all([
-            await ControlPanel.getBanOrder(nextMatch.matchType),
-            await ControlPanel.getMapPool()
+            ControlPanel.getBanOrder(nextMatch.matchType),
+            ControlPanel.getMapPool()
         ]);
         const banOrder = banOrderStr.split(`,`);
         const mapPool = mapPoolStr.split(`,`);
