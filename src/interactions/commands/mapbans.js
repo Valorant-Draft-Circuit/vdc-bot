@@ -1,4 +1,4 @@
-const { EmbedBuilder, ChatInputCommandInteraction, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, PermissionFlagsBits } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, PermissionFlagsBits, MessageFlags } = require(`discord.js`);
 const { ControlPanel, Player } = require(`../../../prisma`);
 const { MatchType, MapBanType } = require(`@prisma/client`);
 const { prisma } = require(`../../../prisma/prismadb`);
@@ -16,7 +16,7 @@ module.exports = {
     name: `mapbans`,
 
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
         // PLAYER CHECKS ##########################################################################
         const player = await Player.getBy({ discordID: interaction.user.id });
@@ -29,21 +29,23 @@ module.exports = {
 
         // EXIST CHECKS ###########################################################################
         // grab player team and the team's matches
-        const team = player.Team;
         const season = await ControlPanel.getSeason();
         const matches = await prisma.matches.findMany({
             where: {
                 AND: [
                     {
-                        OR: [{ home: player.team }, { away: player.team }
-                        ]
+                        OR: [{ home: player.team }, { away: player.team }]
                     },
                     {
-                        OR: [{ matchType: MatchType.BO2 }, { matchType: MatchType.BO3 }, { matchType: MatchType.BO5 }],
+                        OR: [
+                            { matchType: MatchType.BO2 },
+                            { matchType: MatchType.BO3 },
+                            { matchType: MatchType.BO5 }
+                        ]
                     }
                 ],
                 season: season,
-                tier: team.tier
+                tier: player.Team.tier
             },
             include: {
                 Home: {
@@ -137,11 +139,22 @@ module.exports = {
 
             }
         });
+
+        const bansCategory = interaction.guild.channels.cache.find(c => c.id == CHANNELS.CATEGORIES.MAPBANS);
         const newchannel = await interaction.guild.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
             parent: CHANNELS.CATEGORIES.MAPBANS,
-            permissionOverwrites: channelOverrides
+            permissionOverwrites: [
+                ...channelOverrides,
+                ...bansCategory.permissionOverwrites.cache.map((p) => {
+                    return {
+                        id: p.id,
+                        allow: p.allow,
+                        deny: p.deny,
+                    };
+                })
+            ]
         });
         await newchannel.send({ embeds: [embed] });
         // ########################################################################################
