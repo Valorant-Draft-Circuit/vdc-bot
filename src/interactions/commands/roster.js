@@ -28,9 +28,13 @@ module.exports = {
 
       // get data from DB
       const teamName = _hoistedOptions[0].value;
-      const team = await Team.getBy({ name: teamName });
-      const teamRoster = await Team.getRosterBy({ name: teamName });
-      const franchise = await Franchise.getBy({ teamName: teamName });
+
+      const [team, teamRoster, franchise, season] = await Promise.all([
+         Team.getBy({ name: teamName }),
+         Team.getRosterBy({ name: teamName }),
+         Franchise.getBy({ teamName: teamName }),
+         ControlPanel.getSeason()
+      ]);
       const gmIDs = [
          franchise.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
       ].filter(v => v !== undefined);
@@ -40,7 +44,6 @@ module.exports = {
          franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
       ].filter(v => v !== undefined);
 
-      const season = await ControlPanel.getSeason();
       const teamMMRCap = (await ControlPanel.getMMRCaps("TEAM"))[team.tier];
 
       // process db data and organize for display
@@ -107,7 +110,7 @@ module.exports = {
                { home: team.id },
                { away: team.id },
             ],
-            season: 7,
+            season: season,
             matchType: MatchType.BO2,
          },
          include: {
