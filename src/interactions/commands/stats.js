@@ -52,8 +52,10 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
     if (!game.gameType.includes(GameType.SEASON)) return await interaction.editReply(`You can only get match stats for a season game!`);
 
     // get teams
-    const home = await Team.getBy({ id: game.Match.home });
-    const away = await Team.getBy({ id: game.Match.away });
+    const [home, away] = await Promise.all([
+        Team.getBy({ id: game.Match.home }),
+        Team.getBy({ id: game.Match.away })
+    ]);
 
     // create outputs
     const roundsWonBar = createRoundsWonBar((({ PlayerStats, ...o }) => o)(game));
@@ -83,7 +85,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     const player = await Player.getBy({ discordID: guildMember.user.id });
     if (player == null) return await interaction.editReply(`This player does not exist in our database!`);
 
-    const playerStats = await Player.getStatsBy(player.id, season);
+    const playerStats = await Player.getStatsBy({ userID: player.id }, season);
     if (playerStats.length == 0) return await interaction.editReply(`This player doesn't have any stats for season ${season}!`);
 
     const mmrShow = await ControlPanel.getMMRDisplayState()
@@ -245,7 +247,7 @@ function createMatchPlayerStats(player, home, team) {
     const agentEmotes = client.application.emojis.cache;
     const agentEmoteObject = agentEmotes.find(ae => ae.name === agentSanatized);
     const agentEmote = `<:${agentSanatized}:${agentEmoteObject.id}>`;
-    
+
     const teamName = player.Player.Team ? player.Player.Team.name : `Substitute`;
     const rating = `ATK : \`${player.ratingAttack}\` / DEF : \`${player.ratingDefense}\``;
 
