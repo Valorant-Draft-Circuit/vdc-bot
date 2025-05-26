@@ -45,13 +45,13 @@ module.exports = {
         // filter by FA/RFA and format with Riot ID and Tracker link
         const descriptionFA = activeSubs
             .filter(player => player.leagueStatus === LeagueStatus.FREE_AGENT && player.contractStatus == null)
-            .map(p => `${showMMR ? `\` ${String(p.mmr).padStart(3)} \` | ` : ``}[${p.ignPlain}](${p.trackerURL})`);
+            .map(p => `${showMMR ? `\` ${String(p.mmr).padStart(3)} \` | ` : ``}${p.ignPlain}`);
         const descriptionRFA = activeSubs
             .filter(player => player.leagueStatus === LeagueStatus.RESTRICTED_FREE_AGENT && player.contractStatus == null)
-            .map(p => `${showMMR ? `\` ${String(p.mmr).padStart(3)} \` | ` : ``}[${p.ignPlain}](${p.trackerURL})`);
+            .map(p => `${showMMR ? `\` ${String(p.mmr).padStart(3)} \` | ` : ``}${p.ignPlain}`);
         const subInUseDescription = activeSubs
             .filter(player => player.contractStatus == ContractStatus.ACTIVE_SUB)
-            .map(p => `${showMMR ? `\` ${String(p.mmr).padStart(3)} \` | ` : ``}[${p.ignPlain}](${p.trackerURL})`);
+            .map(p => `${showMMR ? `\` ${String(p.mmr).padStart(3)} \` | ` : ``}${p.ignPlain}`);
 
         // add if the type of sub ONLY IF it has players in it
         const d1 = [];
