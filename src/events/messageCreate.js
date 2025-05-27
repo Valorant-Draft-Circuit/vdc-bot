@@ -19,7 +19,7 @@ const NUMBERS_WEBHOOK_ID = `1355710580303990935`;	    // numbers webook
 // const NUMBERS_WEBHOOK_ID = `1238511449173917737`;		// bot-spam test webook
 
 const trackerBaseURL = `https://tracker.gg/valorant/match/`;
-const matchIDRegex = /(?<=Match ID \(DATABASE\): )\d+/;
+const matchIDRegex = /\*\*Match ID \(DATABASE\)\*\*: (\d+)/;
 
 module.exports = {
 
