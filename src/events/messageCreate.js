@@ -1,5 +1,5 @@
 const { Message } = require(`discord.js`);
-const { prisma } = require("../../prisma/prismadb");
+const { prisma } = require(`../../prisma/prismadb`);
 
 const tierChannels = !Boolean(Number(process.env.PROD)) ? {
 	/** @development */
@@ -19,7 +19,6 @@ const NUMBERS_WEBHOOK_ID = `1355710580303990935`;	    // numbers webook
 // const NUMBERS_WEBHOOK_ID = `1238511449173917737`;		// bot-spam test webook
 
 const trackerBaseURL = `https://tracker.gg/valorant/match/`;
-const matchIDRegex = /\*\*Match ID \(DATABASE\)\*\*: (\d+)/;
 
 module.exports = {
 
@@ -48,9 +47,9 @@ module.exports = {
 			if (message.embeds[0].title !== `Game Processed!`) return;
 
 			const embeddescription = message.embeds[0].description;
-			const matchID = Number(embeddescription.match(matchIDRegex)[0]);
+			const matchID = Number(embeddescription.split(`\n`)[1].replace(`**Match ID (DATABASE)**: `, ``));
 
-			logger.log(`VERBOSE`, `Detected successful match submission - Match ID: ${matchID}`);
+			logger.log(`VERBOSE`, `Detected successful match submission - Match ID: \`${matchID}\``);
 			const match = await prisma.matches.findFirst({
 				where: { matchID: matchID },
 				include: {
@@ -60,9 +59,9 @@ module.exports = {
 				}
 			});
 
-			if (!match) return logger.log(`WARNING`, `Match ID: ${matchID} not found in the database`);
-			if (match.matchType !== `BO2`) return logger.log(`VERBOSE`, `Match ID: ${matchID} is not a BO2 match, skipping announcement`);
-			if (match.Games.length !== 2) return logger.log(`VERBOSE`, `Match ID: ${matchID} only has one map, skipping announcement`);
+			if (!match) return logger.log(`WARNING`, `Match ID: \`${matchID}\` not found in the database`);
+			if (match.matchType !== `BO2`) return logger.log(`VERBOSE`, `Match ID: \`${matchID}\` is not a BO2 match, skipping announcement`);
+			if (match.Games.length !== 2) return logger.log(`VERBOSE`, `Match ID: \`${matchID}\` only has one map, skipping announcement`);
 
 			const homeTeam = match.Home;
 			const awayTeam = match.Away;
@@ -77,7 +76,7 @@ module.exports = {
 			const channel = await client.channels.fetch(tierChannels[match.tier]);
 
 			channel.send({ content: [line1, line2, line3].join(`\n`) });
-			logger.log(`INFO`, `Sent match results for Match ID: ${matchID} to ${channel.name} (${channel.id})`);
+			logger.log(`INFO`, `Sent match results for Match ID: \`${matchID}\` to  ${channel} (\`${channel.name}\`, \`${channel.id}\`)`);
 		}
 
 		return;
