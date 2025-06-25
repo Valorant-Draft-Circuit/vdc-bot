@@ -170,6 +170,16 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
+
+	// lastly, update meilisearch to contain their new information
+	// --------------------------------------------------------------------------------------------
+	 const res = await fetch(
+        `${process.env.VDC_WEB_URL}/api/meilisearch/player/${playerData.id}`
+      );
+      if (!res.ok) {
+        console.warn("Unable to update meilisearch player document ");
+      }
+	// --------------------------------------------------------------------------------------------
 	return await transactionsChannel.send({ embeds: [announcement] });
 }
 
