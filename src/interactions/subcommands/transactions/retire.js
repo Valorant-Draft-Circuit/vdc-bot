@@ -6,6 +6,7 @@ const { Player, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { LeagueStatus } = require("@prisma/client");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -63,7 +64,7 @@ async function confirmRetire(interaction) {
 		.replaceAll(`\``, ``)
 		.split(`\n`)[2];
 
-	// const playerData = await Player.getBy({ discordID: playerID });
+	const playerData = await Player.getBy({ discordID: playerID });
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const guildMember = await interaction.guild.members.fetch(playerID);
 
@@ -99,7 +100,10 @@ async function confirmRetire(interaction) {
 		footer: { text: `Transactions — Retire` },
 		timestamp: Date.now(),
 	});
-
+	
+	// lastly, update meilisearch to contain their new information
+	await updateMeilisearchPlayer(playerData.id)
+	
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 	return await transactionsChannel.send({ embeds: [announcement] });

@@ -4,6 +4,7 @@ const { EmbedBuilder, ActionRowBuilder } = require("discord.js");
 const { Player, Franchise, Transaction, Team } = require("../../../../prisma");
 const { ContractStatus } = require("@prisma/client");
 const { CHANNELS, TransactionsNavigationOptions } = require("../../../../utils/enums");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 
 /** Send confirmation to Unsub a player
  * @param {ChatInputCommandInteraction} interaction
@@ -97,7 +98,10 @@ async function confirmUnsub(interaction) {
 		footer: { text: `Transactions — Unsub` },
 		timestamp: Date.now(),
 	});
-
+	
+	// lastly, update meilisearch to contain their new information
+	await updateMeilisearchPlayer(playerData.id)
+	
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 	return await transactionsChannel.send({ embeds: [announcement] });

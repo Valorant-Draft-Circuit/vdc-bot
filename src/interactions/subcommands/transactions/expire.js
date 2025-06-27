@@ -9,6 +9,7 @@ const { Tier } = require("@prisma/client");
 
 
 const Logger = require("../../../core/logger");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -171,6 +172,9 @@ async function confirmExpire(interaction) {
 	} catch (e) {
 		logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the contract expiration message`);
 	}
+
+	// lastly, update meilisearch to contain their new information
+	await updateMeilisearchPlayer(playerData.id)
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);

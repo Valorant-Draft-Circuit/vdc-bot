@@ -5,6 +5,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier } = require("@prisma/client");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -148,7 +149,10 @@ async function confirmUpdateTier(interaction) {
 		footer: { text: `Transactions — Tier Update (Promote/Demote)` },
 		timestamp: Date.now(),
 	});
-
+	
+	// lastly, update meilisearch to contain their new information
+	await updateMeilisearchPlayer(player.id)
+	
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 	return await transactionsChannel.send({ embeds: [announcement] });

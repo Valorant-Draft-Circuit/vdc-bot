@@ -5,6 +5,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { ContractStatus } = require("@prisma/client");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -120,6 +121,9 @@ async function confirmToggleIR(interaction, mode) {
 
 	if (mode === `SET`) announcement.setDescription(`${guildMember} (${playerTag}) has been placed on Inactive Reserve`)
 	else announcement.setDescription(`${guildMember} (${playerTag}) is no longer on Inactive Reserve`)
+	
+	// lastly, update meilisearch to contain their new information
+	await updateMeilisearchPlayer(playerData.id)
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);

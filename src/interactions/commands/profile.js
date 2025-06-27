@@ -3,6 +3,7 @@ const { Player, Franchise, ControlPanel, Roles } = require(`../../../prisma`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { StatusEmotes, ROLES } = require("../../../utils/enums");
+const { updateMeilisearchPlayer } = require("../../../utils/web/vdcWeb");
 
 /** Riot's API endpoint to fetch a user's account by their puuid 
  * @TODO Update to the internal VDC endpoint once it's ready */
@@ -572,14 +573,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	// --------------------------------------------------------------------------------------------
 
 	// lastly, update meilisearch to contain their new information
-	// --------------------------------------------------------------------------------------------
-	 const res = await fetch(
-        `${process.env.VDC_WEB_URL}/api/meilisearch/player/${player.id}`
-      );
-      if (!res.ok) {
-        console.warn("Unable to update meilisearch player document ");
-      }
-	// --------------------------------------------------------------------------------------------
+	await updateMeilisearchPlayer(player.id)
 
 	// All done!
 	// --------------------------------------------------------------------------------------------

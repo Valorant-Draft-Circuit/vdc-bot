@@ -8,6 +8,7 @@ const { Tier } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -172,14 +173,8 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 
 	// lastly, update meilisearch to contain their new information
-	// --------------------------------------------------------------------------------------------
-	 const res = await fetch(
-        `${process.env.VDC_WEB_URL}/api/meilisearch/player/${playerData.id}`
-      );
-      if (!res.ok) {
-        console.warn("Unable to update meilisearch player document ");
-      }
-	// --------------------------------------------------------------------------------------------
+	await updateMeilisearchPlayer(playerData.id)
+
 	return await transactionsChannel.send({ embeds: [announcement] });
 }
 
