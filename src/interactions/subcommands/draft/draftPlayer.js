@@ -4,6 +4,7 @@ const { Franchise, Player, ControlPanel } = require(`../../../../prisma`);
 const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ButtonOptions, ROLES } = require(`../../../../utils/enums`);
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 
 const draftableLeagueStatuses = [LeagueStatus.FREE_AGENT, LeagueStatus.DRAFT_ELIGIBLE];
 
@@ -274,6 +275,8 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
         color: COLORS[tier],
         footer: { text: `Draft — ${tier}` }
     });
+
+    await updateMeilisearchPlayer(draftee.id)
 
     // send the success message
     await interaction.message.edit({ embeds: [embed], components: [] });

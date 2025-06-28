@@ -6,6 +6,7 @@ const { Franchise, Player, Transaction, ControlPanel } = require(`../../../../pr
 const { prisma } = require("../../../../prisma/prismadb");
 const { CHANNELS, ROLES, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { Tier, LeagueStatus } = require("@prisma/client");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
@@ -805,6 +806,9 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 			console.log(e)
 			logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the sign message`);
 		}
+			
+		// lastly, update meilisearch to contain their new information
+		await updateMeilisearchPlayer(player.id)
 	}
 
 	return;

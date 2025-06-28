@@ -8,6 +8,7 @@ const { Tier } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
+const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -170,6 +171,10 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
+
+	// lastly, update meilisearch to contain their new information
+	await updateMeilisearchPlayer(playerData.id)
+
 	return await transactionsChannel.send({ embeds: [announcement] });
 }
 

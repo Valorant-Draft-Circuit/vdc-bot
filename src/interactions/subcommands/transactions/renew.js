@@ -75,7 +75,7 @@ async function confirmRenew(interaction) {
 
 	const playerTag = playerIGN.split(`#`)[0];
 
-	// cut the player & ensure that the player's team property is now null
+	// renew the player & ensure that the player's contract was updated
 	const status = await Transaction.renew(playerData.id);
 	if (status.contractRemaining !== 1) return await interaction.editReply(`There was an error while attempting to renew the player's contract. The database was not updated.`);
 
