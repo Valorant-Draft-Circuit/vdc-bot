@@ -76,6 +76,18 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 			break;
 	}
 
+	// if user's discord pfp in db is invalid, they've probably changed it before we got to update it.
+	const response = await fetch(player.image)
+	if (!response.ok) {
+		logger.log(`DEBUG`, `Player ${player.id}'s discord image from the database is invalid. Attempting to update...`);
+		const user = await prisma.user.update({
+			where: { id: player.id },
+			data: { image: guildUserAvatar },
+		});
+		if (user.image !== guildUserAvatar) logger.log(`ERROR`, `Failed to update player ${player.id}'s discord image in our DB. Silently failing...`)
+		else logger.log(`INFO`, `Successfully updated player ${player.id}'s discord image in our DB.`)
+	}
+
 	const riotAccounts = player.Accounts.filter(a => a.provider === `riot`).map(a => `[\`${a.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(a.riotIGN)}`})`).join(`, `)
 
 	const embed = new EmbedBuilder({
@@ -570,6 +582,31 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	progress[progress.length - 1] = `✅ Your server roles have been updated!`;
 	await interaction.editReply(progress.join(`\n`));
+	// --------------------------------------------------------------------------------------------	
+
+	// update user's pfp in our db if they've changed it.
+	// --------------------------------------------------------------------------------------------
+	progress.push(`🔃 Checking if your profile picture is valid...`);
+	await interaction.editReply(progress.join(`\n`));
+
+	const imageLookup = await fetch(player.image)
+	if (!imageLookup.ok) {
+		progress[progress.length - 1] = `🤔 Seems like you changed your profile picture and we missed it. We'll try to update it.`;
+		await interaction.editReply(progress.join(`\n`));
+
+		const guildMemberAvatar = guildMember.displayAvatarURL({ format: "png", dynamic: true });
+		const user = await prisma.user.update({
+			where: { id: player.id },
+			data: { image: guildMemberAvatar },
+		});
+
+		if (user.image !== guildMemberAvatar) {
+			progress[progress.length - 1] = 
+				`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
+		}
+		else progress[progress.length - 1] = `✅ Your profile picture has been updated!`;
+		await interaction.editReply(progress.join(`\n`));
+	}
 	// --------------------------------------------------------------------------------------------
 
 	// lastly, update meilisearch to contain their new information

@@ -98,10 +98,7 @@ async function confirmUnsub(interaction) {
 		footer: { text: `Transactions — Unsub` },
 		timestamp: Date.now(),
 	});
-	
-	// lastly, update meilisearch to contain their new information
-	await updateMeilisearchPlayer(playerData.id)
-	
+
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 	return await transactionsChannel.send({ embeds: [announcement] });
