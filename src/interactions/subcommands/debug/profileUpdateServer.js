@@ -83,6 +83,12 @@ async function profileUpdateServer(/** @type ChatInputCommandInteraction */ inte
             await latestMessage.edit({ content: `${latestMessage.content}\n> ❌ There was a problem updating \`${serverMembers[i].user.username}\`` });
         }
     }
+    
+    // lastly, mass update meilisearch
+    const meilisearchResponse = await fetch(`${process.env.VDC_WEB_URL}/api/internal/meilisearch/documents/players?meiliauth=${process.env.MEILISEARCH_MASTER_KEY}`)
+    if (!meilisearchResponse.ok) {
+        logger.log(`WARN`, `Looks like there was an error with the meilisearch document update endpoint`)
+    }
 
     return await interaction.channel.send({ content: `✅ Hey, ${interaction.user}! I've processed \`${memberCt}\` members with \`${errCt}\` critical errors (there may be other issues with the players,as listed above). Please review the messages above.` });
 
@@ -418,11 +424,6 @@ async function update(
 	}
     // --------------------------------------------------------------------------------------------
 
-    // lastly, mass update meilisearch
-    const meilisearchResponse = await fetch(`${process.env.VDC_WEB_URL}/api/internal/meilisearch/documents/players?meiliauth=${process.env.MEILISEARCH_MASTER_KEY}`)
-    if (!meilisearchResponse.ok) {
-        logger.log(`WARN`, `Looks like there was an error with the meilisearch document update endpoint`)
-    }
     
     return await playerMessage.edit({ content: `✅ Updated \`${discordUsername}\` successfully!` });
 }
