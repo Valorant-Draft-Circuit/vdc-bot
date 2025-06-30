@@ -85,7 +85,10 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 			data: { image: guildUserAvatar },
 		});
 		if (user.image !== guildUserAvatar) logger.log(`ERROR`, `Failed to update player ${player.id}'s discord image in our DB. Silently failing...`)
-		else logger.log(`INFO`, `Successfully updated player ${player.id}'s discord image in our DB.`)
+		else {
+			updateMeilisearchPlayer(player.id)
+			logger.log(`INFO`, `Successfully updated player ${player.id}'s discord image in our DB.`)
+		}
 	}
 
 	const riotAccounts = player.Accounts.filter(a => a.provider === `riot`).map(a => `[\`${a.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(a.riotIGN)}`})`).join(`, `)
@@ -604,7 +607,10 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			progress[progress.length - 1] = 
 				`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
 		}
-		else progress[progress.length - 1] = `✅ Your profile picture has been updated!`;
+		else {
+			updateMeilisearchPlayer(player.id)
+			progress[progress.length - 1] = `✅ Your profile picture has been updated!`
+		};
 		await interaction.editReply(progress.join(`\n`));
 	}
 	// --------------------------------------------------------------------------------------------
