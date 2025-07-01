@@ -12,6 +12,7 @@
 
     "dev:start": "nodemon --no-warnings --ignore ./cache/ --ignore ./bin/ bot.js",
     "dev:compile": "npm run cache && tsc -w utils/enums/index prisma/index",
+    "dev:run": "npm install && npm run compile && npm run cache && npm run dev:start",
 
     "generate": "prisma generate && (clear || cls)",
     "pull": "prisma db pull --force",
