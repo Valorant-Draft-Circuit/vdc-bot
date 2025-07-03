@@ -125,24 +125,7 @@ module.exports = {
                 return { label: label, value: String(m.matchID), emoji: away.Franchise.Brand.discordEmote }
             });
 
-            // create the action row, add the component to it & then reply with all the data
-            const homeRow = new ActionRowBuilder({
-                components: [new StringSelectMenuBuilder({
-                    customId: `maphistory_home`,
-                    placeholder: `${home.Franchise.name} Match History`,
-                    options: homeOptionsArr,
-                })]
-            });
-            const awayRow = new ActionRowBuilder({
-                components: [new StringSelectMenuBuilder({
-                    customId: `maphistory_away`,
-                    placeholder: `${away.Franchise.name} Match History`,
-                    options: awayOptionsArr,
-                })]
-            });
-
-            // send the match poll predictions
-            await interaction.channel.send({
+            const messageObject = {
                 poll: {
                     question: { text: `${tier.charAt(0).toUpperCase() + tier.substring(1).toLowerCase()} Match Day ${day} Predictions : ${match.Home.Franchise.slug} v. ${match.Away.Franchise.slug}` },
                     answers: [
@@ -152,12 +135,39 @@ module.exports = {
                     ],
                     allowMultiselect: false,
                     duration: hoursTill,
-                },
-                components: [homeRow, awayRow]
-            })
+                    components: []
+                }
+            };
 
+            if (homeOptionsArr.length !== 0) {
+                // create the action row, add the component to it & then reply with all the data
+                const homeRow = new ActionRowBuilder({
+                    components: [new StringSelectMenuBuilder({
+                        customId: `maphistory_home`,
+                        placeholder: `${home.Franchise.name} Match History`,
+                        options: homeOptionsArr,
+                    })]
+                });
+                messageObject.components.push(homeRow);
+            }
+
+            if (awayOptionsArr.length !== 0) {
+                // create the action row, add the component to it & then reply with all the data
+                const awayRow = new ActionRowBuilder({
+                    components: [new StringSelectMenuBuilder({
+                        customId: `maphistory_away`,
+                        placeholder: `${away.Franchise.name} Match History`,
+                        options: awayOptionsArr,
+                    })]
+                });
+                messageObject.components.push(awayRow);
+            }
+
+            // send the match poll predictions
+            await interaction.channel.send(messageObject)
         }
 
+        logger.log(`INFO`, `Sent \`${tier}\` prediction polls in ${interaction.channel}`);
         return await interaction.editReply(`The polls for match day ${day} have been sent!`);
     }
 };

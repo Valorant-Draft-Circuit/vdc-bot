@@ -83,11 +83,11 @@ async function profileUpdateServer(/** @type ChatInputCommandInteraction */ inte
             await latestMessage.edit({ content: `${latestMessage.content}\n> ❌ There was a problem updating \`${serverMembers[i].user.username}\`` });
         }
     }
-    
+
     // lastly, mass update meilisearch
     const meilisearchResponse = await fetch(`${process.env.VDC_WEB_URL}/api/internal/meilisearch/documents/players?meiliauth=${process.env.MEILISEARCH_MASTER_KEY}`)
     if (!meilisearchResponse.ok) {
-        logger.log(`WARN`, `Looks like there was an error with the meilisearch document update endpoint`)
+        logger.log(`WARNING`, `Looks like there was an error with the meilisearch document update endpoint`)
     }
 
     return await interaction.channel.send({ content: `✅ Hey, ${interaction.user}! I've processed \`${memberCt}\` members with \`${errCt}\` critical errors (there may be other issues with the players,as listed above). Please review the messages above.` });
@@ -408,23 +408,22 @@ async function update(
     // ----- SILENT FAIL OPERATIONS -----
     // update profile picture (if changed)
     // --------------------------------------------------------------------------------------------
-	const imageLookup = await fetch(player.image)
-	if (!imageLookup.ok) {
-		logger.log(`DEBUG`, `🤔 Seems like player ${player.id} changed their profile picture and we missed it. We'll try to update it.`)
-		await interaction.editReply(progress.join(`\n`));
+    const imageLookup = await fetch(player.image)
+    if (!imageLookup.ok) {
+        logger.log(`INFO`, `Player \`${player.name}\` (\`${player.id}\`) updated their profile picture. Attempting to update...`);
 
-		const guildMemberAvatar = guildMember.displayAvatarURL({ format: "png", dynamic: true });
-		const user = await prisma.user.update({
-			where: { id: player.id },
-			data: { image: guildMemberAvatar },
-		});
-		if (user.image !== guildMemberAvatar) {
-			logger.log(`WARN`, `Looks like there was an error and the database didnt update the user image src!`)
-		}
-	}
+        const guildMemberAvatar = guildMember.displayAvatarURL({ format: `png`, dynamic: true });
+        const user = await prisma.user.update({
+            where: { id: player.id },
+            data: { image: guildMemberAvatar },
+        });
+        if (user.image !== guildMemberAvatar) {
+            logger.log(`WARNING`, `Looks like there was an error updating the database for \`${player.name}\` (\`${player.id}\`)'s profile picture!`);
+        }
+    }
     // --------------------------------------------------------------------------------------------
 
-    
+
     return await playerMessage.edit({ content: `✅ Updated \`${discordUsername}\` successfully!` });
 }
 

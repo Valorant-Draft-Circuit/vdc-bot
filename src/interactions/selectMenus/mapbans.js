@@ -112,6 +112,7 @@ module.exports = {
 
         const mapData = maps.find(m => m.displayName == mapSelection);
         await interaction.message.edit({ content: `${emote} \`${teamName}\` select \`${mapSelection}\` as their \`${mapBanType}\``, components: [], files: [mapData.listViewIcon] });
+        logger.log(`VERBOSE`, `\`${interaction.user.tag}\` selected \`${mapSelection}\` as their \`${mapBanType}\` for \`${teamName}\` (Match ID: \`${matchID}\`)`);
         // ########################################################################################
 
 
