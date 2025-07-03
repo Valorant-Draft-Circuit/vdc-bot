@@ -185,7 +185,7 @@ module.exports = {
             components: [mapbansRow]
         });
 
-        logger.log(`VERBOSE`, `${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) began mapbans for \`${nextMatch.tier}\` Match Day \`${nextMatch.matchDay}\` — \`${nextMatch.Home.name}\` vs. \`${nextMatch.Away.name}\``);
+        logger.log(`VERBOSE`, `${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) began mapbans for \`${nextMatch.tier}\` Match Day \`${nextMatch.matchDay}\` — \`${nextMatch.Home.name}\` vs. \`${nextMatch.Away.name}\` (Match ID: \`${nextMatch.matchID}\`)`);
         return await interaction.editReply({ content: `Mapbans for \`${nextMatch.tier}\` Match Day \`${nextMatch.matchDay}\` — \`${nextMatch.Home.name}\` vs. \`${nextMatch.Away.name}\` have been created here: ${newchannel}` });
         // ########################################################################################
     }

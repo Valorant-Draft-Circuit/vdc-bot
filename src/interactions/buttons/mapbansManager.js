@@ -115,6 +115,7 @@ module.exports = {
         });
         // ########################################################################################
 
+        logger.log(`VERBOSE`, `\`${interaction.user.tag}\` selected \`${side}\` on \`${currentSelection.map}\` as their \`side\` for \`${pickingTeam.name}\` (Match ID: \`${matchID}\`)`);
 
 
         // MAPBANS COMPLETE #######################################################################
