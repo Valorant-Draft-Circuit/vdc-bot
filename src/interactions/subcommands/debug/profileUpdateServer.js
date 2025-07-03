@@ -85,7 +85,7 @@ async function profileUpdateServer(/** @type ChatInputCommandInteraction */ inte
     }
 
     // lastly, mass update meilisearch
-    const meilisearchResponse = await fetch(`${process.env.VDC_WEB_URL}/api/internal/meilisearch/documents/players?meiliauth=${process.env.MEILISEARCH_MASTER_KEY}`)
+    const meilisearchResponse = await fetch(`https://${process.env.VDC_WEB_URL}/api/internal/meilisearch/documents/players?meiliauth=${process.env.MEILISEARCH_MASTER_KEY}`)
     if (!meilisearchResponse.ok) {
         logger.log(`WARNING`, `Looks like there was an error with the meilisearch document update endpoint`)
     }
