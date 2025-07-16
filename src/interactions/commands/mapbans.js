@@ -65,7 +65,7 @@ module.exports = {
         });
 
         // get the next match for the player
-        const nextMatch = matches.filter(m => m.dateScheduled > Date.now())[0];
+        const nextMatch = matches.filter((m) => m.dateScheduled > Date.now()).sort((a, b) => a.dateScheduled - b.dateScheduled)[0];
 
         // check to not begin too early
         const nextMatchDate = nextMatch.dateScheduled;
