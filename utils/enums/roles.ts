@@ -25,12 +25,14 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             EXPERT: "1057161297319440485",
             APPRENTICE: "1057161301102698567",
             PROSPECT: "1057161308535005204",
+            RECRUIT: "1414441293949440121",
 
             // Free agent tier roles
             MYTHIC_FREE_AGENT: "1224023294093561996",
             EXPERT_FREE_AGENT: "1224023492085940225",
             APPRENTICE_FREE_AGENT: "1224023553498939493",
             PROSPECT_FREE_AGENT: "1224023630330204303",
+            RECRUIT_FREE_AGENT: "1414441123690184836",
         },
         OPERATIONS: {
             // in dev, both of these are the "BADMIN" role

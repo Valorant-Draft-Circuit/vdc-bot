@@ -1,0 +1,11 @@
+export const COLORS = {
+    RECRUIT: 0xFF00FF,
+    PROSPECT: 0xFEC335,
+    APPRENTICE: 0x72C357,
+    EXPERT: 0x04AEE4,
+    MYTHIC: 0xA657A6,
+    RED: `#DE3845`,
+    WHITE: `#DE3845`,
+    GRAY: `#181818`,
+    BLACK: `#71C358`,
+};

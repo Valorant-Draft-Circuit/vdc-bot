@@ -97,6 +97,9 @@ async function confirmExpire(interaction) {
 
 	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, agentType == `RFA` ? ROLES.LEAGUE.RESTRICTED_FREE_AGENT : ROLES.LEAGUE.FREE_AGENT]);
 	switch (team.tier) {
+		case Tier.RECRUIT:
+			await guildMember.roles.add(ROLES.TIER.RECRUIT_FREE_AGENT);
+			break;
 		case Tier.PROSPECT:
 			await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
 			break;

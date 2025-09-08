@@ -1,7 +1,7 @@
 export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
     /** @development */
     {
-        TRANSACTIONS: `1057088094312091678`,
+        TRANSACTIONS: `1300688313988022272`,
         ACCEPTED_MEMBERS: `1057088139711234078`,
         MEMBER_LOGS: `1057088287719817256`,
         FRANCHISES: `1250480424031879188`,
@@ -10,7 +10,8 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
             MYTHIC: `1059244366671118487`,
             EXPERT: `1059244366671118487`,
             APPRENTICE: `1059244366671118487`,
-            PROSPECT: `1059244366671118487`
+            PROSPECT: `1059244366671118487`,
+            RECRUIT: `1059244366671118487`,
         },
         ANNOUNCEMENTS: {
             FM: `1234719001616056370`
@@ -27,6 +28,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     EXPERT: `1360365247843532841`,
                     APPRENTICE: `1360365176347557898`,
                     PROSPECT: `1360365121154842774`,
+                    RECRUIT: `1360365121154842774`,
                 },
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
@@ -34,6 +36,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     EXPERT: `1360365547581079582`,
                     APPRENTICE: `1360365624743821352`,
                     PROSPECT: `1360365712828535085`,
+                    RECRUIT: `1360365712828535085`,
                 }
             },
         },

@@ -7,7 +7,7 @@ const { CHANNELS, ButtonOptions, ROLES } = require(`../../../../utils/enums`);
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 
 const draftableLeagueStatuses = [LeagueStatus.FREE_AGENT, LeagueStatus.DRAFT_ELIGIBLE];
-
+const {COLORS} = require("../../../../utils/enums");
 
 // const timeoutLength = 8 * 60 * 1000;
 // const timeoutLength = 5 * 1000;
@@ -21,17 +21,11 @@ const draftableLeagueStatuses = [LeagueStatus.FREE_AGENT, LeagueStatus.DRAFT_ELI
 // }
 
 const TIER_DRAFT_ENABLE = {
+    RECRUIT: false,
     PROSPECT: false,
     APPRENTICE: false,
     EXPERT: false,
     MYTHIC: false,
-}
-
-const COLORS = {
-    PROSPECT: 0xFEC335,
-    APPRENTICE: 0x72C357,
-    EXPERT: 0x04AEE4,
-    MYTHIC: 0xA657A6,
 }
 
 async function beginOfflineDraft(/** @type ChatInputCommandInteraction */ interaction, tier) {

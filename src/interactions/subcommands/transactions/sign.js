@@ -135,50 +135,50 @@ async function confirmSign(interaction) {
 	});
 
 	// Attempt to send a message to the user once they are signed
-	try {
-		const fchse = await prisma.franchise.findFirst({
-			where: { id: franchise.id },
-			include: {
-				Teams: true, Brand: true,
-				GM: { include: { Accounts: true } },
-				AGM1: { include: { Accounts: true } },
-				AGM2: { include: { Accounts: true } },
-				AGM3: { include: { Accounts: true } },
-			}
-		});
+	// try {
+	// 	const fchse = await prisma.franchise.findFirst({
+	// 		where: { id: franchise.id },
+	// 		include: {
+	// 			Teams: true, Brand: true,
+	// 			GM: { include: { Accounts: true } },
+	// 			AGM1: { include: { Accounts: true } },
+	// 			AGM2: { include: { Accounts: true } },
+	// 			AGM3: { include: { Accounts: true } },
+	// 		}
+	// 	});
 
-		const gmIDs = [
-			fchse.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-		].filter(v => v !== undefined);
+	// 	const gmIDs = [
+	// 		fchse.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+	// 	].filter(v => v !== undefined);
 
-		const agmIDs = [
-			fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-			fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-			fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
-		].filter(v => v !== undefined);
+	// 	const agmIDs = [
+	// 		fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+	// 		fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+	// 		fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+	// 	].filter(v => v !== undefined);
 
 
-		const dmEmbed = new EmbedBuilder({
-			description: `Congratulations, you've been signed to ${franchise.name} for a ${contractLength} season contract! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}` : ``}. Feel free to reach out to them if you have any more questions!`,
-			thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
-			color: Number(franchise.Brand.colorPrimary)
-		});
+	// 	const dmEmbed = new EmbedBuilder({
+	// 		description: `Congratulations, you've been signed to ${franchise.name} for a ${contractLength} season contract! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}` : ``}. Feel free to reach out to them if you have any more questions!`,
+	// 		thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
+	// 		color: Number(franchise.Brand.colorPrimary)
+	// 	});
 
-		// create the action row and add the button to it
-		const dmRow = new ActionRowBuilder({
-			components: [
-				new ButtonBuilder({
-					label: `${franchise.name} Discord`,
-					style: ButtonStyle.Link,
-					url: franchise.Brand.urlDiscord
-				})
-			]
-		});
-		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
+	// 	// create the action row and add the button to it
+	// 	const dmRow = new ActionRowBuilder({
+	// 		components: [
+	// 			new ButtonBuilder({
+	// 				label: `${franchise.name} Discord`,
+	// 				style: ButtonStyle.Link,
+	// 				url: franchise.Brand.urlDiscord
+	// 			})
+	// 		]
+	// 	});
+	// 	await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
-	} catch (e) {
-		logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the sign message`);
-	}
+	// } catch (e) {
+	// 	logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the sign message`);
+	// }
 	
 	// lastly, update meilisearch to contain their new information
 	await updateMeilisearchPlayer(playerData.id)

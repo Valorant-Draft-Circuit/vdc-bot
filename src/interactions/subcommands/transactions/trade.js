@@ -15,10 +15,11 @@ let notAllowedOperation = false;
 
 // this is needed to correctly sort the tiers
 const tierSortWeights = {
-	PROSPECT: 1,
-	APPRENTICE: 2,
-	EXPERT: 3,
-	MYTHIC: 4
+	RECRUIT: 1,
+	PROSPECT: 2,
+	APPRENTICE: 3,
+	EXPERT: 4,
+	MYTHIC: 5
 }
 
 /** Initiate a trade
@@ -625,13 +626,15 @@ async function validatePlayerTrade(interaction, playerArray, franchiseToReceive)
 
 	// get MMR tier lines from the database
 	const mmrCapResponse = await prisma.controlPanel.findMany({ where: { name: { contains: `mmr_cap_player` } }, });
+	const recruitMMRCap = mmrCapResponse.find((r) => r.name === `recruit_mmr_cap_player`).value;
 	const prospectMMRCap = mmrCapResponse.find((r) => r.name === `prospect_mmr_cap_player`).value;
 	const apprenticeMMRCap = mmrCapResponse.find((r) => r.name === `apprentice_mmr_cap_player`).value;
 	const expertMMRCap = mmrCapResponse.find((r) => r.name === `expert_mmr_cap_player`).value;
 
 	// store all MMR bounds in array and grab the relevant MMR bounds to store in tierMMR
 	const tierMMRBounds = [
-		{ name: Tier.PROSPECT, high: prospectMMRCap, low: 0 },
+		{ name: Tier.RECRUIT, high: recruitMMRCap, low: 0 },
+		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap },
 		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap },
 		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
 		{ name: Tier.MYTHIC, high: 999, low: expertMMRCap },
@@ -690,13 +693,15 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 
 	// get MMR tier lines from the database
 	const mmrCapResponse = await prisma.controlPanel.findMany({ where: { name: { contains: `mmr_cap_player` } }, });
+	const recruitMMRCap = mmrCapResponse.find((r) => r.name === `recruit_mmr_cap_player`).value;
 	const prospectMMRCap = mmrCapResponse.find((r) => r.name === `prospect_mmr_cap_player`).value;
 	const apprenticeMMRCap = mmrCapResponse.find((r) => r.name === `apprentice_mmr_cap_player`).value;
 	const expertMMRCap = mmrCapResponse.find((r) => r.name === `expert_mmr_cap_player`).value;
 
 	// store all MMR bounds in array and grab the relevant MMR bounds to store in tierMMR
 	const tierMMRBounds = [
-		{ name: Tier.PROSPECT, high: prospectMMRCap, low: 0 },
+		{ name: Tier.RECRUIT, high: recruitMMRCap, low: 0 },
+		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap },
 		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap },
 		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
 		{ name: Tier.MYTHIC, high: 999, low: expertMMRCap },

@@ -3,6 +3,7 @@ const { prisma } = require(`../../prisma/prismadb`);
 
 const tierChannels = !Boolean(Number(process.env.PROD)) ? {
 	/** @development */
+	RECRUIT: '1059244366671118487',
 	PROSPECT: `1059244366671118487`,
 	APPRENTICE: `1059244366671118487`,
 	EXPERT: `1059244366671118487`,

@@ -2,13 +2,7 @@ const { EmbedBuilder, ChatInputCommandInteraction } = require("discord.js");
 
 const { Player, ControlPanel } = require("../../../prisma");
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
-
-const COLORS = {
-    PROSPECT: 0xFEC335,
-    APPRENTICE: 0x72C357,
-    EXPERT: 0x04AEE4,
-    MYTHIC: 0xA657A6,
-};
+const { COLORS } = require("../../../utils/enums/colors");
 
 module.exports = {
 

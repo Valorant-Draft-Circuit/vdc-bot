@@ -104,6 +104,9 @@ async function confirmUpdateTier(interaction) {
 	if (leagueState !== `COMBINES`) {
 		await guildMember.roles.add(ROLES.TIER[newTeam.tier]);
 		switch (newTeam.tier) {
+			case Tier.RECRUIT:
+				await guildMember.roles.add([ROLES.TIER.RECRUIT_FREE_AGENT]);
+				break;
 			case Tier.PROSPECT:
 				await guildMember.roles.add(ROLES.TIER.PROSPECT_FREE_AGENT);
 				break;
