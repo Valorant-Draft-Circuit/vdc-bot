@@ -5,7 +5,7 @@ const { ApplicationCommandOptionType, InteractionContextType, PermissionFlagsBit
 module.exports = {
     name: `debug`,
     description: `Access debug commands here!`,
-    default_member_permissions: !Boolean(Number(process.env.PROD)) ? `0x0` : PermissionFlagsBits.BanMembers,
+    default_member_permissions: !Boolean(Number(process.env.PROD)) ? `0x0` : PermissionFlagsBits.Administrator,
     contexts: [InteractionContextType.Guild],
     options: [
         {
@@ -204,6 +204,11 @@ module.exports = {
         {
             name: `profile-update-server`,
             description: `WARNING: This will update the profile of all players in the server!`,
+            type: ApplicationCommandOptionType.Subcommand
+        },
+        {
+            name: `offseason-reset`,
+            description: `WARNING: THIS WILL UPDATE A LOT OF DATA. This will set up the database for the new season.`,
             type: ApplicationCommandOptionType.Subcommand
         },
     ]

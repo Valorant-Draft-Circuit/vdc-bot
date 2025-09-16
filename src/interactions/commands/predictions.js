@@ -6,12 +6,7 @@ const { prisma } = require("../../../prisma/prismadb");
 const { MatchType } = require("@prisma/client");
 const { ControlPanel } = require("../../../prisma");
 
-const COLORS = {
-    PROSPECT: 0xFEC335,
-    APPRENTICE: 0x72C357,
-    EXPERT: 0x04AEE4,
-    MYTHIC: 0xA657A6,
-}
+const { COLORS } = require("../../../utils/enums/colors");
 
 
 module.exports = {
