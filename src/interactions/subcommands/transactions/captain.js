@@ -93,7 +93,7 @@ async function confirmToggleCaptain(interaction, mode) {
 	if (mode === `SET`) await guildMember.roles.add(ROLES.LEAGUE.CAPTAIN);
 	else await guildMember.roles.remove(ROLES.LEAGUE.CAPTAIN);
 
-	// cut the player & ensure that the player's team property is now null
+	// uncaptain the player & ensure that the player's Captain property is now null
 	const updatedTeam = await Transaction.toggleCaptain({
 		teamID: team.id,
 		playerID: playerData.id,
