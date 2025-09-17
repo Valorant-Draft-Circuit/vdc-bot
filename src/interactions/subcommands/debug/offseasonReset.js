@@ -14,7 +14,7 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
         },
     });
     if (expiringPlayers.length > 0) {
-        interaction.editReply(`**WARNING:** There are still players with expired contracts! Please ensure that all players with expired contracts have been cut from their teams before running the offseason reset!`);
+        interaction.editReply(`**WARNING:** There are still players with expired contracts! DO NOT RUN THIS COMMAND UNTIL ALL ISSUES ARE FIXED!`);
         return;
     }
     progress = [];
@@ -103,6 +103,7 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
             },
         },
     });
+    progress.pop();
     progress.push('  - ✅ Degraded all contracts by a season.');
     await interaction.editReply(progress.join('\n'));
     // check for players whose contracts have expired
@@ -117,7 +118,7 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
             Status: true,
         },
     });
-    progress.push(`  - Found ${expiredPlayers.length} player${expiredPlayers.length !== 1 ? 's' : ''} with expired contracts.`);
+    progress.push(`  - Found ${expiredPlayers.length} player${expiredPlayers.length !== 1 ? 's' : ''} with expiring contracts now.`);
     // 3. REMOVE FLAGS
     // 4. UPDATE EVERYONE'S STATUS TO UNREGISTERED
     // 5. UPDATE EVERYONE'S ROLES IN DISCORD
