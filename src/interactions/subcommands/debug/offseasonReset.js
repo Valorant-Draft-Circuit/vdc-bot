@@ -90,38 +90,48 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
     progress.push(`  - Found ${contractedPlayers.length} contracted player${contractedPlayers.length !== 1 ? 's' : ''}.`);
     progress.push('  - Degrading contracts...');
     await interaction.editReply(progress.join('\n'));
-    await prisma.status.updateMany({
-        where: {
-            contractStatus: ContractStatus.SIGNED,
-            contractRemaining: {
-                gt: 0,
-            },
-        },
-        data: {
-            contractRemaining: {
-                decrement: 1,
-            },
-        },
-    });
+    // await prisma.status.updateMany({
+    //     where: {
+    //         contractStatus: ContractStatus.SIGNED,
+    //         contractRemaining: {
+    //             gt: 0,
+    //         },
+    //     },
+    //     data: {
+    //         contractRemaining: {
+    //             decrement: 1,
+    //         },
+    //     },
+    // });
     progress.pop();
     progress.push('  - ✅ Degraded all contracts by a season.');
     await interaction.editReply(progress.join('\n'));
     // check for players whose contracts have expired
-    const expiredPlayers = await prisma.user.findMany({
-        where: {
-            Status: {
-                contractStatus: ContractStatus.SIGNED,  
-                contractRemaining: 0,
-            },
-        },
-        include: {
-            Status: true,
-        },
-    });
-    progress.push(`  - Found ${expiredPlayers.length} player${expiredPlayers.length !== 1 ? 's' : ''} with expiring contracts now.`);
+    // const expiredPlayers = await prisma.user.findMany({
+    //     where: {
+    //         Status: {
+    //             contractStatus: ContractStatus.SIGNED,  
+    //             contractRemaining: 0,
+    //         },
+    //     },
+    //     include: {
+    //         Status: true,
+    //     },
+    // });
+    // progress.push(`  - Found ${expiredPlayers.length} player${expiredPlayers.length !== 1 ? 's' : ''} with expiring contracts now.`);
     // 3. REMOVE FLAGS
+    progress.push('3. Removing all user flags...');
+    await interaction.editReply(progress.join('\n'));
+    await prisma.user.updateMany({
+        data:{
+            flags: "0x0",
+        }
+    })
+    progress.push('  - ✅ Removed all user flags.');
     // 4. UPDATE EVERYONE'S STATUS TO UNREGISTERED
-    // 5. UPDATE EVERYONE'S ROLES IN DISCORD
+    progress.push('4. Updating all player statuses to UNREGISTERED...');
+    await interaction.editReply(progress.join('\n'));
+    
     progress.push('Done!');
     return await interaction.editReply(progress.join('\n'));
 }
