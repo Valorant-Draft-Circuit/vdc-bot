@@ -1,9 +1,69 @@
+const { Player, ControlPanel } = require("../../../../prisma");
 const { prisma } = require(`../../../../prisma/prismadb`); 
 const { Tier, GameType } = require(`@prisma/client`);
 const season = 8
+let increment = 0
 async function statsCsv(/** @type ChatInputCommandInteraction */ interaction, { gameType }) {
     const stats = (await getPlayerStats(Tier.RECRUIT, gameType, season)).concat(await getPlayerStats(Tier.PROSPECT, gameType, season), await getPlayerStats(Tier.APPRENTICE, gameType, season), await getPlayerStats(Tier.EXPERT, gameType, season), await getPlayerStats(Tier.MYTHIC, gameType, season))
     let thing = (getDuplicates(stats, 'userID').map(a => a.userID)).sort()
+    console.log(thing)
+    console.log(thing.length)
+    const mmrcaps = await ControlPanel.getMMRCaps('PLAYER');
+    while (thing.length > 0) {
+      console.log(stats.length)
+      console.log(gameType)
+      for ( let i = 0; i < thing.length; i++) {
+        let thingy = thing[i]
+        let matches = stats.filter(a => a.userID === thingy)
+        let player = await Player.getBy({ userID: thingy });
+        let mmr = player.PrimaryRiotAccount.MMR.mmrEffective
+        let index;
+        console.log("test")
+        console.log(mmrcaps)
+        switch (true) {
+                    case (mmrcaps.RECRUIT.min <= mmr && mmr <= mmrcaps.RECRUIT.max):
+                        // RECRUIT PLAYER
+                        console.log('recruit')
+                        index = stats.findIndex((stat) => stat.id === matches.filter(a => a.tier !== 'RECRUIT')[0].id)
+                        console.log(index)
+                        stats.splice(index,1);
+                        break;
+                    case (mmrcaps.PROSPECT.min <= mmr && mmr <= mmrcaps.PROSPECT.max):
+                        // PROSPECT PLAYER
+                        console.log('prospect')
+                        index = stats.findIndex((stat) => stat.id === matches.filter(a => a.tier !== 'PROSPECT')[0].id)
+                        console.log(index)
+                        stats.splice(index,1);
+                        break;
+                    case mmrcaps.APPRENTICE.min <= mmr && mmr <= mmrcaps.APPRENTICE.max:
+                        // APPRENTICE PLAYER
+                        console.log('apprentice')
+                        index = stats.findIndex((stat) => stat.id === matches.filter(a => a.tier !== 'APPRENTICE')[0].id)
+                        console.log(index)
+                        stats.splice(index,1);
+                        break;
+                    case mmrcaps.EXPERT.min <= mmr && mmr <= mmrcaps.EXPERT.max:
+                        // EXPERT PLAYER
+                        console.log('expert')
+                        index = stats.findIndex((stat) => stat.id === matches.filter(a => a.tier !== 'EXPERT')[0].id)
+                        console.log(index)
+                        stats.splice(index,1);
+                        break;
+                    case mmrcaps.MYTHIC.min <= mmr && mmr <= mmrcaps.MYTHIC.max:
+                        // MYTHIC PLAYER
+                        console.log('mythic')
+                        index = stats.findIndex((stat) => stat.id === matches.filter(a => a.tier !== 'MYTHIC')[0].id)
+                        console.log(index)
+                        stats.splice(index ,1);
+                        break;
+                        default:
+                        console.log(mmr)
+                        break;
+                }
+      }
+      console.log(stats.length)
+      thing = (getDuplicates(stats, 'userID').map(a => a.userID)).sort()
+    }
     console.log(thing)
     console.log(thing.length)
     const formattedStats = await formatStats(stats, gameType)
@@ -12,19 +72,18 @@ async function statsCsv(/** @type ChatInputCommandInteraction */ interaction, { 
     await prisma.$disconnect()
     //convert to CSV and send as file
     // const csv = json2csv.parse(formattedStats)
-    //console.log((formattedStats.reverse()).splice(0, 10))
-    interaction.editReply({files: [{ attachment: Buffer.from(formattedStats), name: `stats-${gameType}-season-${season}.json` }]})
-    // var fields = Object.keys(formattedStats[0])
-    // var replacer = function(key, value) { return value === null ? '' : value } 
-    // var csv = formattedStats.map(function(row){
-    // return fields.map(function(fieldName){s
-    //     return JSON.stringify(row[fieldName], replacer)
-    // }).join(',')
-    // })
-    // csv.unshift(fields.join(',')) // add header column
-    // csv = csv.join('\r\n');
-    // console.log(csv)
-    // interaction.editReply({ content: `Here are the stats for the ${matchType} season!`, files: [{ attachment: Buffer.from(csv), name: `stats-${matchType}-season-${season}.csv` }] })
+    // console.log((formattedStats.reverse()).splice(0, 10))
+    // interaction.editReply({files: [{ attachment: Buffer.from(formattedStats), name: `stats-${gameType}-season-${season}.json` }]})
+    var fields = Object.keys(formattedStats[0])
+    var replacer = function(key, value) { return value === null ? '' : value } 
+    var csv = formattedStats.map(function(row){
+    return fields.map(function(fieldName){
+        return JSON.stringify(row[fieldName], replacer)
+    }).join(',')
+    })
+    csv.unshift(fields.join(',')) // add header column
+    csv = csv.join('\r\n');
+    interaction.editReply({ content: `Stats for ${gameType}:`, files: [{ attachment: Buffer.from(csv), name: `stats-${gameType}-season-${season}.csv` }] })
 }
 function getDuplicates(arr, key) {
     const map = {};
@@ -42,7 +101,7 @@ function getDuplicates(arr, key) {
     return duplicates;
 }
 async function getPlayerStats(tier, gameType, season) {
-  return await prisma.playerStats.groupBy({
+  let stats = await prisma.playerStats.groupBy({
     where: {
       Game: {
         gameType: gameType,
@@ -86,6 +145,12 @@ async function getPlayerStats(tier, gameType, season) {
       userID: true,
     },
   })
+  for (let i = 0; i < stats.length; i++) {
+    stats[i].tier = tier
+    stats[i].id = increment
+    increment++
+  }
+  return stats
 }
 
 async function formatStats(playerStats, gameType) {
@@ -94,12 +159,24 @@ async function formatStats(playerStats, gameType) {
   playerStats.forEach(function (arrayItem) {
     find.push(arrayItem.userID)
   })
+  // Sanitize and dedupe the list of IDs before querying Prisma.
+  // This trims whitespace, coerces to strings, removes falsy values,
+  // and keeps only unique IDs. Using the raw `find` array can cause
+  // mismatches (e.g. extra whitespace or nulls) which makes Prisma
+  // omit expected rows.
+  const cleanedFind = Array.from(
+    new Set(
+      find
+        .filter(Boolean)
+        .map((id) => String(id).trim())
+    )
+  )
 //   console.log(find.length)
 //   console.log(find)
   const names = await prisma.user.findMany({
     where: {
       id: {
-        in: find,
+        in: cleanedFind,
       },
     },
     select: {
@@ -109,6 +186,11 @@ async function formatStats(playerStats, gameType) {
           riotIGN: true,
         },
       },
+      Status: {
+        select: {
+          contractStatus: true,
+        },
+      },
       Team: {
         select: {
           name: true,
@@ -116,6 +198,11 @@ async function formatStats(playerStats, gameType) {
       },
     },
   })
+  // Diagnose which IDs from the cleaned list were not returned by Prisma.
+  const missing = cleanedFind.filter((id) => !names.some((n) => n.id === id))
+  if (missing.length) {
+    console.log('prisma.user.findMany missing userIDs:', missing)
+  }
 //   names.forEach(function (arrayItem) {
 //     let thing = find.indexOf(arrayItem.id)
 //     if (thing > -1) {
@@ -131,7 +218,7 @@ async function formatStats(playerStats, gameType) {
   const playerStatsWithGames = await prisma.playerStats.findMany({
     where: {
       userID: {
-        in: find, // Only consider the users from the list
+        in: cleanedFind, // Only consider the users from the cleaned list
       },
       Game: {
         season: season, // Filter by the current season
@@ -151,7 +238,7 @@ async function formatStats(playerStats, gameType) {
   })
 
   // Create an array of objects with userID and totalRounds
-  const rounds = find.map((userId) => {
+  const rounds = cleanedFind.map((userId) => {
     // Get all PlayerStats for this user
     const userPlayerStats = playerStatsWithGames.filter((ps) => ps.userID === userId)
 
@@ -162,6 +249,7 @@ async function formatStats(playerStats, gameType) {
 
     return { userID: userId, totalRounds } // Return an object with userID and totalRounds
   })
+  console.log(cleanedFind.length)
   console.log(names.length)
   console.log(playerStats.length)
   console.log(rounds.length)
@@ -175,6 +263,7 @@ async function formatStats(playerStats, gameType) {
   const formattedStats = playerStats.map((stats) => ({
     name: stats.PrimaryRiotAccount?.riotIGN,
     team: stats.Team,
+    contractStatus: stats.Status?.contractStatus,
     matchesPlayed: stats._count.userID,
     rounds: stats.totalRounds,
     acs: stats._avg.acs,
