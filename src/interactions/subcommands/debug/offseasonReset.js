@@ -1,10 +1,15 @@
 const { ContractStatus, LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
-const { Transaction, Player, Roles, Team } = require("../../../../prisma");
+const { Transaction, Player, Roles, Team, ControlPanel } = require("../../../../prisma");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
 const { EmbedBuilder } = require("discord.js");
 
 async function offseasonReset(/** @type ChatInputCommandInteraction */ interaction) {
+    const seasonState = await ControlPanel.getLeagueState();
+    if (seasonState !== "OFFSEASON") {
+        interaction.editReply("**WARNING:** The league state is not the offseason! YOU SHOULD NOT BE RUNNING THIS COMMAND OUTSIDE OF THE OFFSEASON!");
+        return;
+    }
     const expiringPlayers = await prisma.user.findMany({
         where: {
             Status: {
