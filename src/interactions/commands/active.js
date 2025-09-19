@@ -17,7 +17,7 @@ module.exports = {
 
         const invalidLeagueStatusStates = [
             LeagueStatus.UNREGISTERED, LeagueStatus.PENDING, LeagueStatus.APPROVED,
-            LeagueStatus.RETIRED, LeagueStatus.SUSPENDED
+            LeagueStatus.RETIRED, LeagueStatus.SUSPENDED, LeagueStatus.MANUAL_REVIEW
         ];
 
         if (invalidLeagueStatusStates.includes(player.Status.leagueStatus)) {
