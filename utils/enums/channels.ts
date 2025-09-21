@@ -10,7 +10,8 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
             MYTHIC: `1059244366671118487`,
             EXPERT: `1059244366671118487`,
             APPRENTICE: `1059244366671118487`,
-            PROSPECT: `1059244366671118487`
+            PROSPECT: `1059244366671118487`,
+            RECRUIT: `1059244366671118487`,
         },
         ANNOUNCEMENTS: {
             FM: `1234719001616056370`
@@ -27,6 +28,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     EXPERT: `1360365247843532841`,
                     APPRENTICE: `1360365176347557898`,
                     PROSPECT: `1360365121154842774`,
+                    RECRUIT: `1360365121154842774`,
                 },
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
@@ -34,6 +36,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     EXPERT: `1360365547581079582`,
                     APPRENTICE: `1360365624743821352`,
                     PROSPECT: `1360365712828535085`,
+                    RECRUIT: `1360365712828535085`,
                 }
             },
         },
@@ -52,7 +55,8 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
             MYTHIC: `1173394756680822854`,
             EXPERT: `1173394810170790019`,
             APPRENTICE: `1173394850905853952`,
-            PROSPECT: `1173394893297696788`
+            PROSPECT: `1173394893297696788`,
+            RECRUIT: `1417210319826063490`,
         },
         ANNOUNCEMENTS: {
             FM: `966212909703237662`
@@ -69,6 +73,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     EXPERT: `1052005068746006598`,
                     APPRENTICE: `1165389054938980394`,
                     PROSPECT: `1052002652688486554`,
+                    RECRUIT: `1417228147212026026`,
                 },
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
@@ -76,6 +81,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     EXPERT: `1052001614157856798`,
                     APPRENTICE: `1052001489964515459`,
                     PROSPECT: `1052001442979905586`,
+                    RECRUIT: `1417228058900824164`,
                 }
             },
         },

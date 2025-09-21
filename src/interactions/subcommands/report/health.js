@@ -171,8 +171,13 @@ function generateTable(columns, rows) {
 
 // get tier based on MMR
 function getTier(mmr, tierLines) {
-
-    if ( 											// PROSPECT
+    
+    if ( 											// RECRUIT
+        tierLines.RECRUIT.min <= mmr &&
+        mmr <= tierLines.RECRUIT.max
+    ) {
+        return Tier.RECRUIT;
+    } else if ( 											// PROSPECT
         tierLines.PROSPECT.min <= mmr &&
         mmr <= tierLines.PROSPECT.max
     ) {

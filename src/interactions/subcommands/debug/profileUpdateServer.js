@@ -432,8 +432,12 @@ async function getTierRole(player, isSigned) {
     const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
 
     let roles = [];
-
-    if ( 											// PROSPECT
+    if (tierLines.RECRUIT.min <= mmrEffective && 
+        mmrEffective <= tierLines.RECRUIT.max) { 	// RECRUIT
+        roles.push(ROLES.TIER.RECRUIT);
+        if (!isSigned) roles.push(ROLES.TIER.RECRUIT_FREE_AGENT);
+        
+    } else if ( 									// PROSPECT
         tierLines.PROSPECT.min <= mmrEffective &&
         mmrEffective <= tierLines.PROSPECT.max
     ) {

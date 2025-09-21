@@ -5,21 +5,10 @@ const logoBaseLink = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/te
 const Canvas = require('@napi-rs/canvas');
 const {GlobalFonts} = require('@napi-rs/canvas');
 const { LeagueStatus, ContractStatus } = require('@prisma/client');
-
+const { COLORS } = require(`../../../../utils/enums`);
 
 const nameSanatize = (name, slug) => name.split(`#`)[0].replace(`${slug} `, ``);
 
-const COLORS = {
-    PROSPECT: `#FEC335`,
-    APPRENTICE: `#72C357`,
-    EXPERT: `#04AEE4`,
-    MYTHIC: `#A657A6`,
-
-    RED: `#DE3845`,
-    WHITE: `#DE3845`,
-    GRAY: `#181818`,
-    BLACK: `#71C358`,
-};
 
 const ASSETS = {
     BASE: `./utils/assets/base.png`,

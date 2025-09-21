@@ -106,6 +106,9 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     if (mmrShow) {
         const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
         switch (true) {
+            case (tierLines.RECRUIT.min < mmrBase && mmrBase < tierLines.RECRUIT.max):
+                await guildMember.roles.add([ROLES.TIER.RECRUIT, ROLES.TIER.RECRUIT_FREE_AGENT]);
+                break;
             case (tierLines.PROSPECT.min < mmrBase && mmrBase < tierLines.PROSPECT.max):
                 await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
                 break;

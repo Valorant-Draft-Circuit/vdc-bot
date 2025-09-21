@@ -478,8 +478,15 @@ async function getTierRole(player, isSigned) {
 
 	let roles = [];
 	let readableRoles = [];
-
-	if ( 											// PROSPECT
+	if (tierLines.RECRUIT.min <= mmrEffective && 
+		mmrEffective <= tierLines.RECRUIT.max) { 	// RECRUIT
+		roles.push(ROLES.TIER.RECRUIT);
+		readableRoles.push(`Recruit`);
+		if (!isSigned) {
+			roles.push(ROLES.TIER.RECRUIT_FREE_AGENT);
+			readableRoles.push(`Recruit Free Agent`);
+		}
+	} else if ( 									// PROSPECT
 		tierLines.PROSPECT.min <= mmrEffective &&
 		mmrEffective <= tierLines.PROSPECT.max
 	) {

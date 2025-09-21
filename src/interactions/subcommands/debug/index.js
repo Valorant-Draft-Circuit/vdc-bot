@@ -7,6 +7,7 @@ const { processRFA } = require("./processRFA");
 const { profileUpdate } = require("./profileUpdate");
 const { refreshCache } = require("./refreshCache");
 const { profileUpdateServer } = require("./profileUpdateServer");
+const { offseasonReset } = require("./offseasonReset");
 
 
 module.exports = {
@@ -19,4 +20,5 @@ module.exports = {
     profileUpdate: profileUpdate,
     refreshCache: refreshCache,
     profileUpdateServer: profileUpdateServer,
+    offseasonReset: offseasonReset,
 }

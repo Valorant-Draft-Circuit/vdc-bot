@@ -8,23 +8,12 @@ const Canvas = require('@napi-rs/canvas');
 const { Tier } = require('@prisma/client');
 const { ControlPanel } = require('../../../../prisma');
 const { GlobalFonts } = require('@napi-rs/canvas');
-
+const { COLORS } = require('../../../../utils/enums');
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 
 
 
-const COLORS = {
-    PROSPECT: `#FEC335`,
-    APPRENTICE: `#72C357`,
-    EXPERT: `#04AEE4`,
-    MYTHIC: `#A657A6`,
-
-    RED: `#DE3845`,
-    WHITE: `#DE3845`,
-    GRAY: `#181818`,
-    BLACK: `#71C358`,
-}
 const ASSETS = {
     BASE: `./utils/assets/base.png`,
     LOGO: `./utils/assets/logo.png`,
@@ -74,7 +63,7 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
     GlobalFonts.registerFromPath(`./utils/assets/Lato-Regular.ttf`, `Lato`);
 
     const season = await ControlPanel.getSeason();
-    const tiers = [Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
+    const tiers = [Tier.RECRUIT, Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
     // const tiers = [Tier.MYTHIC];
 
     for (let i = 0; i < tiers.length; i++) {

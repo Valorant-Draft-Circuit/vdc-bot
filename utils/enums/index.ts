@@ -9,6 +9,7 @@
 export { CHANNELS } from "./channels";
 export { ROLES } from "./roles";
 export { GUILD } from "./guild";
+export { COLORS } from "./colors";
 export { StatusEmotes } from "./emotes";
 
 export { ButtonOptions } from "./buttonOptions";

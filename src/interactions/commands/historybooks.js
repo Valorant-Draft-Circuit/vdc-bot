@@ -28,10 +28,11 @@ const defs = {
 
 // this is needed to correctly sort the tiers
 const tierSortWeights = {
-    PROSPECT: 1,
-    APPRENTICE: 2,
-    EXPERT: 3,
-    MYTHIC: 4
+    RECRUIT: 1,
+    PROSPECT: 2,
+    APPRENTICE: 3,
+    EXPERT: 4,
+    MYTHIC: 5
 };
 
 
@@ -148,31 +149,41 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
 
 
 
-    // all stars
+    // Team Champions
     const mChampion = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `WIN`);
     const eChampion = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `WIN`);
     const aChampion = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `WIN`);
     const pChampion = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `WIN`);
+    const rChampion = accolades.filter(m => m.tier == Tier.RECRUIT && m.shorthand == `WIN`);
 
-    // all stars
+    // FM Creator of Champions
     const mManagement = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `WIN_FM`);
     const eManagement = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `WIN_FM`);
     const aManagement = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `WIN_FM`);
     const pManagement = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `WIN_FM`);
+    const rManagement = accolades.filter(m => m.tier == Tier.RECRUIT && m.shorthand == `WIN_FM`);
 
-    // all stars
+    // Finals Substitutes
     const mSubstitute = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `WIN_SUB`);
     const eSubstitute = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `WIN_SUB`);
     const aSubstitute = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `WIN_SUB`);
     const pSubstitute = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `WIN_SUB`);
+    const rSubstitute = accolades.filter(m => m.tier == Tier.RECRUIT && m.shorthand == `WIN_SUB`);
 
     // all stars
     const mAllStar = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `AST`);
     const eAllStar = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `AST`);
     const aAllStar = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `AST`);
     const pAllStar = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `AST`);
+    const rAllStar = accolades.filter(m => m.tier == Tier.RECRUIT && m.shorthand == `AST`);
 
-
+    // recruit
+    const rFields = [
+        { name: `Recruit`, value: rChampion.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
+        { name: `Recruit Franchise Management`, value: rManagement.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
+    ];
+    if (rSubstitute.length !== 0) rFields.push({ name: `Recruit Substitutes`, value: rSubstitute.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true });
+    else rFields.push({ name: `\u200B`, value: `\u200B`, inline: true });
 
     // prospect
     const pFields = [
@@ -191,7 +202,7 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
     if (aSubstitute.length !== 0) aFields.push({ name: `Apprentice Substitutes`, value: aSubstitute.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true });
     else aFields.push({ name: `\u200B`, value: `\u200B`, inline: true });
 
-    //expoert
+    //expert
     const eFields = [
         { name: `Expert`, value: eChampion.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
         { name: `Expert Franchise Management`, value: eManagement.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
@@ -220,6 +231,8 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
             color: 0x235A81,
             fields: [
                 // { name: `Apprentice All Stars`, value: aAllStar.map(ast => `<@${ast.Player.Accounts.find(a => a.provider === `discord`).providerAccountId}> ([\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
+                ...rFields,
+                
                 ...pFields,
 
                 ...aFields,
@@ -282,12 +295,10 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
         new EmbedBuilder({
             color: 0x235A81,
             fields: [
+                { name: `Recruit All Stars`, value: rAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
                 { name: `Prospect All Stars`, value: pAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
                 { name: `\u200B`, value: `\u200B`, inline: true },
                 { name: `Apprentice All Stars`, value: aAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
-                { name: `\u200B`, value: `\u200B`, inline: true },
-                { name: `\u200B`, value: `\u200B`, inline: true },
-                { name: `\u200B`, value: `\u200B`, inline: true },
                 { name: `Expert All Stars`, value: eAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
                 { name: `\u200B`, value: `\u200B`, inline: true },
                 { name: `Mythic All Stars`, value: mAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },

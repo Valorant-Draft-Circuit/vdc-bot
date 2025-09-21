@@ -1,4 +1,4 @@
-const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
+const { LeagueStatus, ContractStatus, MatchType, GameType } = require(`@prisma/client`);
 const { ApplicationCommandOptionType, InteractionContextType } = require(`discord.js`);
 
 /** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
@@ -85,6 +85,23 @@ module.exports = {
                     description: `Match time (Defaults to 9:00 EST / 6:00 PST)`,
                     type: ApplicationCommandOptionType.String,
                     required: false,
+                },
+            ]
+        },
+        {
+            name: `stats-csv`,
+            description: `Get a CSV of stats for a given match type`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `match-type`,
+                    description: `The type of match`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        { name: `Combine`, value: GameType.COMBINE },
+                        { name: 'Regular Season', value: GameType.SEASON },
+                    ]
                 },
             ]
         },

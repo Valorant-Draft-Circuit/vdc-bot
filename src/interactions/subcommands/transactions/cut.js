@@ -90,6 +90,9 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 	await guildMember.roles.add([ROLES.LEAGUE.LEAGUE, ROLES.LEAGUE.FREE_AGENT]);
 	if (leagueState !== `COMBINES`) {
 		switch (team.tier) {
+			case Tier.RECRUIT:
+				await guildMember.roles.add([ROLES.TIER.RECRUIT, ROLES.TIER.RECRUIT_FREE_AGENT]);
+				break;
 			case Tier.PROSPECT:
 				await guildMember.roles.add([ROLES.TIER.PROSPECT, ROLES.TIER.PROSPECT_FREE_AGENT]);
 				break;
