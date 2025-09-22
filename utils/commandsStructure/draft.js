@@ -18,6 +18,7 @@ module.exports = {
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					choices: [
+						{ name: 'Recruit', value: Tier.RECRUIT },
 						{ name: `Prospect`, value: Tier.PROSPECT },
 						{ name: `Apprentice`, value: Tier.APPRENTICE },
 						{ name: `Expert`, value: Tier.EXPERT },
@@ -43,6 +44,7 @@ module.exports = {
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					choices: [
+						{ name: 'Recruit', value: Tier.RECRUIT },
 						{ name: `Prospect`, value: Tier.PROSPECT },
 						{ name: `Apprentice`, value: Tier.APPRENTICE },
 						{ name: `Expert`, value: Tier.EXPERT },
@@ -75,6 +77,7 @@ module.exports = {
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					choices: [
+						{ name: 'Recruit', value: Tier.RECRUIT },
 						{ name: `Prospect`, value: Tier.PROSPECT },
 						{ name: `Apprentice`, value: Tier.APPRENTICE },
 						{ name: `Expert`, value: Tier.EXPERT },
@@ -108,6 +111,7 @@ module.exports = {
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					choices: [
+						{ name: 'Recruit', value: Tier.RECRUIT },
 						{ name: `Prospect`, value: Tier.PROSPECT },
 						{ name: `Apprentice`, value: Tier.APPRENTICE },
 						{ name: `Expert`, value: Tier.EXPERT },
@@ -133,6 +137,7 @@ module.exports = {
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					choices: [
+						{ name: 'Recruit', value: Tier.RECRUIT },
 						{ name: `Prospect`, value: Tier.PROSPECT },
 						{ name: `Apprentice`, value: Tier.APPRENTICE },
 						{ name: `Expert`, value: Tier.EXPERT },
@@ -171,6 +176,7 @@ module.exports = {
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					choices: [
+						{ name: 'Recruit', value: Tier.RECRUIT },
 						{ name: `Prospect`, value: Tier.PROSPECT },
 						{ name: `Apprentice`, value: Tier.APPRENTICE },
 						{ name: `Expert`, value: Tier.EXPERT },
@@ -216,6 +222,7 @@ module.exports = {
 					type: ApplicationCommandOptionType.String,
 					required: true,
 					choices: [
+						{ name: 'Recruit', value: Tier.RECRUIT },
 						{ name: `Prospect`, value: Tier.PROSPECT },
 						{ name: `Apprentice`, value: Tier.APPRENTICE },
 						{ name: `Expert`, value: Tier.EXPERT },

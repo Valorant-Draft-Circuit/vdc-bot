@@ -1,4 +1,4 @@
-const { generateSeasonThumbnail, generatePlayoffsImages } = require("../subcommands/media");
+const { generateSeasonThumbnail, generatePlayoffsImages, statsCsv } = require("../subcommands/media");
 
 module.exports = {
 	name: `media`,
@@ -47,6 +47,12 @@ module.exports = {
 					type: imagetype,
 					style: matchtype,
 				})
+			}
+			case `stats-csv`: {
+				const gameType = _hoistedOptions[0].value;
+				return statsCsv(interaction, {
+					gameType: gameType,
+				});
 			}
 			default:
 				return interaction.editReply(`That's not a valid subcommand or this command is a work in progress!`);

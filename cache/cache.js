@@ -5,10 +5,11 @@ const { Client, Application } = require('discord.js');
 
 // this is needed to correctly sort the tiers
 const tierSortWeights = {
-    PROSPECT: 1,
-    APPRENTICE: 2,
-    EXPERT: 3,
-    MYTHIC: 4
+    RECRUIT: 1,
+    PROSPECT: 2,
+    APPRENTICE: 3,
+    EXPERT: 4,
+    MYTHIC: 5
 };
 
 // #####################################################################################

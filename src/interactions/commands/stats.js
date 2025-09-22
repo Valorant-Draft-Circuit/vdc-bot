@@ -2,16 +2,11 @@ const { ChatInputCommandInteraction, GuildMember, EmbedBuilder, ButtonBuilder, B
 
 const { Games, Team, Player, ControlPanel } = require(`../../../prisma`);
 const { GameType, LeagueStatus } = require(`@prisma/client`);
+const { COLORS } = require(`../../../utils/enums/colors`);
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 const avg = (array) => array.reduce((s, v) => s += v, 0) / array.length;
 
-const COLORS = {
-    PROSPECT: 0xFEC335,
-    APPRENTICE: 0x72C357,
-    EXPERT: 0x04AEE4,
-    MYTHIC: 0xA657A6,
-};
 
 module.exports = {
 

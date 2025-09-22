@@ -4,15 +4,10 @@ const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelec
 const { LeagueStatus, ContractStatus, MatchType } = require("@prisma/client");
 const { prisma } = require("../../../prisma/prismadb");
 
+const { COLORS } = require("../../../utils/enums/colors");
+
 const imagesURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos`;
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
-
-const COLORS = {
-   PROSPECT: 0xFEC335,
-   APPRENTICE: 0x72C357,
-   EXPERT: 0x04AEE4,
-   MYTHIC: 0xA657A6,
-}
 
 module.exports = {
 

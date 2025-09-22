@@ -1,6 +1,6 @@
 const { ChatInputCommandInteraction } = require(`discord.js`);
 
-const { debugUser, forceUpdate, processInactive, updateMMR, updateByIGN, profileUpdate, refreshCache, profileUpdateServer } = require(`../subcommands/debug`);
+const { debugUser, forceUpdate, processInactive, updateMMR, updateByIGN, profileUpdate, refreshCache, profileUpdateServer, offseasonReset } = require(`../subcommands/debug`);
 
 
 module.exports = {
@@ -19,5 +19,6 @@ module.exports = {
         if (_subcommand === `profile-update`) return profileUpdate(interaction);
         if (_subcommand === `refresh-cache`) return refreshCache(interaction);
         if (_subcommand === `profile-update-server`) return profileUpdateServer(interaction);
+        if (_subcommand === 'offseason-reset') return offseasonReset(interaction);
     }
 };

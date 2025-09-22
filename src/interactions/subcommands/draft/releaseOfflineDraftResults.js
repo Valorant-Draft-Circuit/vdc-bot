@@ -4,13 +4,7 @@ const { ControlPanel, Transaction } = require(`../../../../prisma`);
 const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ROLES } = require(`../../../../utils/enums`);
-
-const COLORS = {
-    PROSPECT: 0xFEC335,
-    APPRENTICE: 0x72C357,
-    EXPERT: 0x04AEE4,
-    MYTHIC: 0xA657A6,
-}
+const { COLORS } = require(`../../../../utils/enums`);
 
 const Logger = require(`../../../core/logger`);
 const logger = new Logger();
