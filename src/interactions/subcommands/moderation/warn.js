@@ -1,0 +1,1 @@
+// Warn a user and add a log of it to modlogs
