@@ -18,7 +18,7 @@
 
 ## TODO: Make relax hot configurable and make it relational to how many players are in queue.
 
-## TODO: Built an example embed that can be found here https://discord.com/channels/1027754353207033966/1419239139588702218/1426426454375403654 & https://discohook.app/?share=loJoQ1ps 
+## TODO: Built an example embed that can be found here https://discord.com/channels/1027754353207033966/1419239139588702218/1426426454375403654 & https://discohook.app/?share=7KFNhTkS
 ![alt text](embed_example.png)
 
 
@@ -119,8 +119,6 @@ vdc:metrics:*                            -> counters for ops (optional)  :conten
 
 **Implementation detail:**  
 Maintain **three Redis queues per tier** (see §5). The matchmaker pulls from them in priority order until filling 10 slots (5v5), while the anti-rematch rule may skip a candidate and peek deeper. If a higher-priority queue is empty, pull from the next one. Starvation relaxation (after ~180s) can temporarily ignore priority/anti-rematch to get games moving.
-
-TODO: having one or two 'veterans' (FA or SIGNED) can help bridge the social gap between newer players and older ones, as well as provide a guiding voice to newer players who may not know VDC procedures.
 
 ---
 
