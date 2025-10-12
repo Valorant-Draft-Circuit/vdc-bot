@@ -1,0 +1,141 @@
+const { prisma } = require(`../../prisma/prismadb`);
+const { getRedisClient } = require(`./redis`);
+const { getQueueConfig } = require(`./config`);
+
+const LEAGUE_STATE_KEY = `vdc:league_state`;
+const COMBINES_STATE = `combines`;
+const DEFAULT_INTERVAL_MS = 5000;
+
+let monitorHandle;
+let monitorIntervalMs = DEFAULT_INTERVAL_MS;
+let lastStateSnapshot = {
+	redisHealthy: null,
+	dbHealthy: null,
+	combinesActive: null,
+	paused: null,
+};
+
+function log(level, message, error) {
+	if (global.logger && typeof global.logger.log === `function`) {
+		global.logger.log(level, message, error);
+	} else if (error) {
+		console.log(`[${level}] ${message} :: ${error.message || error}`);
+	} else {
+		console.log(`[${level}] ${message}`);
+	}
+}
+
+async function pingRedis() {
+	try {
+		const redis = getRedisClient();
+		await redis.ping();
+		return true;
+	} catch (error) {
+		log(`WARNING`, `Redis ping failed`, error);
+		return false;
+	}
+}
+
+async function pingDatabase(timeoutMs) {
+	try {
+		await Promise.race([
+			prisma.$queryRaw`SELECT 1`,
+			new Promise((_, reject) =>
+				setTimeout(() => reject(new Error(`DB_PING_TIMEOUT`)), timeoutMs),
+			),
+		]);
+
+		return true;
+	} catch (error) {
+		if (error.message === `DB_PING_TIMEOUT`) {
+			log(`WARNING`, `Database ping timed out after ${timeoutMs}ms`);
+		} else {
+			log(`WARNING`, `Database ping failed`, error);
+		}
+
+		return false;
+	}
+}
+
+async function readLeagueState() {
+	try {
+		const redis = getRedisClient();
+		const state = await redis.get(LEAGUE_STATE_KEY);
+		return typeof state === `string` ? state.toLowerCase() : null;
+	} catch (error) {
+		log(`WARNING`, `Unable to read league state`, error);
+		return null;
+	}
+}
+
+async function monitorTick() {
+    const config = await getQueueConfig();
+    const redisHealthy = await pingRedis();
+    const dbHealthy = await pingDatabase(config.health.dbTimeoutMs);
+    const leagueState = await readLeagueState();
+
+    const combinesActive = leagueState === COMBINES_STATE;
+    const healthy = redisHealthy && dbHealthy && config.enabled && combinesActive;
+
+    if (
+        lastStateSnapshot.redisHealthy !== redisHealthy ||
+        lastStateSnapshot.dbHealthy !== dbHealthy ||
+        lastStateSnapshot.combinesActive !== combinesActive ||
+        lastStateSnapshot.paused !== !healthy
+    ) {
+        lastStateSnapshot = { redisHealthy, dbHealthy, combinesActive, paused: !healthy };
+        log(`INFO`, `Queue health updated: ${JSON.stringify(lastStateSnapshot)}`);
+    }
+
+	const desiredInterval = Math.max(
+		1000,
+		Number(config.health?.checkIntervalMs) || DEFAULT_INTERVAL_MS,
+	);
+	if (desiredInterval !== monitorIntervalMs) {
+		rescheduleMonitor(desiredInterval);
+	}
+}
+
+function rescheduleMonitor(newInterval) {
+	monitorIntervalMs = newInterval;
+
+	if (monitorHandle) {
+		clearInterval(monitorHandle);
+		monitorHandle = setInterval(
+			() => monitorTick().catch((error) => log(`ERROR`, `Queue health tick failed`, error)),
+			monitorIntervalMs,
+		);
+		monitorHandle.unref?.();
+	}
+}
+
+function startHealthMonitor() {
+	if (monitorHandle) return monitorHandle;
+
+	monitorHandle = setInterval(
+		() => monitorTick().catch((error) => log(`ERROR`, `Queue health tick failed`, error)),
+		monitorIntervalMs,
+	);
+	monitorHandle.unref?.();
+
+	monitorTick().catch((error) => log(`ERROR`, `Initial queue health check failed`, error));
+
+	return monitorHandle;
+}
+
+function stopHealthMonitor() {
+	if (!monitorHandle) return;
+	clearInterval(monitorHandle);
+	monitorHandle = undefined;
+	lastStateSnapshot = {
+		redisHealthy: null,
+		dbHealthy: null,
+		combinesActive: null,
+		paused: null,
+	};
+}
+
+module.exports = {
+	startHealthMonitor,
+	stopHealthMonitor,
+};

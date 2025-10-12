@@ -107,7 +107,14 @@ module.exports = class Logger {
         const levelOut = level.padStart(8, ` `);
 
         let tidyStack;
-        if (stack) tidyStack = stack.replaceAll(__dirname.replace(`src\\core`, ``), `./`).replaceAll(`\\`, `/`);
+        if (stack) {
+            const stackText = typeof stack === `string`
+                ? stack
+                : stack?.stack
+                    ? stack.stack
+                    : String(stack);
+            tidyStack = stackText.replaceAll(__dirname.replace(`src\\core`, ``), `./`).replaceAll(`\\`, `/`);
+        }
 
         // out to console
         console.log(`${ccolor[level](time)} | ${ccolor[level](levelOut)} : ${message}`);

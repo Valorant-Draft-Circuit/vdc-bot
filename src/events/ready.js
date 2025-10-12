@@ -1,3 +1,8 @@
+const { startHealthMonitor } = require(`../core/health`);
+const { preloadLuaScripts } = require(`../core/redis`);
+const { bootstrapRedisIfNeeded } = require(`../core/bootstrap`);
+const { startMatchmaker } = require(`../workers/matchmaker`);
+
 module.exports = {
 
 	/**
@@ -19,6 +24,12 @@ module.exports = {
 
 		const emotes = (await client.application.emojis.fetch()).map(e => e);
 		logger.log(`INFO`, `Found \`${emotes.length}\` application emote(s)`);
+
+		await preloadLuaScripts();
+		await bootstrapRedisIfNeeded();
+
+		startHealthMonitor(client);
+		startMatchmaker(client);
 
 		// initialize logger logdrain needs
 		return await logger.init();
