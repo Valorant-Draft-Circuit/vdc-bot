@@ -127,7 +127,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
     // initalize welcome slug
     let welcomeSlug = ``;
 
-    if (playerData.Status.contractStatus == ContractStatus.SIGNED || BigInt(playerData.roles) == BigInt(Roles.LEAGUE_GM) || BigInt(playerData.roles) == BigInt(Roles.LEAGUE_AGM)) {
+    if (playerData.Status.contractStatus == ContractStatus.SIGNED || BigInt(playerData.roles) & BigInt(Roles.LEAGUE_GM) || BigInt(playerData.roles) & BigInt(Roles.LEAGUE_AGM)) {
         // get team and if captain
         const playerTeam = playerData.Team;
         const isCaptain = playerTeam?.captain == playerData.id;
@@ -139,7 +139,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
         // set welcomeslug
         welcomeSlug = playerFranchise?.slug;
 
-        if (BigInt(playerData.roles) == BigInt(Roles.LEAGUE_GM)) {
+        if (BigInt(playerData.roles) & BigInt(Roles.LEAGUE_GM)) {
             const franchise = await prisma.franchise.findFirst({
                 where: {
                     OR: [
@@ -159,7 +159,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
                 content: `Welcome ${guildMember.user} back as a General Manager for ${franchise.name}!`
             });
 
-        } else if (BigInt(playerData.roles) == BigInt(Roles.LEAGUE_AGM)) {
+        } else if (BigInt(playerData.roles) & BigInt(Roles.LEAGUE_AGM)) {
             const franchise = await prisma.franchise.findFirst({
                 where: {
                     OR: [

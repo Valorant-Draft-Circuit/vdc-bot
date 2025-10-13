@@ -4,6 +4,14 @@ const { CHANNELS } = require("../../../../utils/enums");
 const { prisma } = require("../../../../prisma/prismadb");
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 
+const tierSortWeights = {
+    RECRUIT: 1,
+    PROSPECT: 2,
+    APPRENTICE: 3,
+    EXPERT: 4,
+    MYTHIC: 5
+};
+
 async function refreshFranchisesChannel(/** @type ChatInputCommandInteraction */ interaction) {
     const franchiseChannel = await interaction.guild.channels.fetch(CHANNELS.FRANCHISES);
 
@@ -74,7 +82,7 @@ async function refreshFranchisesChannel(/** @type ChatInputCommandInteraction */
             // thumbnail: { url: `${imagepath}${franchise.logoFileName}?size=1080` },
             // footer: { text: `Valorant Draft Circuit - ${franchise.name} (${franchise.slug})`, iconURL: `${imagepath}${franchise.Brand.logo}` }
         });
-
+        franchise.Teams = franchise.Teams.sort((a, b) => tierSortWeights[a.tier] - tierSortWeights[b.tier]);
         const teamsEmbed = new EmbedBuilder({
             // author: { name: franchise.name, iconURL: `${imagepath}${franchise.Brand.logo}` },
             // title: franchise.name,
