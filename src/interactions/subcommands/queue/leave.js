@@ -21,7 +21,7 @@ async function leaveQueue(interaction) {
 			content: `You have been removed from the ${payload.tier ?? `queue`} queue.`,
 		});
 	} catch (error) {
-		log(`ERROR`, `Queue leave failed`, error);
+		logger.log(`ERROR`, `Queue leave failed`, error);
 		return interaction.editReply({
 			content: `Unable to remove you from the queue right now. Please contact an admin if this persists.`,
 		});
@@ -54,21 +54,11 @@ function parseLuaJson(payload) {
 		try {
 			return JSON.parse(payload);
 		} catch (error) {
-			log(`ERROR`, `Failed to parse Lua script response`, error);
+			logger.log(`ERROR`, `Failed to parse Lua script response`, error);
 			return {};
 		}
 	}
 	return payload;
-}
-
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else if (error) {
-		console.log(`[${level}] ${message} :: ${error.message || error}`);
-	} else {
-		console.log(`[${level}] ${message}`);
-	}
 }
 
 module.exports = {

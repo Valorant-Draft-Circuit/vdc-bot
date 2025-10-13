@@ -70,15 +70,6 @@ function coerceControlPanelValue(rawValue) {
 	return trimmed;
 }
 
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else {
-		const payload = error ? `${message} :: ${error.message || error}` : message;
-		console.log(`[${level}] ${payload}`);
-	}
-}
-
 function hydrateConfigFromRows(rows) {
 	const config = cloneDefaultQueueConfig();
 
@@ -165,7 +156,7 @@ async function persistQueueConfigToRedis(config) {
 			QUEUE_CONFIG_CACHE_TTL_SECONDS,
 		);
 	} catch (error) {
-		log(`WARNING`, `Failed to persist queue config to Redis`, error);
+		logger.log(`WARNING`, `Failed to persist queue config to Redis`, error);
 	}
 }
 
@@ -186,7 +177,7 @@ async function readQueueConfigFromRedis() {
 					: base.mapPool.slice(),
 			};
 		} catch (error) {
-			log(`WARNING`, `Failed to read queue config from Redis`, error);
+			logger.log(`WARNING`, `Failed to read queue config from Redis`, error);
 			return null;
 		}
 }
@@ -219,7 +210,7 @@ async function loadQueueConfig({ forceRefresh = false } = {}) {
 		await persistQueueConfigToRedis(fresh);
 		return fresh;
 	} catch (error) {
-		log(`ERROR`, `Unable to load queue configuration`, error);
+		logger.log(`ERROR`, `Unable to load queue configuration`, error);
 		throw error;
 	}
 }
@@ -232,7 +223,7 @@ async function invalidateQueueConfigCache() {
 		const redis = getRedisClient();
 		await redis.del(QUEUE_CONFIG_CACHE_KEY);
 	} catch (error) {
-		log(`WARNING`, `Failed to invalidate queue config cache`, error);
+		logger.log(`WARNING`, `Failed to invalidate queue config cache`, error);
 	}
 }
 
@@ -267,7 +258,7 @@ async function fetchGlobalMapPool() {
 
 		throw new Error(`ControlPanel map pool (MAP_POOL) has invalid format`);
 	} catch (error) {
-		log(`WARNING`, `Failed to fetch global map pool`, error);
+		logger.log(`WARNING`, `Failed to fetch global map pool`, error);
 		throw error;
 	}
 }
@@ -285,7 +276,7 @@ async function fetchDisplayMmrFallback(current) {
 		const coerced = coerceControlPanelValue(row.value);
 		return typeof coerced === `boolean` ? coerced : false;
 	} catch (error) {
-		log(`WARNING`, `Failed to fetch display_mmr`, error);
+		logger.log(`WARNING`, `Failed to fetch display_mmr`, error);
 		return false;
 	}
 }

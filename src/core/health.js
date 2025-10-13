@@ -12,18 +12,8 @@ let lastStateSnapshot = {
 	redisHealthy: null,
 	dbHealthy: null,
 	combinesActive: null,
-	paused: null,
+	healthy: null,
 };
-
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else if (error) {
-		console.log(`[${level}] ${message} :: ${error.message || error}`);
-	} else {
-		console.log(`[${level}] ${message}`);
-	}
-}
 
 async function pingRedis() {
 	try {
@@ -48,9 +38,9 @@ async function pingDatabase(timeoutMs) {
 		return true;
 	} catch (error) {
 		if (error.message === `DB_PING_TIMEOUT`) {
-			log(`WARNING`, `Database ping timed out after ${timeoutMs}ms`);
+			logger.log(`WARNING`, `Database ping timed out after ${timeoutMs}ms`);
 		} else {
-			log(`WARNING`, `Database ping failed`, error);
+			logger.log(`WARNING`, `Database ping failed`, error);
 		}
 
 		return false;
@@ -63,29 +53,29 @@ async function readLeagueState() {
 		const state = await redis.get(LEAGUE_STATE_KEY);
 		return typeof state === `string` ? state.toLowerCase() : null;
 	} catch (error) {
-		log(`WARNING`, `Unable to read league state`, error);
+		logger.log(`WARNING`, `Unable to read league state`, error);
 		return null;
 	}
 }
 
 async function monitorTick() {
-    const config = await getQueueConfig();
-    const redisHealthy = await pingRedis();
-    const dbHealthy = await pingDatabase(config.health.dbTimeoutMs);
-    const leagueState = await readLeagueState();
+	const config = await getQueueConfig();
+	const redisHealthy = await pingRedis();
+	const dbHealthy = await pingDatabase(config.health.dbTimeoutMs);
+	const leagueState = await readLeagueState();
 
-    const combinesActive = leagueState === COMBINES_STATE;
-    const healthy = redisHealthy && dbHealthy && config.enabled && combinesActive;
+	const combinesActive = leagueState === COMBINES_STATE;
+	const healthy = redisHealthy && dbHealthy && config.enabled && combinesActive;
 
-    if (
-        lastStateSnapshot.redisHealthy !== redisHealthy ||
-        lastStateSnapshot.dbHealthy !== dbHealthy ||
-        lastStateSnapshot.combinesActive !== combinesActive ||
-        lastStateSnapshot.paused !== !healthy
-    ) {
-        lastStateSnapshot = { redisHealthy, dbHealthy, combinesActive, paused: !healthy };
-        log(`INFO`, `Queue health updated: ${JSON.stringify(lastStateSnapshot)}`);
-    }
+	if (
+		lastStateSnapshot.redisHealthy !== redisHealthy ||
+		lastStateSnapshot.dbHealthy !== dbHealthy ||
+		lastStateSnapshot.combinesActive !== combinesActive ||
+		lastStateSnapshot.healthy !== healthy
+	) {
+		lastStateSnapshot = { redisHealthy, dbHealthy, combinesActive, healthy };
+		logger.log(`INFO`, `Queue health updated: ${JSON.stringify(lastStateSnapshot)}`);
+	}
 
 	const desiredInterval = Math.max(
 		1000,
@@ -102,7 +92,7 @@ function rescheduleMonitor(newInterval) {
 	if (monitorHandle) {
 		clearInterval(monitorHandle);
 		monitorHandle = setInterval(
-			() => monitorTick().catch((error) => log(`ERROR`, `Queue health tick failed`, error)),
+			() => monitorTick().catch((error) => logger.log(`ERROR`, `Queue health tick failed`, error)),
 			monitorIntervalMs,
 		);
 		monitorHandle.unref?.();
@@ -113,12 +103,12 @@ function startHealthMonitor() {
 	if (monitorHandle) return monitorHandle;
 
 	monitorHandle = setInterval(
-		() => monitorTick().catch((error) => log(`ERROR`, `Queue health tick failed`, error)),
+		() => monitorTick().catch((error) => logger.log(`ERROR`, `Queue health tick failed`, error)),
 		monitorIntervalMs,
 	);
 	monitorHandle.unref?.();
 
-	monitorTick().catch((error) => log(`ERROR`, `Initial queue health check failed`, error));
+	monitorTick().catch((error) => logger.log(`ERROR`, `Initial queue health check failed`, error));
 
 	return monitorHandle;
 }
@@ -131,7 +121,7 @@ function stopHealthMonitor() {
 		redisHealthy: null,
 		dbHealthy: null,
 		combinesActive: null,
-		paused: null,
+		healthy: null,
 	};
 }
 

@@ -3,19 +3,9 @@ const { ChannelType, PermissionFlagsBits } = require(`discord.js`);
 const MATCH_CHANNEL_NAMES = Object.freeze({
 	text: `match-chat`,
 	lobby: `Lobby`,
-	teamA: `Team A`,
-	teamB: `Team B`,
+	teamA: `Attackers`,
+	teamB: `Defenders`,
 });
-
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else if (error) {
-		console.log(`[${level}] ${message} :: ${error.message || error}`);
-	} else {
-		console.log(`[${level}] ${message}`);
-	}
-}
 
 /**
  * Create the category, text channel, and voice channels for a match instance.

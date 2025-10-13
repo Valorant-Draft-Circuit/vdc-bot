@@ -9,15 +9,6 @@ let redisClient;
 let lastConnectionErrorAt = 0;
 let lastConnectionClosedAt = 0;
 
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else {
-		const payload = error ? `${message} :: ${error.message || error}` : message;
-		console.log(`[${level}] ${payload}`);
-	}
-}
-
 /**
  * Create or return the shared Redis client.
  * @returns {import('ioredis').Redis}
@@ -41,18 +32,18 @@ function getRedisClient() {
 		const now = Date.now();
 		if (now - lastConnectionErrorAt > 15000) {
 			lastConnectionErrorAt = now;
-			log(`ERROR`, `Redis connection error`, error);
+			logger.log(`ERROR`, `Redis connection error`, error);
 		}
 	});
 	redisClient.on(`connect`, () => {
 		lastConnectionErrorAt = 0;
-		log(`DEBUG`, `Redis connection established`);
+		logger.log(`DEBUG`, `Redis connection established`);
 	});
 	redisClient.on(`close`, () => {
 		const now = Date.now();
 		if (now - lastConnectionClosedAt > 15000) {
 			lastConnectionClosedAt = now;
-			log(`WARNING`, `Redis connection closed`);
+			logger.log(`WARNING`, `Redis connection closed`);
 		}
 	});
 
@@ -119,7 +110,7 @@ async function preloadLuaScripts() {
 			await loadLuaScript(scriptName);
 		}
 	} catch (error) {
-		log(`WARNING`, `Unable to preload Lua scripts`, error);
+		logger.log(`WARNING`, `Unable to preload Lua scripts`, error);
 	}
 }
 

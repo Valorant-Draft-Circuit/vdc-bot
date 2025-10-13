@@ -79,16 +79,7 @@ async function joinQueue(interaction, queueConfig) {
 
 		return interaction.editReply({ content: lines.join(`\n`) });
 	} catch (error) {
-		logger.log(
-			`ERROR`,
-			`Queue join encountered an unexpected error`,
-			{
-				userId: interaction.user.id,
-				username: interaction.user.tag,
-				error: error?.message || error,
-			},
-		);
-		log(`ERROR`, `Queue join failed`, error);
+		logger.log(`ERROR`, `Queue join failed`, error);
 		return interaction.editReply({
 			content: `Something went wrong while joining the queue. Please try again shortly.`,
 		});
@@ -156,21 +147,11 @@ function parseLuaJson(payload) {
 		try {
 			return JSON.parse(payload);
 		} catch (error) {
-			log(`ERROR`, `Failed to parse Lua script response`, error);
+			logger.log(`ERROR`, `Failed to parse Lua script response`, error);
 			return {};
 		}
 	}
 	return payload;
-}
-
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else if (error) {
-		console.log(`[${level}] ${message} :: ${error.message || error}`);
-	} else {
-		console.log(`[${level}] ${message}`);
-	}
 }
 
 module.exports = {

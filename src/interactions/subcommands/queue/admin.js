@@ -12,6 +12,8 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 		});
 	}
 
+	const actorLabel = `${interaction.user.tag} (${interaction.user.id})`;
+
 	switch (subcommand) {
 		case `status`: {
 			const embed = await buildQueueStatusEmbed(queueConfig);
@@ -27,6 +29,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			}
 
 			await setTierState(tiers, true);
+			logger.log(`INFO`, `Queue admin open executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, true) });
 		}
 
@@ -39,11 +42,13 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			}
 
 			await setTierState(tiers, false);
+			logger.log(`INFO`, `Queue admin close executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, false) });
 		}
 
 		case `reload-config`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			logger.log(`INFO`, `Queue admin config reload executed by ${actorLabel}`);
 			await invalidateQueueConfigCache();
 			await getQueueConfig({ forceRefresh: true });
 			return interaction.editReply({
@@ -56,6 +61,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const { runMatchmakerOnce } = require(`../../../workers/matchmaker`);
 			await runMatchmakerOnce(interaction.client, tierSelection);
+			logger.log(`INFO`, `Queue admin build triggered by ${actorLabel} for ${tierSelection}`);
 			return interaction.editReply({
 				content:
 					tierSelection === `ALL`
@@ -67,14 +73,14 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 		case `kill`: {
 			const matchId = interaction.options.getString(`match_id`, true);
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const result = await killMatch(interaction.client, matchId);
+			const result = await killMatch(interaction.client, matchId, actorLabel);
 			await interaction.editReply({ content: result.message });
 
 			if (result.matchRecord) {
 				try {
 					await cleanupMatchChannels(interaction.client, result.matchRecord, matchId);
 				} catch (error) {
-					log(`WARNING`, `Failed to cleanup channels for ${matchId}`, error);
+					logger.log(`WARNING`, `Failed to cleanup channels for ${matchId}`, error);
 				}
 			}
 
@@ -83,7 +89,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 
 		case `reset`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const result = await resetQueues(interaction.client);
+			const result = await resetQueues(interaction.client, actorLabel);
 			return interaction.editReply({ content: result });
 		}
 	}
@@ -96,26 +102,6 @@ async function hasQueueAdminPrivileges(interaction, queueConfig) {
 	if (!roleId) return false;
 
 	return interaction.member.roles.cache.has(roleId);
-}
-
-async function setPauseState(interaction, paused) {
-	try {
-		const redis = getRedisClient();
-		await redis.set(GLOBAL_PAUSE_KEY, paused ? `1` : `0`);
-	} catch (error) {
-		log(`ERROR`, `Failed to ${paused ? `pause` : `resume`} queues`, error);
-		return interaction.reply({
-			content: `Unable to ${paused ? `pause` : `resume`} queues — Redis connection failed.`,
-			flags: MessageFlags.Ephemeral,
-		});
-	}
-
-	return interaction.reply({
-		content: paused
-			? `Global queues paused. Use \`/queue admin resume\` to re-enable.`
-			: `Global queues resumed.`,
-		flags: MessageFlags.Ephemeral,
-	});
 }
 
 async function resolveTiers(selection) {
@@ -164,7 +150,7 @@ async function buildQueueStatusEmbed(queueConfig) {
 		.setFooter({ text: `Queue system bootstrap — functionality pending final implementation.` });
 }
 
-async function killMatch(client, matchId) {
+async function killMatch(client, matchId, actorLabel) {
 	const redis = getRedisClient();
 	const matchKey = `vdc:match:${matchId}`;
 	const matchData = await redis.hgetall(matchKey);
@@ -187,13 +173,18 @@ async function killMatch(client, matchId) {
 	pipeline.del(matchKey, `${matchKey}:cancel_votes`);
 	await pipeline.exec();
 
+	logger.log(
+		`ALERT`,
+		`Queue admin kill executed by ${actorLabel} for match ${matchId} — affected players: ${players.size}`,
+	);
+
 	return {
 		message: `Match \`${matchId}\` was killed and players were reset.`,
 		matchRecord: parsed,
 	};
 }
 
-async function resetQueues(client) {
+async function resetQueues(client, actorLabel) {
 	const redis = getRedisClient();
 	const tiers = await redis.smembers(`vdc:tiers`);
 	const affectedUsers = new Set();
@@ -236,7 +227,7 @@ async function resetQueues(client) {
 		try {
 			await cleanupMatchChannels(client, parsed, matchId);
 		} catch (error) {
-			log(`WARNING`, `Failed to cleanup channels for ${matchId}`, error);
+			logger.log(`WARNING`, `Failed to cleanup channels for ${matchId}`, error);
 		}
 		await redis.del(key, `${key}:cancel_votes`);
 		matchesCleared += 1;
@@ -252,6 +243,11 @@ async function resetQueues(client) {
 		}
 		await pipeline.exec();
 	}
+
+	logger.log(
+		`ALERT`,
+		`Queue admin reset executed by ${actorLabel} — queues cleared: ${queuesCleared}, matches cleared: ${matchesCleared}, players reset: ${affectedUsers.size}`,
+	);
 
 	return (
 		`Queues reset complete.\n` +
@@ -320,16 +316,6 @@ async function scanKeys(redis, pattern) {
 	} while (cursor !== `0`);
 
 	return keys;
-}
-
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else if (error) {
-		console.log(`[${level}] ${message} :: ${error.message || error}`);
-	} else {
-		console.log(`[${level}] ${message}`);
-	}
 }
 
 module.exports = {

@@ -4,8 +4,8 @@ const { getRedisClient } = require(`../../core/redis`);
 const BUTTON_LABELS = {
 	joinLobby: `Join Lobby VC`,
 	joinAttackers: `Join Attackers VC`,
-	joinDef: `Join Defenders VC`,
-	submit: `Submit Result`,
+	joinDefenders: `Join Defenders VC`,
+	submit: `Submit Match Link`,
 };
 
 module.exports = {
@@ -45,11 +45,11 @@ module.exports = {
 			}
 
 			return interaction.reply({
-				content: `${label} ready! Use this invite (expires in 30 minutes): ${inviteUrl}`,
+				content: `${label} ready! Use this invite (expires in 30 seconds): ${inviteUrl}`,
 				flags: MessageFlags.Ephemeral,
 			});
 		} catch (error) {
-			log(`ERROR`, `Failed to create queue invite`, error);
+			logger.log(`ERROR`, `Failed to create queue invite`, error);
 			return interaction.reply({
 				content: `We couldn't generate an invite right now. Please try again shortly.`,
 				flags: MessageFlags.Ephemeral,
@@ -78,7 +78,7 @@ async function createVoiceInvite(interaction, matchId, command) {
 
 	const invite = await channel.createInvite({
 		maxAge: 30,
-		maxUses: 10,
+		maxUses: 1,
 		unique: true,
 		reason: `Queue quick join for match ${matchId}`,
 	});
@@ -96,19 +96,9 @@ function selectChannelId(command, descriptor) {
 			return voice.lobby;
 		case `joinAttackers`:
 			return voice.teamA;
-		case `joinDef`:
+		case `joinDefenders`:
 			return voice.teamB;
 		default:
 			return null;
-	}
-}
-
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else if (error) {
-		console.log(`[${level}] ${message} :: ${error.message || error}`);
-	} else {
-		console.log(`[${level}] ${message}`);
 	}
 }

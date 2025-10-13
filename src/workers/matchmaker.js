@@ -20,16 +20,6 @@ let cachedMapPool = null;
 let valorantMapsCache = null;
 const lastTierError = new Map();
 
-function log(level, message, error) {
-	if (global.logger && typeof global.logger.log === `function`) {
-		global.logger.log(level, message, error);
-	} else if (error) {
-		console.log(`[${level}] ${message} :: ${error.message || error}`);
-	} else {
-		console.log(`[${level}] ${message}`);
-	}
-}
-
 async function startMatchmaker(client, options = {}) {
 	if (intervalHandle) return intervalHandle;
 
@@ -42,7 +32,7 @@ async function startMatchmaker(client, options = {}) {
 	// Run an initial tick so we don't wait for the first interval.
 	runSafely(() => processAllTiers(client));
 
-	log(`INFO`, `Queue matchmaker started (interval ${intervalMs}ms)`);
+	logger.log(`INFO`, `Queue matchmaker started (interval ${intervalMs}ms)`);
 	return intervalHandle;
 }
 
@@ -50,7 +40,7 @@ function stopMatchmaker() {
 	if (intervalHandle) {
 		clearInterval(intervalHandle);
 		intervalHandle = undefined;
-		log(`INFO`, `Queue matchmaker stopped`);
+		logger.log(`INFO`, `Queue matchmaker stopped`);
 	}
 }
 
@@ -112,7 +102,7 @@ async function attemptMatchForTier(client, tier, config) {
 
 			if (lastTierError.get(tier) !== errorCode) {
 				lastTierError.set(tier, errorCode);
-				log(`WARNING`, `Match build failed for ${tier}`, errorCode);
+				logger.log(`WARNING`, `Match build failed for ${tier}`, errorCode);
 			}
 
 			return;
@@ -121,7 +111,7 @@ async function attemptMatchForTier(client, tier, config) {
 		lastTierError.delete(tier);
 		await dispatchMatch(client, payload, config);
 	} catch (error) {
-		log(`ERROR`, `Error building match for ${tier}`, error);
+		logger.log(`ERROR`, `Error building match for ${tier}`, error);
 	} finally {
 		inFlightTiers.delete(tier);
 	}
@@ -160,7 +150,7 @@ async function dispatchMatch(client, payload, config) {
 	}
 
 	if (!guild) {
-		log(`WARNING`, `Match ${payload.matchId} could not resolve a guild context`);
+		logger.log(`WARNING`, `Match ${payload.matchId} could not resolve a guild context`);
 		return;
 	}
 
@@ -181,7 +171,7 @@ async function dispatchMatch(client, payload, config) {
 			enableVoice: config.vcCreate !== false,
 		});
 	} catch (error) {
-		log(`ERROR`, `Failed to create match channels`, error);
+		logger.log(`ERROR`, `Failed to create match channels`, error);
 	}
 
 	if (!channelDescriptor.textChannelId && fallbackChannelId) {
@@ -197,7 +187,7 @@ async function dispatchMatch(client, payload, config) {
 	}
 
 	if (!channelDescriptor.textChannelId) {
-		log(`WARNING`, `Match ${payload.matchId} has no text channel target`);
+		logger.log(`WARNING`, `Match ${payload.matchId} has no text channel target`);
 		return;
 	}
 
@@ -213,7 +203,7 @@ const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
 		fallbackChannel;
 
 	if (!textChannel) {
-		log(`ERROR`, `No text channel available to post match ${payload.matchId}`);
+		logger.log(`ERROR`, `No text channel available to post match ${payload.matchId}`);
 		return;
 	}
 
@@ -227,7 +217,7 @@ const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
 		await message.pin().catch(() => null);
 		await updateMatchChannelsInRedis(payload.matchId, channelDescriptor);
 	} catch (error) {
-		log(`ERROR`, `Failed to send match embed`, error);
+		logger.log(`ERROR`, `Failed to send match embed`, error);
 	}
 }
 
@@ -276,22 +266,22 @@ function buildMatchComponents(matchId) {
 	const joinLobby = new ButtonBuilder()
 		.setCustomId(`queueManager_joinLobby-${matchId}`)
 		.setLabel(`Join Lobby VC`)
-		.setStyle(ButtonStyle.Primary);
+		.setStyle(ButtonStyle.Secondary);
 
 	const joinAttackers = new ButtonBuilder()
 		.setCustomId(`queueManager_joinAttackers-${matchId}`)
 		.setLabel(`Join Attackers`)
-		.setStyle(ButtonStyle.Secondary);
+		.setStyle(ButtonStyle.Danger);
 
 	const joinDefenders = new ButtonBuilder()
-		.setCustomId(`queueManager_joinDef-${matchId}`)
-		.setLabel(`Join Def`)
-		.setStyle(ButtonStyle.Secondary);
+		.setCustomId(`queueManager_joinDefenders-${matchId}`)
+		.setLabel(`Join Defenders`)
+		.setStyle(ButtonStyle.Success);
 
 	const submitResult = new ButtonBuilder()
 		.setCustomId(`queueManager_submit-${matchId}`)
-		.setLabel(`Submit Result`)
-		.setStyle(ButtonStyle.Success);
+		.setLabel(`Submit Match Link`)
+		.setStyle(ButtonStyle.Primary);
 
 	return [
 		new ActionRowBuilder({
@@ -317,7 +307,7 @@ function parseLuaJson(response) {
 		try {
 			return JSON.parse(response);
 		} catch (error) {
-			log(`ERROR`, `Failed to parse Lua response`, error);
+			logger.log(`ERROR`, `Failed to parse Lua response`, error);
 			return {};
 		}
 	}
@@ -327,7 +317,7 @@ function parseLuaJson(response) {
 function runSafely(fn) {
 	Promise.resolve()
 		.then(fn)
-		.catch((error) => log(`ERROR`, `Matchmaker tick failure`, error));
+		.catch((error) => logger.log(`ERROR`, `Matchmaker tick failure`, error));
 }
 
 function filterStaffRoles(roleId, guild) {
@@ -393,7 +383,7 @@ async function loadValorantMaps() {
 		valorantMapsCache = { data, timestamp: Date.now() };
 		return data;
 	} catch (error) {
-		log(`WARNING`, `Unable to load map data`, error);
+		logger.log(`WARNING`, `Unable to load map data`, error);
 		valorantMapsCache = { data: [], timestamp: Date.now() };
 		return [];
 	}
