@@ -294,7 +294,7 @@ function buildMatchComponents(matchId) {
 
 async function notifyPlayersDirectly(client, payload, embedData, textChannelId, guild) {
 	const channelLink = `https://discord.com/channels/${guild.id}/${textChannelId}`;
-	const content = `Match Found Agent!  Good luck out there.  Match chat: ${channelLink}`;
+	const content = `Match Found, Agent!  Good luck out there.  Match chat: ${channelLink}`;
 
 	for (const player of payload.players) {
 		const playerId = player.id;
