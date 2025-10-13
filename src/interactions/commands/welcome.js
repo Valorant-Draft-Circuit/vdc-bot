@@ -198,7 +198,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
             });
         }
         await guildMember.roles.add(isCaptain ? [franchiseRoleID, ROLES.LEAGUE.CAPTAIN] : franchiseRoleID);
-        await Transaction.updateStatus({ playerID: discordID, status: BigInt(playerData.roles) == BigInt(Roles.LEAGUE_GM) ? LeagueStatus.GENERAL_MANAGER : LeagueStatus.SIGNED });
+        await Transaction.updateStatus({ playerID: discordID, status: BigInt(playerData.roles) == BigInt(Roles.LEAGUE_GM) || BigInt(playerData.roles) == BigInt(Roles.LEAGUE_AGM) ? LeagueStatus.GENERAL_MANAGER : LeagueStatus.SIGNED });
 
         // FAs, RFAs and DEs
     } else {
@@ -281,7 +281,18 @@ async function bulkWelcome(/** @type ChatInputCommandInteraction */ interaction)
 
         if (i === playersToWelcome.length - 1) {
             buildMMRCache();
-            await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed to the league!` });
+
+            // interaction tokens expire after 15 minutes, so im gonna use a try catch
+            try {
+                await interaction.followUp({ content: `Hey there, ${interaction.user}, the players have been welcomed to the league!` });
+            } catch (e) {
+                console.log(e);
+                try {
+                    await interaction.channel.send({ content: `Hey there, ${interaction.user}, the players have been welcomed to the league!` });
+                } catch (e) {
+                    console.log(e);
+                }
+            }
             return clearInterval(int);
         };
         i++
