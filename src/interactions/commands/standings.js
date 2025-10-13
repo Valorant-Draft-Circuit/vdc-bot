@@ -6,6 +6,7 @@ const { COLORS } = require("../../../utils/enums/colors");
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 const playoffsCutoff = {
+    recruit: 4,
     prospect: 6,
     apprentice: 8,
     expert: 8,
