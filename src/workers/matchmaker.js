@@ -191,9 +191,10 @@ async function dispatchMatch(client, payload, config) {
 		return;
 	}
 
-const mapInfo = await getRandomMapInfo(config);
-const mmrDisplay = await isMmrDisplayEnabled();
-const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
+	const mapInfo = await getRandomMapInfo(config);
+	const mmrDisplay = await isMmrDisplayEnabled();
+	const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
+	const embedData = embed.toJSON();
 	const components = buildMatchComponents(payload.matchId);
 	const mentionLine = playerIds.map((id) => `<@${id}>`).join(` `);
 
@@ -216,6 +217,7 @@ const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
 
 		await message.pin().catch(() => null);
 		await updateMatchChannelsInRedis(payload.matchId, channelDescriptor);
+		await notifyPlayersDirectly(client, payload, embedData, channelDescriptor.textChannelId, guild);
 	} catch (error) {
 		logger.log(`ERROR`, `Failed to send match embed`, error);
 	}
@@ -288,6 +290,21 @@ function buildMatchComponents(matchId) {
 			components: [joinLobby, joinAttackers, joinDefenders, submitResult],
 		}),
 	];
+}
+
+async function notifyPlayersDirectly(client, payload, embedData, textChannelId, guild) {
+	const channelLink = `https://discord.com/channels/${guild.id}/${textChannelId}`;
+	const content = `Match Found Agent!  Good luck out there.  Match chat: ${channelLink}`;
+
+	for (const player of payload.players) {
+		const playerId = player.id;
+		try {
+			const user = await client.users.fetch(playerId);
+			await user.send({ content, embeds: [embedData] });
+		} catch (error) {
+			logger.log(`WARNING`, `Failed to DM player ${playerId} about match ${payload.matchId}`, error);
+		}
+	}
 }
 
 async function updateMatchChannelsInRedis(matchId, descriptor) {
