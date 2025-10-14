@@ -127,6 +127,10 @@ async function setTierState(tiers, isOpen) {
 	}
 
 	await pipeline.exec();
+
+	if (!isOpen) {
+		await clearTierQueues(redis, tiers);
+	}
 }
 
 function buildTierStateMessage(tiers, isOpen) {
@@ -168,6 +172,7 @@ async function killMatch(client, matchId, actorLabel) {
 		pipeline.hset(key, `status`, `idle`);
 		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentMatchId`);
 		pipeline.del(`vdc:player:${playerId}:recent`);
+		pipeline.pexpire(key, 43200000);
 	}
 
 	pipeline.del(matchKey, `${matchKey}:cancel_votes`);
@@ -240,6 +245,7 @@ async function resetQueues(client, actorLabel) {
 			pipeline.hset(key, `status`, `idle`);
 			pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentMatchId`);
 			pipeline.del(`vdc:player:${userId}:recent`);
+			pipeline.pexpire(key, 43200000);
 		}
 		await pipeline.exec();
 	}
@@ -316,6 +322,42 @@ async function scanKeys(redis, pattern) {
 	} while (cursor !== `0`);
 
 	return keys;
+}
+
+async function clearTierQueues(redis, tiers) {
+	const pipeline = redis.pipeline();
+	const affectedUsers = new Set();
+
+	for (const tier of tiers) {
+		const listKeys = [
+			`vdc:tier:${tier}:queue:DE`,
+			`vdc:tier:${tier}:queue:FA_RFA`,
+			`vdc:tier:${tier}:queue:SIGNED`,
+		];
+
+		for (const key of listKeys) {
+			const members = await redis.lrange(key, 0, -1);
+			members.forEach((id) => id && affectedUsers.add(id));
+			pipeline.del(key);
+		}
+	}
+
+	if (affectedUsers.size === 0) {
+		return;
+	}
+
+	for (const userId of affectedUsers) {
+		const key = `vdc:player:${userId}`;
+		pipeline.hset(key, `status`, `idle`);
+		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentMatchId`);
+		pipeline.del(`vdc:player:${userId}:recent`);
+	}
+
+	await pipeline.exec();
+	logger.log(
+		`INFO`,
+		`Queue admin close removed ${affectedUsers.size} queued player(s) after closing tiers [${tiers.join(`, `)}]`,
+	);
 }
 
 module.exports = {

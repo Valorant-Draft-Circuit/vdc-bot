@@ -171,6 +171,7 @@ redis.call("HSET", playerKey,
     "mmr", tostring(mmr),
 	"guildId", guildId
 )
+redis.call("PEXPIRE", playerKey, 43200000)
 redis.call("HDEL", playerKey, "currentMatchId")
 
 local eventsKey = KEYS[7]

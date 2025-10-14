@@ -378,6 +378,7 @@ for _, entry in ipairs(selection) do
 		"queuePriority", entry.bucket
 	)
 	redis.call("HDEL", key, "queueJoinedAt")
+	redis.call("PEXPIRE", key, 43200000)
 end
 
 redis.call("HSET", KEY_MATCH,

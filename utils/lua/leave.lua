@@ -85,6 +85,7 @@ redis.call("LREM", queueKey, 0, userId)
 
 redis.call("HSET", playerKey, "status", "idle")
 redis.call("HDEL", playerKey, "queuePriority", "queueJoinedAt")
+redis.call("PEXPIRE", playerKey, 43200000)
 
 local eventsKey = KEYS[2]
 local eventId = nil
