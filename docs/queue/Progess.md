@@ -10,5 +10,3 @@ TODO: Add Scout system.
 TODO: Check amount of games and change their priority to lowest possible.
 - Low Priority
   - May multiply queues to 6 per tier
-  
-TODO: When queues are closed empty players out of all queues.

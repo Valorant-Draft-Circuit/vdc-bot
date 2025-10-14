@@ -1,6 +1,6 @@
 const { MessageFlags } = require(`discord.js`);
 const { getQueueConfig } = require(`../../core/config`);
-const { joinQueue, leaveQueue, handleAdminCommand } = require(`../subcommands/queue`);
+const { joinQueue, leaveQueue } = require(`../subcommands/queue`);
 
 module.exports = {
 	name: `queue`,
@@ -16,14 +16,8 @@ module.exports = {
 			});
 		}
 
-		const subcommandGroup = interaction.options.getSubcommandGroup(false);
 		const subcommand = interaction.options.getSubcommand(false);
 		const queueConfig = await getQueueConfig();
-
-		if (subcommandGroup === `admin`) {
-			return handleAdminCommand(interaction, queueConfig, subcommand);
-		}
-
 		if (subcommand === `leave`) {
 			return leaveQueue(interaction, queueConfig);
 		}

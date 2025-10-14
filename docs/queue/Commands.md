@@ -50,19 +50,21 @@ This document describes the available queue and match-related slash commands imp
 - Args: none.
 - Permissions: any user may call, but they must be queued for the command to have effect.
 
-## `/queue admin <subcommand>` (admin group)
+## `/queueadmin <subcommand>` (admin top-level command)
 
-All admin subcommands are grouped under `/queue admin`. Permission check: the caller must either have the Discord Administrator permission or have the configured queue admin role id from queue config (`queueConfig.adminRoleId`) — see `hasQueueAdminPrivileges()` in `src/interactions/subcommands/queue/admin.js`.
+Admin functionality was moved to a top-level command to avoid Discord limitations on hiding subcommands. Use `/queueadmin <subcommand>` instead of `/queue admin <subcommand>`.
+
+Permission check: the caller must either have the Discord Administrator permission or have the configured queue admin role id from queue config (`queueConfig.adminRoleId`) — see `hasQueueAdminPrivileges()` in `src/interactions/subcommands/queue/admin.js`.
 
 Common note: Replies are ephemeral when appropriate.
 
-### `/queue admin status`
+### `/queueadmin status`
 
 - Description: Shows a live snapshot of basic queue controls.
 - Usage: `/queue admin status` (no args)
 - Current behavior (code): Builds an embed with fields such as Enabled (yes/no) and Admin Role, plus color/footer. (`buildQueueStatusEmbed`).
 
-### `/queue admin open`
+### `/queueadmin open`
 
 - Description: Open a queue for a specific tier (or ALL).
 - Usage: `/queue admin open tier:<tier>`
@@ -70,14 +72,14 @@ Common note: Replies are ephemeral when appropriate.
 	- `tier` (required string) — choice from configured tiers (e.g. All, Recruit, Prospect, Apprentice, Expert, Mythic). The command accepts `ALL` or a specific tier.
 - Current behavior (code): Resolves tiers (including existing tiers discovered in Redis), then sets `vdc:tier:{tier}:open` = `1` for each selected tier and returns a confirmation message.
 
-### `/queue admin close`
+### `/queueadmin close`
 
 - Description: Close a queue for a specific tier (or ALL).
 - Usage: `/queue admin close tier:<tier>`
 - Args: same as `open`.
 - Current behavior (code): Sets `vdc:tier:{tier}:open` = `0` for the selected tiers and returns a confirmation message.
 
-### `/queue admin build`
+### `/queueadmin build`
 
 - Description: Force-run the matchmaker for a tier (or ALL).
 - Usage: `/queue admin build tier:<tier>`
@@ -85,7 +87,7 @@ Common note: Replies are ephemeral when appropriate.
 	- `tier` (required string) — `ALL` or a specific tier.
 - Current behavior (code): Calls `runMatchmakerOnce(client, tierSelection)` from the matchmaker worker and replies indicating the matchmaker was triggered for the selected tier(s).
 
-### `/queue admin kill`
+### `/queueadmin kill`
 
 - Description: Force-cancel a match record and reset affected players.
 - Usage: `/queue admin kill match_id:<id>`
@@ -93,13 +95,13 @@ Common note: Replies are ephemeral when appropriate.
 	- `match_id` (required string) — the internal queue match identifier (the key portion used with `vdc:match:{id}`).
 - Current behavior (code): Reads `vdc:match:{id}` from Redis, sets each player's `status` to `idle`, removes queue and match-related fields (`queuePriority`, `queueJoinedAt`, `currentMatchId`), deletes the match key and its cancel_votes, and returns a message. It also attempts to clean up match channels (category/text/voice) if present (`cleanupMatchChannels`). (`src/interactions/subcommands/queue/admin.js`).
 
-### `/queue admin reset`
+### `/queueadmin reset`
 
 - Description: Clear all queues, match records, and reset player profiles.
 - Usage: `/queue admin reset` (no args)
 - Current behavior (code): Iterates over known tiers stored in `vdc:tiers`, deletes queue lists (`vdc:tier:{tier}:queue:*`), scans for `vdc:match:*` keys and deletes them (attempting channel cleanup for matches), and resets affected player hashes to `status=idle` and removes queue/match fields. Returns a summary of cleared entries, matches, and reset players.
 
-### `/queue admin reload-config`
+### `/queueadmin reload-config`
 
 - Description: Reload queue configuration from the Control Panel.
 - Usage: `/queue admin reload-config` (no args)
@@ -113,10 +115,5 @@ Notes and related files:
 - Admin match-manipulation & reset logic: `src/interactions/subcommands/queue/admin.js`.
 - Lua core scripts used by join/leave/build: `utils/lua/join.lua`, `utils/lua/leave.lua`, `utils/lua/build_match.lua`.
 - Button quick-join helpers (voice invites) exist in `src/interactions/buttons/queueManager.js` (for join lobby/attackers/defenders quick actions).
-
-If you want, I can also:
-- Add usage examples and example responses for each command.
-- Add a short table of the admin role requirements and config keys used.
-- Expand the `match` command documentation to include the expected Tracker URL regex and Numbers integration details from the requirements docs.
 
 
