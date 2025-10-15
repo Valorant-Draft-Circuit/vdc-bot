@@ -5,11 +5,11 @@ Players who have completed their required number of Combines games should still 
 ## Proposed Approach
 
 1. **Join-time classifier & TTL**  
-   - When `/queue join` runs, check a cached “combines games played” entry.  
+   - When `/queue join` runs, check a cached "combines games played" entry.  
    - If the player meets the requirement, enqueue them in a secondary queue; otherwise keep them in the primary queue.  
    - Cache entries should include `gamesPlayed`/`combinesComplete` and refresh every ~12 h to limit DB hits.
 
-2. **Secondary “completed” queues**  
+2. **Secondary "completed" queues**  
    - Add dedicated lists per tier/priority (e.g. `vdc:tier:{tier}:queue:DE:completed`).  
    - Join logic chooses primary vs. completed list based on the classifier above.
 
@@ -25,7 +25,7 @@ Players who have completed their required number of Combines games should still 
    - `/queue join` response should mention when the player is in the lower-priority pool.  
    - Admin status embeds/dashboards should surface counts for both primary/completed queues.
 
-6. **DB Check – TODO**  
+6. **DB Check - TODO**  
    - [ ] Query Prisma for combines games played when cache misses occur (add table/field details when implementing).  
    - [ ] Update the cache entry after the DB read so subsequent joins within ~12 h use cached data.
 
