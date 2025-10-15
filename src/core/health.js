@@ -21,7 +21,7 @@ async function pingRedis() {
 		await redis.ping();
 		return true;
 	} catch (error) {
-		log(`WARNING`, `Redis ping failed`, error);
+		logger.log(`WARNING`, `Redis ping failed`, error);
 		return false;
 	}
 }
