@@ -156,6 +156,24 @@ async function dispatchMatch(client, payload, config) {
 
 	const playerIds = payload.players.map((p) => p.id);
 
+	// collect scouts who follow any of these players
+	const redis = getRedisClient();
+	const scoutsSet = new Set();
+	try {
+		for (const p of payload.players) {
+			try {
+				const followers = await redis.smembers(`vdc:scouts:followers:${p.id}`);
+				if (Array.isArray(followers)) {
+					for (const s of followers) scoutsSet.add(s);
+				}
+			} catch (e) {
+				// ignore redis errors for followers
+			}
+		}
+	} catch (e) {
+		// ignore
+	}
+
 	let channelDescriptor = {
 		categoryId: null,
 		textChannelId: fallbackChannel?.id ?? null,
@@ -163,10 +181,14 @@ async function dispatchMatch(client, payload, config) {
 	};
 
 	try {
+		// include scouts in allowedUserIds so they can view/connect to match channels
+		const allowedUserIds = playerIds.slice();
+		for (const s of scoutsSet) allowedUserIds.push(s);
+
 		channelDescriptor = await createMatchChannels(guild, {
 			matchId: payload.matchId,
 			tier: payload.tier,
-			allowedUserIds: playerIds,
+			allowedUserIds,
 			staffRoleIds: filterStaffRoles(config.staffRoleId, guild),
 			enableVoice: config.vcCreate !== false,
 		});
@@ -217,7 +239,7 @@ async function dispatchMatch(client, payload, config) {
 
 		await message.pin().catch(() => null);
 		await updateMatchChannelsInRedis(payload.matchId, channelDescriptor);
-		await notifyPlayersDirectly(client, payload, embedData, channelDescriptor.textChannelId, guild);
+		await notifyPlayersDirectly(client, payload, embedData, channelDescriptor.textChannelId, guild, Array.from(scoutsSet));
 	} catch (error) {
 		logger.log(`ERROR`, `Failed to send match embed`, error);
 	}
@@ -292,17 +314,48 @@ function buildMatchComponents(matchId) {
 	];
 }
 
-async function notifyPlayersDirectly(client, payload, embedData, textChannelId, guild) {
+async function notifyPlayersDirectly(client, payload, embedData, textChannelId, guild, extraScoutIds = []) {
 	const channelLink = `https://discord.com/channels/${guild.id}/${textChannelId}`;
-	const content = `Match Found, Agent!  Good luck out there.  Match chat: ${channelLink}`;
+	const playerContent = `Match Found, Agent!  Good luck out there.  Match chat: ${channelLink}`;
 
+	// Notify players
 	for (const player of payload.players) {
 		const playerId = player.id;
 		try {
 			const user = await client.users.fetch(playerId);
-			await user.send({ content, embeds: [embedData] });
+			await user.send({ content: playerContent, embeds: [embedData] });
 		} catch (error) {
 			logger.log(`WARNING`, `Failed to DM player ${playerId} about match ${payload.matchId}`, error);
+		}
+	}
+
+	// Notify scouts — use provided extraScoutIds if available; otherwise read from Redis
+	let scoutIds = Array.isArray(extraScoutIds) && extraScoutIds.length ? extraScoutIds.slice() : null;
+	const redis = getRedisClient();
+	if (!scoutIds) {
+		try {
+			const scoutSet = new Set();
+			for (const player of payload.players) {
+				const followers = await redis.smembers(`vdc:scouts:followers:${player.id}`).catch(() => []);
+				for (const f of followers || []) scoutSet.add(f);
+			}
+			scoutIds = Array.from(scoutSet);
+		} catch (error) {
+			logger.log(`WARNING`, `Failed to read scout followers from redis for match ${payload.matchId}`, error);
+			scoutIds = [];
+		}
+	}
+
+	if (!Array.isArray(scoutIds) || scoutIds.length === 0) return;
+
+	const uniqueScouts = [...new Set(scoutIds)];
+	const scoutContent = `A player you follow has a match! Match chat: ${channelLink}`;
+	for (const scoutId of uniqueScouts) {
+		try {
+			const user = await client.users.fetch(scoutId);
+			await user.send({ content: scoutContent, embeds: [embedData] });
+		} catch (error) {
+			logger.log(`WARNING`, `Failed to DM scout ${scoutId} about match ${payload.matchId}`, error);
 		}
 	}
 }

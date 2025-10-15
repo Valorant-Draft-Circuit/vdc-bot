@@ -117,3 +117,42 @@ Notes and related files:
 - Button quick-join helpers (voice invites) exist in `src/interactions/buttons/queueManager.js` (for join lobby/attackers/defenders quick actions).
 
 
+## ` /scout` (Scout utilities)
+
+- Description: Tools for users with the Scout role to follow players and receive notifications and access when those players are matched. Useful for scouts who want to spectate or monitor specific players.
+
+- Subcommands:
+	- `/scout follow player:<@user>`
+		- Description: Start following a player. The scout will receive a DM when that player is matched and will be granted access to the match category/channels for that match.
+		- Args: `player` — the Discord user to follow (required).
+		- Notes: Requires the configured Scout role (see Control Panel key below).
+
+	- `/scout unfollow player:<@user>`
+		- Description: Stop following a player. Removes the scout from the follow list so they no longer receive DMs for that player.
+		- Args: `player` — the Discord user to unfollow (required).
+
+	- `/scout list`
+		- Description: List players you are currently following.
+		- Args: none.
+
+- Behavior and implementation notes (code):
+	- The commands are implemented in `src/interactions/commands/scout.js`.
+	- Follow state is stored in Redis using two sets:
+		- `vdc:scouts:followers:{playerId}` — set of scout user IDs following the player.
+		- `vdc:scouts:following:{scoutId}` — set of player IDs a scout follows.
+	- When the matchmaker builds a match that includes a player a scout is following, the scout user IDs are:
+		- DMed with the match embed and a link to the match chat.
+		- Added to the allowedUserIds passed to `createMatchChannels`, so scouts get permission to view the match category and its channels for that match.
+
+- Control Panel configuration:
+	- The scout role ID should be set in the Control Panel. The code checks for the following keys (in this order) and uses the first match:
+		- `queue_scout_role_id`
+		- `queue_scout_rold_id` (common typo — supported for backward compatibility)
+		- `queue_scout_roldid`
+	- If no scout role is configured, the /scout commands will inform the caller that the scout role is missing.
+
+- Permissions:
+	- Only members who have the configured Scout role may use the `/scout follow`, `/scout unfollow`, and `/scout list` commands.
+	- Scouts who follow a player are granted per-match access to the match category and channels (same permissions as players) so they can view chat and join voice.
+
+
