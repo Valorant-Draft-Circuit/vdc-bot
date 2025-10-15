@@ -1,4 +1,8 @@
 # People listed below are team leads
 
 # Manage GH Actions
-/.github/ @unieveth
+/.github/workflows @unieveth
+
+# Queue Logic
+utils/lua @unieveth
+
