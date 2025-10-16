@@ -10,13 +10,15 @@ This document describes the available queue and match-related slash commands imp
 - Args: none (should be invoked from the match context/thread or DM mirror so the bot can resolve the queue id).
 - Permissions: only members of the match (implementation planned).
 
-## `/match submit`
+## Match submission (use `/submit` or the match embed Submit button)
 
-- Description: Finalize a match by submitting an external Tracker.gg match URL (manual end).
-- Current behavior (code): Not yet implemented — the command handler replies ephemerally: "Match submission via Tracker link is not live yet. Stay tuned!" (`src/interactions/commands/match.js`).
-- Intended / planned behavior: When implemented this command should open a modal that asks for a Tracker.gg match URL. The bot should validate the URL/format (requirements include a regex for the tracker URL), extract the Riot gameID, POST the data to the Numbers service, mark the match completed, and unlock players.
-- Args: none (modal will collect the Tracker URL).
-- Permissions: only members of the match (implementation planned).
+- Description: Finalize a match by submitting an external Tracker.gg match URL (manual end). Use the global `/submit` command or the Submit button on the match embed.
+
+- Behavior: Opening the Submit modal (via `/submit` or the match embed) asks for a Tracker.gg match URL. The bot validates the URL/format, extracts the Riot gameID, POSTS to the Numbers service, marks the match completed, and unlocks players.
+
+- Args: none (modal collects the Tracker URL).
+
+- Permissions: only members of the match may submit results.
 
 ## `/queue join`
 

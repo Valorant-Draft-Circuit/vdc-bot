@@ -11,18 +11,5 @@ module.exports = {
 			description: `Start a vote to cancel the current match.`,
 			type: ApplicationCommandOptionType.Subcommand,
 		},
-		{
-			name: `submit`,
-			description: `Submit the Tracker link for the completed match.`,
-			type: ApplicationCommandOptionType.Subcommand,
-			options: [
-				{
-					name: `tracker_url`,
-					description: `Tracker.gg match URL.`,
-					type: ApplicationCommandOptionType.String,
-					required: false,
-				},
-			],
-		},
 	],
 };

@@ -215,7 +215,7 @@ async function killMatch(client, queueId, actorLabel) {
 		pipeline.pexpire(key, 43200000);
 	}
 
-	pipeline.del(matchKey, `${matchKey}:cancel_votes`);
+	pipeline.del(matchKey, `${matchKey}:cancel_votes_yes`, `${matchKey}:cancel_votes_no`);
 	await pipeline.exec();
 
 	logger.log(
@@ -274,7 +274,7 @@ async function resetQueues(client, actorLabel) {
 		} catch (error) {
 			logger.log(`WARNING`, `Failed to cleanup channels for ${queueId}`, error);
 		}
-		await redis.del(key, `${key}:cancel_votes`);
+	await redis.del(key, `${key}:cancel_votes_yes`, `${key}:cancel_votes_no`);
 		matchesCleared += 1;
 	}
 

@@ -350,24 +350,9 @@ for _, entry in ipairs(selection) do
     })
 end
 
-local function updateRecentSets(list, ttlSeconds)
-	if ttlSeconds <= 0 then
-		return
-	end
-	for i = 1, #list do
-		local playerId = list[i].id
-		local key = playerRecentKey(playerId)
-		for j = 1, #list do
-			local otherId = list[j].id
-			if otherId ~= playerId then
-				redis.call("SADD", key, otherId)
-			end
-		end
-		redis.call("EXPIRE", key, ttlSeconds)
-	end
-end
-
-updateRecentSets(selection, recentTtlSeconds)
+-- NOTE: recent set updates (anti-rematch bookkeeping) were previously applied here during match creation.
+-- That logic has been intentionally removed so that recent sets are applied when a match is submitted
+-- (to avoid marking players as "recent" for the duration of long-running matches). See submission handler.
 
 for _, entry in ipairs(selection) do
 	local key = playerHashKey(entry.id)

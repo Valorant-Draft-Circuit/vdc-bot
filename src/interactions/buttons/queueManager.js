@@ -1,4 +1,4 @@
-const { MessageFlags } = require(`discord.js`);
+const { MessageFlags, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
 
 const BUTTON_LABELS = {
@@ -29,10 +29,29 @@ module.exports = {
 		}
 
 		if (command === `submit`) {
-			return interaction.reply({
-				content: `Game submission flow is still being wired up. Sit tight!`,
-				flags: MessageFlags.Ephemeral,
-			});
+				// show a modal to collect the tracker.gg URL
+				try {
+					const modal = new ModalBuilder()
+						.setTitle(`Submit Match Link`)
+						.setCustomId(`queueManager_submitModal-${queueId}`);
+
+					const input = new TextInputBuilder()
+						.setCustomId(`tracker_url`)
+						.setStyle(TextInputStyle.Short)
+						.setPlaceholder(`https://tracker.gg/valorant/match/...`)
+						.setRequired(true);
+
+					const label = new LabelBuilder()
+						.setLabel(`Tracker.gg match URL`)
+						.setTextInputComponent(input);
+
+					modal.addLabelComponents(label);
+
+					return await interaction.showModal(modal);
+				} catch (error) {
+					logger.log(`ERROR`, `Failed to show submit modal`, error);
+					return interaction.reply({ content: `Unable to open submission modal right now.`, flags: MessageFlags.Ephemeral });
+				}
 		}
 
 		try {
