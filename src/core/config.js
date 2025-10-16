@@ -125,6 +125,12 @@ function hydrateConfigFromRows(rows) {
 			case `queue_scout_role_id`:
 				if (value != null) config.scoutRoleId = String(value);
 				break;
+			case `queue_new_player_game_req`:
+				if (typeof value === `number`) config.newPlayerGameReq = value;
+				break;
+			case `queue_returning_game_req`:
+				if (typeof value === `number`) config.returningPlayerGameReq = value;
+				break;
 			default:
 				if (key.startsWith(`queue_open_`)) {
 					const tierKey = key.replace(`queue_open_`, ``).toUpperCase();
@@ -186,6 +192,8 @@ function sanitizeQueueConfigForRedis(config) {
 		maxScanPerBucket: Number(config.maxScanPerBucket ?? DEFAULT_QUEUE_CONFIG.maxScanPerBucket),
 		displayMmr: Boolean(config.displayMmr),
 		scoutRoleId: typeof config.scoutRoleId === `string` && config.scoutRoleId.length ? config.scoutRoleId : undefined,
+		newPlayerGameReq: Number.isInteger(config.newPlayerGameReq) ? config.newPlayerGameReq : undefined,
+		returningPlayerGameReq: Number.isInteger(config.returningPlayerGameReq) ? config.returningPlayerGameReq : undefined,
 	};
 
 	return out;

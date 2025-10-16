@@ -3,6 +3,7 @@ const { Tier } = require(`@prisma/client`);
 const { getRedisClient } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/config`);
 const { deleteMatchChannels } = require(`../../../core/matchChannels`);
+const { buildCombineCountCache } = require(`../../../../cache/cache`);
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
 	// Permission is enforced by Discord via command registration (ManageGuild or Administrator).
@@ -47,6 +48,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			logger.log(`INFO`, `Queue admin config reload executed by ${actorLabel}`);
 			await invalidateQueueConfigCache();
 			await getQueueConfig({ forceRefresh: true });
+			await buildCombineCountCache();
 			return interaction.editReply({
 				content: `Queue configuration cache reloaded.`,
 			});
@@ -190,7 +192,7 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 
 	return new EmbedBuilder()
 		.setTitle(`Queue Status`)
-		.setDescription(`Live snapshot of queue controls.`)
+		.setDescription(`Live snapshot of the current queue configuration.`)
 		.addFields(
 			{ name: `Enabled`, value: queueConfig.enabled ? `Yes` : `No`, inline: true },
 			{
@@ -231,6 +233,16 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 					: `Not configured`,
 				inline: false,
 			},
+			{
+				name: `New Player Game Requirement`,
+				value: `${queueConfig.newPlayerGameReq} games`,
+				inline: true,
+			},
+			{
+				name: `Returning Player Game Requirement`,
+				value: `${queueConfig.returningPlayerGameReq} games`,
+				inline: true,
+			}
 		)
 		.setColor(queueConfig.enabled ? 0x2ecc71 : 0xffa200)
 		.setFooter({ text: `Valorant Draft Circuit - Queue Manager` });

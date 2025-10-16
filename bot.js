@@ -38,6 +38,7 @@ process.on(`warning`, (warning) => {
 // create hotreloading for cache
 const mmrCachePath = `./cache/mmrCache.json`;
 const mmrTierLinesCache = `./cache/mmrTierLinesCache.json`;
+const combineCountCache = `./cache/combineCountCache.json`;
 
 // initial requires
 global.mmrCache = require(mmrCachePath);
@@ -56,6 +57,13 @@ fs.watchFile(mmrTierLinesCache, () => {
     global.mmrTierLinesCache = require(mmrTierLinesCache);
 
     return logger.log(`INFO`, `Reloaded file: \`${mmrTierLinesCache}\``);
+});
+
+fs.watchFile(combineCountCache, () => {
+    delete require.cache[require.resolve(combineCountCache)];
+    global.mmrTierLinesCache = require(combineCountCache);
+
+    return logger.log(`INFO`, `Reloaded file: \`${combineCountCache}\``);
 });
 // ################################################################################################
 
