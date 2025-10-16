@@ -41,6 +41,8 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 	const guildUser = guildMember.user;
 	const guildNickname = guildMember.nickname ? guildMember.nickname : guildMember.user.username;
 	const guildUserAvatar = guildUser.displayAvatarURL({ format: "png", dynamic: true });
+	const guildUserBanner = guildUser.displayBannerURL({ format: "png", dynamic: true });
+
 
 	// get the member's roles
 	const allUserRoles = guildMember.roles.cache.sort((a, b) => b.position - a.position).map(r => r);
@@ -77,8 +79,8 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 	}
 
 	// if user's discord pfp in db is invalid, they've probably changed it before we got to update it.
-	const response = await fetch(player.image)
-	if (!response.ok) {
+	const imageResponse = await fetch(player.image)
+	if (!imageResponse.ok) {
 		logger.log(`DEBUG`, `Player ${player.id}'s discord image from the database is invalid. Attempting to update...`);
 		const user = await prisma.user.update({
 			where: { id: player.id },
@@ -88,6 +90,19 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 		else {
 			updateMeilisearchPlayer(player.id)
 			logger.log(`INFO`, `Successfully updated player ${player.id}'s discord image in our DB.`)
+		}
+	}
+
+	const bannerResponse = await fetch(player.banner)
+	if (!bannerResponse.ok) {
+		logger.log(`DEBUG`, `Player ${player.id}'s discord banner from the database is invalid. Attempting to update...`);
+		const user = await prisma.user.update({
+			where: { id: player.id },
+			data: { banner: guildUserBanner },
+		});
+		if (user.image !== guildUserBanner) logger.log(`ERROR`, `Failed to update player ${player.id}'s discord banner in our DB. Silently failing...`)
+		else {
+			logger.log(`INFO`, `Successfully updated player ${player.id}'s discord banner in our DB.`)
 		}
 	}
 
@@ -587,9 +602,9 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------	
 
-	// update user's pfp in our db if they've changed it.
+	// update user's pfp/banner in our db if they've changed it.
 	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Checking if your profile picture is valid...`);
+	progress.push(`🔃 Checking if your pfp/banner is valid...`);
 	await interaction.editReply(progress.join(`\n`));
 
 	const imageLookup = await fetch(player.image)
@@ -598,6 +613,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		await interaction.editReply(progress.join(`\n`));
 
 		const guildMemberAvatar = guildMember.displayAvatarURL({ format: "png", dynamic: true });
+
 		const user = await prisma.user.update({
 			where: { id: player.id },
 			data: { image: guildMemberAvatar },
@@ -608,6 +624,26 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 				`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
 		}
 		else progress[progress.length - 1] = `✅ Your profile picture has been updated!`
+		await interaction.editReply(progress.join(`\n`));
+	}
+	
+	const bannerLookup = await fetch(player.banner)
+	if(!bannerLookup.ok){
+		progress[progress.length - 1] = `🤔 Seems like you changed your banner. We'll try to update it.`;
+		await interaction.editReply(progress.join(`\n`));
+
+		const guildMemberBanner = guildMember.displayBannerURL({ format: "png", dynamic: true });
+
+		const user = await prisma.user.update({
+			where: { id: player.id },
+			data: { banner: guildMemberBanner },
+		});
+
+		if (user.image !== guildMemberBanner) {
+			progress[progress.length - 1] = 
+				`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
+		}
+		else progress[progress.length - 1] = `✅ Your banner has been updated!`
 		await interaction.editReply(progress.join(`\n`));
 	}
 	// --------------------------------------------------------------------------------------------
