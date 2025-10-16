@@ -71,16 +71,16 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 		}
 
 		case `kill`: {
-			const matchId = interaction.options.getString(`match_id`, true);
+			const queueId = interaction.options.getString(`queue_id`, true);
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-			const result = await killMatch(interaction.client, matchId, actorLabel);
+			const result = await killMatch(interaction.client, queueId, actorLabel);
 			await interaction.editReply({ content: result.message });
 
 			if (result.matchRecord) {
 				try {
-					await cleanupMatchChannels(interaction.client, result.matchRecord, matchId);
+					await cleanupMatchChannels(interaction.client, result.matchRecord, queueId);
 				} catch (error) {
-					logger.log(`WARNING`, `Failed to cleanup channels for ${matchId}`, error);
+					logger.log(`WARNING`, `Failed to cleanup channels for ${queueId}`, error);
 				}
 			}
 
@@ -91,6 +91,46 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const result = await resetQueues(interaction.client, actorLabel);
 			return interaction.editReply({ content: result });
+		}
+
+		case `create-dummies`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
+			const count = Math.min(Math.max(interaction.options.getInteger(`count`, true) || 0, 1), 50);
+			const bucket = interaction.options.getString(`bucket`, true);
+			const redis = getRedisClient();
+
+			const validBuckets = new Set([`DE`, `FA_RFA`, `SIGNED`]);
+			if (!validBuckets.has(bucket)) {
+				return interaction.editReply({ content: `Invalid bucket type: ${bucket}` });
+			}
+
+			// Generate dummy IDs and push them to the queue list. Use a distinct prefix to avoid colliding
+			// with real user IDs. Each dummy will have a player hash similar to real players.
+			const created = [];
+			for (let i = 0; i < count; i++) {
+				// ensure reasonably unique id
+				const dummyId = `dummy_${Date.now().toString(36)}_${Math.floor(Math.random() * 100000)}_${i}`;
+				const playerKey = `vdc:player:${dummyId}`;
+				const nowMs = Date.now().toString();
+				// Set a simple player hash
+				await redis.hset(playerKey, {
+					status: `queued`,
+					tier: tierSelection,
+					queueJoinedAt: nowMs,
+					mmr: `1000`,
+					guildId: ``,
+				});
+				// set TTL so these expire after 5 minutes (short-lived test players)
+				await redis.pexpire(playerKey, 300000);
+				// Push to the selected queue list
+				const queueKey = `vdc:tier:${tierSelection}:queue:${bucket}`;
+				await redis.rpush(queueKey, dummyId);
+				created.push({ id: dummyId, queueKey });
+			}
+
+			logger.log(`INFO`, `Queue admin create-dummies executed by ${actorLabel} — created ${created.length} dummies for ${tierSelection} in ${bucket}`);
+			return interaction.editReply({ content: `Created and queued ${created.length} dummy players in ${tierSelection} / ${bucket}.` });
 		}
 	}
 }
@@ -154,13 +194,13 @@ async function buildQueueStatusEmbed(queueConfig) {
 		.setFooter({ text: `Queue system bootstrap — functionality pending final implementation.` });
 }
 
-async function killMatch(client, matchId, actorLabel) {
+async function killMatch(client, queueId, actorLabel) {
 	const redis = getRedisClient();
-	const matchKey = `vdc:match:${matchId}`;
+	const matchKey = `vdc:match:${queueId}`;
 	const matchData = await redis.hgetall(matchKey);
 
 	if (!matchData || Object.keys(matchData).length === 0) {
-		return { message: `Match \`${matchId}\` was not found.` };
+		return { message: `Match \`${queueId}\` was not found.` };
 	}
 
 	const parsed = parseMatchRecord(matchData);
@@ -170,7 +210,7 @@ async function killMatch(client, matchId, actorLabel) {
 	for (const playerId of players) {
 		const key = `vdc:player:${playerId}`;
 		pipeline.hset(key, `status`, `idle`);
-		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentMatchId`);
+		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
 		pipeline.del(`vdc:player:${playerId}:recent`);
 		pipeline.pexpire(key, 43200000);
 	}
@@ -180,11 +220,11 @@ async function killMatch(client, matchId, actorLabel) {
 
 	logger.log(
 		`ALERT`,
-		`Queue admin kill executed by ${actorLabel} for match ${matchId} — affected players: ${players.size}`,
+		`Queue admin kill executed by ${actorLabel} for match ${queueId} — affected players: ${players.size}`,
 	);
 
 	return {
-		message: `Match \`${matchId}\` was killed and players were reset.`,
+		message: `Match \`${queueId}\` was killed and players were reset.`,
 		matchRecord: parsed,
 	};
 }
@@ -223,16 +263,16 @@ async function resetQueues(client, actorLabel) {
 			await redis.del(key);
 			continue;
 		}
-		const matchId = key.split(`vdc:match:`)[1];
+		const queueId = key.split(`vdc:match:`)[1];
 		const parsed = parseMatchRecord(matchData);
 
 		(parsed.teamA ?? []).forEach((id) => id && affectedUsers.add(id));
 		(parsed.teamB ?? []).forEach((id) => id && affectedUsers.add(id));
 
 		try {
-			await cleanupMatchChannels(client, parsed, matchId);
+			await cleanupMatchChannels(client, parsed, queueId);
 		} catch (error) {
-			logger.log(`WARNING`, `Failed to cleanup channels for ${matchId}`, error);
+			logger.log(`WARNING`, `Failed to cleanup channels for ${queueId}`, error);
 		}
 		await redis.del(key, `${key}:cancel_votes`);
 		matchesCleared += 1;
@@ -243,7 +283,7 @@ async function resetQueues(client, actorLabel) {
 		for (const userId of affectedUsers) {
 			const key = `vdc:player:${userId}`;
 			pipeline.hset(key, `status`, `idle`);
-			pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentMatchId`);
+			pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
 			pipeline.del(`vdc:player:${userId}:recent`);
 			pipeline.pexpire(key, 43200000);
 		}
@@ -263,7 +303,7 @@ async function resetQueues(client, actorLabel) {
 	);
 }
 
-async function cleanupMatchChannels(client, matchRecord, matchId) {
+async function cleanupMatchChannels(client, matchRecord, queueId) {
 	const descriptor = matchRecord.channels;
 	if (!descriptor || !descriptor.categoryId) return;
 
@@ -282,7 +322,7 @@ async function cleanupMatchChannels(client, matchRecord, matchId) {
 		categoryId: descriptor.categoryId,
 		textChannelId: descriptor.textChannelId,
 		voiceChannelIds: descriptor.voiceChannelIds,
-		reason: `Match ${matchId} reset`,
+		reason: `Match ${queueId} reset`,
 	});
 }
 
@@ -349,7 +389,7 @@ async function clearTierQueues(redis, tiers) {
 	for (const userId of affectedUsers) {
 		const key = `vdc:player:${userId}`;
 		pipeline.hset(key, `status`, `idle`);
-		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentMatchId`);
+		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
 		pipeline.del(`vdc:player:${userId}:recent`);
 	}
 

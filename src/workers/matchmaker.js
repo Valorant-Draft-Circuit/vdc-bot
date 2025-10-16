@@ -9,7 +9,7 @@ const { runLua, getRedisClient } = require(`../core/redis`);
 const { getQueueConfig, DEFAULT_MAP_POOL } = require(`../core/config`);
 const { createMatchChannels } = require(`../core/matchChannels`);
 const { isMmrDisplayEnabled } = require(`../core/mmrDisplay`);
-const { generateMatchId } = require(`../core/id`);
+const { generateQueueId } = require(`../core/id`);
 
 const LUA_SCRIPT = `build_match`;
 const EVENTS_KEY = `vdc:events`;
@@ -67,19 +67,19 @@ async function attemptMatchForTier(client, tier, config) {
 	inFlightTiers.add(tier);
 
 	try {
-        const matchId = await generateMatchId(getRedisClient());
+	const queueId = await generateQueueId(getRedisClient());
         const keys = [
             `vdc:league_state`,
             `vdc:tier:${tier}:queue:DE`,
             `vdc:tier:${tier}:queue:FA_RFA`,
             `vdc:tier:${tier}:queue:SIGNED`,
-            `vdc:match:${matchId}`,
+            `vdc:match:${queueId}`,
             EVENTS_KEY,
         ];
 
 		const args = [
 			tier,
-			matchId,
+			queueId,
 			String(Date.now()),
 			String(config.relaxSeconds ?? 180),
 			String(config.recentSetTtlSeconds ?? config.relaxSeconds ?? 180),
@@ -150,7 +150,7 @@ async function dispatchMatch(client, payload, config) {
 	}
 
 	if (!guild) {
-		logger.log(`WARNING`, `Match ${payload.matchId} could not resolve a guild context`);
+		logger.log(`WARNING`, `Match ${payload.queueId} could not resolve a guild context`);
 		return;
 	}
 
@@ -186,7 +186,7 @@ async function dispatchMatch(client, payload, config) {
 		for (const s of scoutsSet) allowedUserIds.push(s);
 
 		channelDescriptor = await createMatchChannels(guild, {
-			matchId: payload.matchId,
+			queueId: payload.queueId,
 			tier: payload.tier,
 			allowedUserIds,
 			staffRoleIds: filterStaffRoles(config.staffRoleId, guild),
@@ -209,7 +209,7 @@ async function dispatchMatch(client, payload, config) {
 	}
 
 	if (!channelDescriptor.textChannelId) {
-		logger.log(`WARNING`, `Match ${payload.matchId} has no text channel target`);
+		logger.log(`WARNING`, `Match ${payload.queueId} has no text channel target`);
 		return;
 	}
 
@@ -217,7 +217,7 @@ async function dispatchMatch(client, payload, config) {
 	const mmrDisplay = await isMmrDisplayEnabled();
 	const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
 	const embedData = embed.toJSON();
-	const components = buildMatchComponents(payload.matchId);
+	const components = buildMatchComponents(payload.queueId);
 	const mentionLine = playerIds.map((id) => `<@${id}>`).join(` `);
 
 	let textChannel =
@@ -226,7 +226,7 @@ async function dispatchMatch(client, payload, config) {
 		fallbackChannel;
 
 	if (!textChannel) {
-		logger.log(`ERROR`, `No text channel available to post match ${payload.matchId}`);
+		logger.log(`ERROR`, `No text channel available to post match ${payload.queueId}`);
 		return;
 	}
 
@@ -238,7 +238,7 @@ async function dispatchMatch(client, payload, config) {
 		});
 
 		await message.pin().catch(() => null);
-		await updateMatchChannelsInRedis(payload.matchId, channelDescriptor);
+		await updateMatchChannelsInRedis(payload.queueId, channelDescriptor);
 		await notifyPlayersDirectly(client, payload, embedData, channelDescriptor.textChannelId, guild, Array.from(scoutsSet));
 	} catch (error) {
 		logger.log(`ERROR`, `Failed to send match embed`, error);
@@ -265,7 +265,7 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 		.setAuthor({ name: `VDC Queue Manager` })
 		.setDescription(
 			`**Tier**: ${payload.tier}\n` +
-				`**Match ID**: ${payload.matchId}\n` +
+				`**Queue ID**: ${payload.queueId}\n` +
 				`**Map**: ${mapInfo.name}`,
 		)
 		.addFields(
@@ -286,24 +286,24 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 	return embed;
 }
 
-function buildMatchComponents(matchId) {
+function buildMatchComponents(queueId) {
 	const joinLobby = new ButtonBuilder()
-		.setCustomId(`queueManager_joinLobby-${matchId}`)
+		.setCustomId(`queueManager_joinLobby-${queueId}`)
 		.setLabel(`Join Lobby VC`)
 		.setStyle(ButtonStyle.Secondary);
 
 	const joinAttackers = new ButtonBuilder()
-		.setCustomId(`queueManager_joinAttackers-${matchId}`)
+		.setCustomId(`queueManager_joinAttackers-${queueId}`)
 		.setLabel(`Join Attackers`)
 		.setStyle(ButtonStyle.Danger);
 
 	const joinDefenders = new ButtonBuilder()
-		.setCustomId(`queueManager_joinDefenders-${matchId}`)
+		.setCustomId(`queueManager_joinDefenders-${queueId}`)
 		.setLabel(`Join Defenders`)
 		.setStyle(ButtonStyle.Success);
 
 	const submitResult = new ButtonBuilder()
-		.setCustomId(`queueManager_submit-${matchId}`)
+		.setCustomId(`queueManager_submit-${queueId}`)
 		.setLabel(`Submit Match Link`)
 		.setStyle(ButtonStyle.Primary);
 
@@ -325,7 +325,7 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 			const user = await client.users.fetch(playerId);
 			await user.send({ content: playerContent, embeds: [embedData] });
 		} catch (error) {
-			logger.log(`WARNING`, `Failed to DM player ${playerId} about match ${payload.matchId}`, error);
+			logger.log(`WARNING`, `Failed to DM player ${playerId} about match ${payload.queueId}`, error);
 		}
 	}
 
@@ -341,7 +341,7 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 			}
 			scoutIds = Array.from(scoutSet);
 		} catch (error) {
-			logger.log(`WARNING`, `Failed to read scout followers from redis for match ${payload.matchId}`, error);
+			logger.log(`WARNING`, `Failed to read scout followers from redis for match ${payload.queueId}`, error);
 			scoutIds = [];
 		}
 	}
@@ -355,15 +355,15 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 			const user = await client.users.fetch(scoutId);
 			await user.send({ content: scoutContent, embeds: [embedData] });
 		} catch (error) {
-			logger.log(`WARNING`, `Failed to DM scout ${scoutId} about match ${payload.matchId}`, error);
+			logger.log(`WARNING`, `Failed to DM scout ${scoutId} about match ${payload.queueId}`, error);
 		}
 	}
 }
 
-async function updateMatchChannelsInRedis(matchId, descriptor) {
+async function updateMatchChannelsInRedis(queueId, descriptor) {
 	const redis = getRedisClient();
-	await redis.hset(`vdc:match:${matchId}`, `channelIdsJSON`, JSON.stringify(descriptor));
-	await redis.hset(`vdc:match:${matchId}`, `status`, `active`);
+	await redis.hset(`vdc:match:${queueId}`, `channelIdsJSON`, JSON.stringify(descriptor));
+	await redis.hset(`vdc:match:${queueId}`, `status`, `active`);
 }
 
 function deriveTiersFromCache() {

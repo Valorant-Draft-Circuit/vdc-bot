@@ -7,7 +7,7 @@ This document describes the available queue and match-related slash commands imp
 - Description: Player-facing command intended to initiate a cancel vote for an active match.
 - Current behavior (code): Not yet implemented — the command handler replies ephemerally: "Match cancel voting will be enabled soon. For now, please contact a queue admin." (`src/interactions/commands/match.js`).
 - Intended / planned behavior (requirements): When live, only players in the match (or DM mirror) should be able to run this. Calling the command adds the voter to `vdc:match:{id}:cancel_votes`. If votes meet the configured threshold (design docs reference ~80% of players), the match is marked canceled, players are unlocked, channels are removed/archived, and no backfill occurs.
-- Args: none (should be invoked from the match context/thread or DM mirror so the bot can resolve the match id).
+- Args: none (should be invoked from the match context/thread or DM mirror so the bot can resolve the queue id).
 - Permissions: only members of the match (implementation planned).
 
 ## `/match submit`
@@ -90,10 +90,10 @@ Common note: Replies are ephemeral when appropriate.
 ### `/queueadmin kill`
 
 - Description: Force-cancel a match record and reset affected players.
-- Usage: `/queue admin kill match_id:<id>`
+- Usage: `/queue admin kill queue_id:<id>`
 - Args:
-	- `match_id` (required string) — the internal queue match identifier (the key portion used with `vdc:match:{id}`).
-- Current behavior (code): Reads `vdc:match:{id}` from Redis, sets each player's `status` to `idle`, removes queue and match-related fields (`queuePriority`, `queueJoinedAt`, `currentMatchId`), deletes the match key and its cancel_votes, and returns a message. It also attempts to clean up match channels (category/text/voice) if present (`cleanupMatchChannels`). (`src/interactions/subcommands/queue/admin.js`).
+	- `queue_id` (required string) — the internal queue identifier (Queue ID) (the key portion used with `vdc:match:{id}`).
+-- Current behavior (code): Reads `vdc:match:{id}` from Redis, sets each player's `status` to `idle`, removes queue and match-related fields (`queuePriority`, `queueJoinedAt`, `currentQueueId`), deletes the match key and its cancel_votes, and returns a message. It also attempts to clean up match channels (category/text/voice) if present (`cleanupMatchChannels`). (`src/interactions/subcommands/queue/admin.js`).
 
 ### `/queueadmin reset`
 
@@ -106,6 +106,17 @@ Common note: Replies are ephemeral when appropriate.
 - Description: Reload queue configuration from the Control Panel.
 - Usage: `/queue admin reload-config` (no args)
 - Current behavior (code): Invalidates the queue config cache and forces a refresh via `getQueueConfig({ forceRefresh: true })`. Replies with a confirmation message.
+
+### `/queueadmin create-dummies`
+
+- Description: Create dummy players and add them to a specified queue for testing the matchmaker.
+- Usage: `/queue admin create-dummies tier:<tier> count:<n> bucket:<DE|FA_RFA|SIGNED>`
+- Args:
+	- `tier` (required) — Tier to which dummy players belong (choices include All, Recruit, Prospect, Apprentice, Expert, Mythic).
+	- `count` (required integer) — Number of dummy players to create (1–50).
+	- `bucket` (required string) — Which queue bucket to place them in: `DE`, `FA_RFA`, or `SIGNED`.
+- Current behavior (code): Creates ephemeral dummy player hashes in Redis (keys `vdc:player:dummy_*`) with `status=queued`, sets a 12-hour TTL, and pushes them onto the specified `vdc:tier:{tier}:queue:{bucket}` list. Replies with a summary of how many dummies were queued.
+ - Current behavior (code): Creates ephemeral dummy player hashes in Redis (keys `vdc:player:dummy_*`) with `status=queued`, sets a short 5-minute TTL, and pushes them onto the specified `vdc:tier:{tier}:queue:{bucket}` list. Replies with a summary of how many dummies were queued.
 
 ---
 

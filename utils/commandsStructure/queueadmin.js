@@ -60,8 +60,8 @@ module.exports = {
             type: ApplicationCommandOptionType.Subcommand,
             options: [
                 {
-                    name: `match_id`,
-                    description: `Internal queue match identifier.`,
+                    name: `queue_id`,
+                    description: `Internal queue identifier (Queue ID).`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                 },
@@ -83,6 +83,37 @@ module.exports = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     choices: TIER_CHOICES,
+                },
+            ],
+        },
+        {
+            name: `create-dummies`,
+            description: `Create dummy players and add them to a queue for testing.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `tier`,
+                    description: `Select which tier the dummies should belong to.`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: TIER_CHOICES,
+                },
+                {
+                    name: `count`,
+                    description: `How many dummy players to create (max 50).`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: true,
+                },
+                {
+                    name: `bucket`,
+                    description: `Which queue bucket to add dummies to (DE, FA_RFA, SIGNED).`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        { name: `DE`, value: `DE` },
+                        { name: `FA_RFA`, value: `FA_RFA` },
+                        { name: `SIGNED`, value: `SIGNED` },
+                    ],
                 },
             ],
         },

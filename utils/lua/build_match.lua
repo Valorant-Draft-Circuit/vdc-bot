@@ -8,12 +8,12 @@ KEYS
   2 -> vdc:tier:{tier}:queue:DE
   3 -> vdc:tier:{tier}:queue:FA_RFA
   4 -> vdc:tier:{tier}:queue:SIGNED
-  5 -> vdc:match:{matchId}
+  5 -> vdc:match:{queueId}
   6 -> vdc:events stream key (optional)
 
 ARGV
   1 -> tier identifier
-  2 -> matchId
+  2 -> queueId
   3 -> current timestamp (ms) (optional)
   4 -> relax window (seconds, default 180)
   5 -> recent set TTL (seconds, default relax window)
@@ -74,8 +74,8 @@ if tier == nil or tier == "" then
 	return failure("MISSING_TIER")
 end
 
-local matchId = ARGV[2]
-if matchId == nil or matchId == "" then
+local queueId = ARGV[2]
+if queueId == nil or queueId == "" then
 	return failure("MISSING_MATCH_ID")
 end
 
@@ -111,7 +111,7 @@ if leagueState ~= "combines" then
 end
 
 if redis.call("EXISTS", KEY_MATCH) == 1 then
-	return failure("MATCH_ALREADY_EXISTS", { matchId = matchId })
+	return failure("MATCH_ALREADY_EXISTS", { queueId = queueId })
 end
 
 local queueLengths = {
@@ -373,7 +373,7 @@ for _, entry in ipairs(selection) do
 	local key = playerHashKey(entry.id)
 	redis.call("HSET", key,
 		"status", "in_match",
-		"currentMatchId", matchId,
+		"currentQueueId", queueId,
 		"lastMatchAt", tostring(nowMs),
 		"queuePriority", entry.bucket
 	)
@@ -401,7 +401,7 @@ local eventId = nil
 if KEY_EVENTS ~= nil and KEY_EVENTS ~= "" then
 	local eventFields = {
 		"type", "match_created",
-		"matchId", matchId,
+		"queueId", queueId,
 		"tier", tier,
 		"timestamp", tostring(nowMs),
 		"relaxed", relaxApplied and "1" or "0",
@@ -422,7 +422,7 @@ local remainingQueues = {
 }
 
 local response = {
-    matchId = matchId,
+    queueId = queueId,
     tier = tier,
     relaxed = relaxApplied,
     teamA = teamA,

@@ -18,10 +18,10 @@ module.exports = {
 	async execute(interaction, action = ``) {
 		const separatorIndex = action.indexOf(`-`);
 		const command = separatorIndex === -1 ? action : action.slice(0, separatorIndex);
-		const matchId = separatorIndex === -1 ? `` : action.slice(separatorIndex + 1);
+		const queueId = separatorIndex === -1 ? `` : action.slice(separatorIndex + 1);
 		const label = BUTTON_LABELS[command] ?? `Queue Action`;
 
-		if (!matchId) {
+		if (!queueId) {
 			return interaction.reply({
 				content: `Missing match information for this action.`,
 				flags: MessageFlags.Ephemeral,
@@ -36,7 +36,7 @@ module.exports = {
 		}
 
 		try {
-			const inviteUrl = await createVoiceInvite(interaction, matchId, command);
+			const inviteUrl = await createVoiceInvite(interaction, queueId, command);
 			if (!inviteUrl) {
 				return interaction.reply({
 					content: `Unable to locate an appropriate voice channel for this match.`,
@@ -58,9 +58,9 @@ module.exports = {
 	},
 };
 
-async function createVoiceInvite(interaction, matchId, command) {
+async function createVoiceInvite(interaction, queueId, command) {
 	const redis = getRedisClient();
-	const descriptorRaw = await redis.hget(`vdc:match:${matchId}`, `channelIdsJSON`);
+	const descriptorRaw = await redis.hget(`vdc:match:${queueId}`, `channelIdsJSON`);
 	if (!descriptorRaw) return null;
 
 	let descriptor;
@@ -80,7 +80,7 @@ async function createVoiceInvite(interaction, matchId, command) {
 		maxAge: 30,
 		maxUses: 1,
 		unique: true,
-		reason: `Queue quick join for match ${matchId}`,
+		reason: `Queue quick join for match ${queueId}`,
 	});
 
 	return invite?.url ?? null;

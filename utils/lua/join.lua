@@ -140,7 +140,7 @@ local status = toLower(previousStatusRaw)
 if status == "queued" then
 	return failure("ALREADY_QUEUED", { tier = playerData.tier, priority = playerData.queuePriority })
 elseif status == "in_match" then
-	return failure("IN_MATCH", { matchId = playerData.currentMatchId })
+	return failure("IN_MATCH", { queueId = playerData.currentQueueId })
 elseif status == "locked" then
 	return failure("PLAYER_LOCKED")
 end
@@ -172,7 +172,7 @@ redis.call("HSET", playerKey,
 	"guildId", guildId
 )
 redis.call("PEXPIRE", playerKey, 43200000)
-redis.call("HDEL", playerKey, "currentMatchId")
+redis.call("HDEL", playerKey, "currentQueueId")
 
 local eventsKey = KEYS[7]
 local eventId = nil

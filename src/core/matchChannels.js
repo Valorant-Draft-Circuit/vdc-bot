@@ -11,7 +11,7 @@ const MATCH_CHANNEL_NAMES = Object.freeze({
  * Create the category, text channel, and voice channels for a match instance.
  * @param {import('discord.js').Guild} guild
  * @param {{
- *   matchId: string;
+ *   queueId: string;
  *   tier: string;
  *   allowedUserIds?: string[];
  *   staffRoleIds?: string[];
@@ -21,12 +21,12 @@ const MATCH_CHANNEL_NAMES = Object.freeze({
  */
 async function createMatchChannels(guild, options) {
 	const {
-		matchId,
+		queueId,
 		tier,
 		allowedUserIds = [],
 		staffRoleIds = [],
-		categoryName = buildCategoryName(tier, matchId),
-		reason = `Queue match ${matchId}`,
+		categoryName = buildCategoryName(tier, queueId),
+		reason = `Queue match ${queueId}`,
 		enableVoice = true,
 	} = options;
 
@@ -168,9 +168,9 @@ function buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds) {
 	return overwrites;
 }
 
-function buildCategoryName(tier, matchId) {
+function buildCategoryName(tier, queueId) {
 	const tierLabel = tier ? tier.toUpperCase() : `COMBINES`;
-	return `Match ${tierLabel} — ${matchId}`;
+	return `Match ${tierLabel} — ${queueId}`;
 }
 
 function isValidSnowflake(id) {

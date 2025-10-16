@@ -54,7 +54,7 @@ end
 
 local status = playerData.status and string.lower(playerData.status)
 if status == "in_match" then
-	return failure("IN_MATCH", { matchId = playerData.currentMatchId })
+	return failure("IN_MATCH", { queueId = playerData.currentQueueId })
 end
 
 if status ~= "queued" then

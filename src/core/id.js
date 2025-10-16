@@ -1,14 +1,14 @@
 const crypto = require(`node:crypto`);
 
-const MATCH_ID_MIN = 1000000;
-const MATCH_ID_MAX = 99999999;
+const QUEUE_ID_MIN = 1000000;
+const QUEUE_ID_MAX = 99999999;
 
-function generateMatchId(redis) {
+function generateQueueId(redis) {
 	return generateOkayId(redis);
 }
 
 function generateOkayId(redis, attempts = 5) {
-	const id = String(randomInt(MATCH_ID_MIN, MATCH_ID_MAX + 1));
+	const id = String(randomInt(QUEUE_ID_MIN, QUEUE_ID_MAX + 1));
 	const key = `vdc:match:${id}`;
 
 	if (!redis) return id;
@@ -29,5 +29,5 @@ function randomInt(min, max) {
 }
 
 module.exports = {
-	generateMatchId,
+	generateQueueId,
 };

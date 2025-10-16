@@ -117,7 +117,7 @@ function mapJoinErrorToMessage(payload, tier) {
 		case `ALREADY_QUEUED`:
 			return `You're already queued for ${payload.details?.tier ?? tier}.`;
 		case `IN_MATCH`:
-			return `You're currently in a match (${payload.details?.matchId ?? `unknown`}).`;
+			return `You're currently in a match (${payload.details?.queueId ?? `unknown`}).`;
 		case `PLAYER_LOCKED`:
 			return `You're locked from queueing until staff unlocks you.`;
 		case `ON_COOLDOWN`:
