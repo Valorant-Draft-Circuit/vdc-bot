@@ -60,11 +60,34 @@ module.exports = class BotClient extends Client {
         /** @type {Collection} - button manager collection */
         this.buttons = new Collection();
 
+    /** @type {Collection} - modal handlers */
+        this.modals = new Collection();
+
         /** @type {Collection} - button manager collection */
         this.autocompletes = new Collection();
 
         /** @member {Class} logger instanciated by ready.js  */
         this.logger;
+    };
+
+    /**
+     * Load modal handler files from specified directory
+     * @param {String} directory
+     */
+    loadModals(directory) {
+        const absoluteDirectory = path.resolve(__dirname, `../../${directory}`);
+        const modalFiles = fs.readdirSync(absoluteDirectory).filter(f => f.endsWith(`.js`));
+        let success = 0;
+
+        modalFiles.forEach(modalPath => {
+            const modalFilePath = path.resolve(__dirname, `../../${directory}/${modalPath}`);
+            const modal = require(modalFilePath);
+            const key = modal.id ?? modalPath.replace(/\.js$/, ``);
+            this.modals.set(key, modal);
+            success++;
+        });
+
+        logger.log(`DEBUG`, `Loaded ${success} modal(s) from (${directory}/)!`);
     };
 
     /**
