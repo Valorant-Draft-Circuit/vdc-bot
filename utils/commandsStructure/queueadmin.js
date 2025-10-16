@@ -10,10 +10,14 @@ const TIER_CHOICES = [
     { name: `Mythic`, value: Tier.MYTHIC },
 ];
 
+const { PermissionFlagsBits } = require(`discord.js`);
+
 /** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
     name: `queueadmin`,
     description: `Administrative queue controls (admin role required).`,
+    // Hide this command from users without Manage Guild (Manage Server) or Administrator
+    default_member_permissions: String(PermissionFlagsBits.ManageGuild),
     contexts: [InteractionContextType.Guild],
     options: [
         {

@@ -5,20 +5,16 @@ const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/co
 const { deleteMatchChannels } = require(`../../../core/matchChannels`);
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
-	if (!(await hasQueueAdminPrivileges(interaction, queueConfig))) {
-		return interaction.reply({
-			content: `You do not have permission to manage queues.`,
-			flags: MessageFlags.Ephemeral,
-		});
-	}
+	// Permission is enforced by Discord via command registration (ManageGuild or Administrator).
+	// Rely on Discord to hide this command for unauthorized users.
 
 	const actorLabel = `${interaction.user.tag} (${interaction.user.id})`;
 
 	switch (subcommand) {
-		case `status`: {
-			const embed = await buildQueueStatusEmbed(queueConfig);
-			return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
-		}
+			case `status`: {
+				const embed = await buildQueueStatusEmbed(queueConfig, interaction);
+				return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+			}
 
 		case `open`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -135,15 +131,6 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 	}
 }
 
-async function hasQueueAdminPrivileges(interaction, queueConfig) {
-	if (interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) return true;
-
-	const roleId = queueConfig.adminRoleId;
-	if (!roleId) return false;
-
-	return interaction.member.roles.cache.has(roleId);
-}
-
 async function resolveTiers(selection) {
 	const redis = getRedisClient();
 	const knownTiers = new Set(
@@ -178,20 +165,75 @@ function buildTierStateMessage(tiers, isOpen) {
 	return `${prefix} ${tiers.length === 1 ? `tier` : `tiers`}: ${tiers.map((t) => `\`${t}\``).join(`, `)}`;
 }
 
-async function buildQueueStatusEmbed(queueConfig) {
+async function buildQueueStatusEmbed(queueConfig, interaction) {
+	let scoutRoleDisplay = `Not configured`;
+
+	if (queueConfig.scoutRoleId) {
+		const id = String(queueConfig.scoutRoleId);
+		// If interaction is provided and in a guild, try to resolve the role object
+		try {
+			const guild = interaction?.guild ?? null;
+			if (guild) {
+				const role = guild.roles.cache.get(id) ?? (await guild.roles.fetch(id).catch(() => null));
+				if (role) {
+					scoutRoleDisplay = `<@&${id}> ${role.name} (${id})`;
+				} else {
+					scoutRoleDisplay = `${id}`;
+				}
+			} else {
+				scoutRoleDisplay = `${id}`;
+			}
+		} catch (err) {
+			scoutRoleDisplay = `${id}`;
+		}
+	}
+
 	return new EmbedBuilder()
 		.setTitle(`Queue Status`)
 		.setDescription(`Live snapshot of queue controls.`)
 		.addFields(
 			{ name: `Enabled`, value: queueConfig.enabled ? `Yes` : `No`, inline: true },
 			{
-				name: `Admin Role`,
-				value: queueConfig.adminRoleId ? `<@&${queueConfig.adminRoleId}>` : `Not configured`,
+				name: `Display MMR`,
+				value: `${queueConfig.displayMmr}`,
 				inline: true,
+			},
+			{ name: "", value: ``, inline: false },
+			{
+				name: `Channel Management Active`,
+				value: `${queueConfig.vcCreate ? `Yes` : `No`}`,
+				inline: true,
+			},
+			{
+				name: `Queue Cancel Threshold`,
+				value: `${queueConfig.cancelThreshold}%`,
+				inline: true,
+			},
+			{ name: "", value: ``, inline: false },
+			{
+				name: `Relax Timeout`,
+				value: `${queueConfig.relaxSeconds}s`,
+				inline: true,
+			},
+			{
+				name: `Recent Key Expiry`,
+				value: `${queueConfig.recentSetTtlSeconds}s`,
+				inline: true,
+			},
+			{
+				name: `Scout Role`,
+				value: `<@&${queueConfig.scoutRoleId}> (${queueConfig.scoutRoleId})` + (queueConfig.scoutRoleId ? `` : `*Not configured*`),
+				inline: false,
+			},
+			{ name: `Active Map Pool`,
+				value: (queueConfig.mapPool && queueConfig.mapPool.length > 0)
+					? queueConfig.mapPool.map(m => `\`${m}\``).join(`, `)
+					: `Not configured`,
+				inline: false,
 			},
 		)
 		.setColor(queueConfig.enabled ? 0x2ecc71 : 0xffa200)
-		.setFooter({ text: `Queue system bootstrap — functionality pending final implementation.` });
+		.setFooter({ text: `Valorant Draft Circuit - Queue Manager` });
 }
 
 async function killMatch(client, queueId, actorLabel) {

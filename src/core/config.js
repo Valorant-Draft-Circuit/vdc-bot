@@ -9,9 +9,6 @@ const CONTROL_PANEL_DISPLAY_KEY = `display_mmr`;
 
 const DEFAULT_QUEUE_CONFIG = Object.freeze({
 	enabled: true,
-	announcementsChannelId: null,
-	adminRoleId: null,
-	staffRoleId: null,
 	health: {
 		checkIntervalMs: 5000,
 		dbTimeoutMs: 1000,
@@ -34,9 +31,6 @@ let lastFetchAttemptAt = 0;
 function cloneDefaultQueueConfig() {
 	return {
 		enabled: DEFAULT_QUEUE_CONFIG.enabled,
-		announcementsChannelId: DEFAULT_QUEUE_CONFIG.announcementsChannelId,
-		adminRoleId: DEFAULT_QUEUE_CONFIG.adminRoleId,
-		staffRoleId: DEFAULT_QUEUE_CONFIG.staffRoleId,
 		health: { ...DEFAULT_QUEUE_CONFIG.health },
 		mapPool: DEFAULT_QUEUE_CONFIG.mapPool.slice(),
 		perTierFlags: { ...DEFAULT_QUEUE_CONFIG.perTierFlags },
@@ -65,7 +59,21 @@ function coerceControlPanelValue(rawValue) {
 	const lower = trimmed.toLowerCase();
 	if (lower === `true` || lower === `false`) return lower === `true`;
 
-	if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+	// Only coerce numeric strings to Number when it's safe to do so. Large
+	// integers (like Discord snowflakes) can exceed Number's safe integer range
+	// and will lose precision if converted. For integers we only convert when
+	// Number.isSafeInteger(parsed) is true. For decimals we convert normally.
+	if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+		const num = Number(trimmed);
+		if (!Number.isNaN(num)) {
+			// If it's a decimal, return as Number
+			if (trimmed.includes(`.`)) return num;
+			// For integers, only return Number when it's a safe integer
+			if (Number.isSafeInteger(num)) return num;
+		}
+		// Otherwise fall through and return the original string to preserve exactness
+		return trimmed;
+	}
 
 	return trimmed;
 }
@@ -82,15 +90,6 @@ function hydrateConfigFromRows(rows) {
 		switch (key) {
 			case `queue_enabled`:
 				if (typeof value === `boolean`) config.enabled = value;
-				break;
-			case `queue_announcements_channel_id`:
-				config.announcementsChannelId = value || null;
-				break;
-			case `queue_admin_role_id`:
-				config.adminRoleId = value || null;
-				break;
-			case `queue_staff_role_id`:
-				config.staffRoleId = value || null;
 				break;
 			case `queue_health_check_interval_ms`:
 				if (typeof value === `number`) config.health.checkIntervalMs = value;
@@ -123,6 +122,9 @@ function hydrateConfigFromRows(rows) {
 				if (Array.isArray(value)) config.mapPool = value;
 				else if (typeof value === `string` && value.length) config.mapPool = [value];
 				break;
+			case `queue_scout_role_id`:
+				if (value != null) config.scoutRoleId = String(value);
+				break;
 			default:
 				if (key.startsWith(`queue_open_`)) {
 					const tierKey = key.replace(`queue_open_`, ``).toUpperCase();
@@ -149,15 +151,44 @@ async function fetchQueueConfigFromControlPanel() {
 async function persistQueueConfigToRedis(config) {
 	try {
 		const redis = getRedisClient();
+		const payload = sanitizeQueueConfigForRedis(config);
 		await redis.set(
 			QUEUE_CONFIG_CACHE_KEY,
-			JSON.stringify(config),
+			JSON.stringify(payload),
 			`EX`,
 			QUEUE_CONFIG_CACHE_TTL_SECONDS,
 		);
 	} catch (error) {
 		logger.log(`WARNING`, `Failed to persist queue config to Redis`, error);
 	}
+}
+
+// TODO: Test without the block below?
+// Keep persisted Redis payload small and stable. Only include known fields so
+// old/unused keys are not reintroduced into Redis when the config is refreshed.
+function sanitizeQueueConfigForRedis(config) {
+	if (!config || typeof config !== `object`) return {};
+	const out = {
+		enabled: Boolean(config.enabled),
+		// adminRoleId/staffRoleId intentionally omitted: permission now enforced via
+		// Discord Manage Guild/Administrator permissions instead of role config
+		health: {
+			checkIntervalMs: Number(config?.health?.checkIntervalMs ?? DEFAULT_QUEUE_CONFIG.health.checkIntervalMs),
+			dbTimeoutMs: Number(config?.health?.dbTimeoutMs ?? DEFAULT_QUEUE_CONFIG.health.dbTimeoutMs),
+		},
+		mapPool: Array.isArray(config.mapPool) ? config.mapPool.slice() : DEFAULT_QUEUE_CONFIG.mapPool.slice(),
+		perTierFlags: config.perTierFlags && typeof config.perTierFlags === `object` ? { ...config.perTierFlags } : {},
+		relaxSeconds: Number(config.relaxSeconds ?? DEFAULT_QUEUE_CONFIG.relaxSeconds),
+		recentSetTtlSeconds: Number(config.recentSetTtlSeconds ?? DEFAULT_QUEUE_CONFIG.recentSetTtlSeconds),
+		cancelThreshold: Number(config.cancelThreshold ?? DEFAULT_QUEUE_CONFIG.cancelThreshold),
+		vcCreate: config.vcCreate === false ? false : true,
+		matchSize: Number(config.matchSize ?? DEFAULT_QUEUE_CONFIG.matchSize),
+		maxScanPerBucket: Number(config.maxScanPerBucket ?? DEFAULT_QUEUE_CONFIG.maxScanPerBucket),
+		displayMmr: Boolean(config.displayMmr),
+		scoutRoleId: typeof config.scoutRoleId === `string` && config.scoutRoleId.length ? config.scoutRoleId : undefined,
+	};
+
+	return out;
 }
 
 async function readQueueConfigFromRedis() {

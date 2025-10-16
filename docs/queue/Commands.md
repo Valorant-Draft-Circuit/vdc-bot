@@ -56,7 +56,7 @@ This document describes the available queue and match-related slash commands imp
 
 Admin functionality was moved to a top-level command to avoid Discord limitations on hiding subcommands. Use `/queueadmin <subcommand>` instead of `/queue admin <subcommand>`.
 
-Permission check: the caller must either have the Discord Administrator permission or have the configured queue admin role id from queue config (`queueConfig.adminRoleId`) — see `hasQueueAdminPrivileges()` in `src/interactions/subcommands/queue/admin.js`.
+Permission: Discord will only show this command to users with Manage Server (Manage Guild) or Administrator permission. The command is registered with those required permissions so it will be hidden from users who lack them.
 
 Common note: Replies are ephemeral when appropriate.
 
@@ -64,7 +64,7 @@ Common note: Replies are ephemeral when appropriate.
 
 - Description: Shows a live snapshot of basic queue controls.
 - Usage: `/queue admin status` (no args)
-- Current behavior (code): Builds an embed with fields such as Enabled (yes/no) and Admin Role, plus color/footer. (`buildQueueStatusEmbed`).
+- Current behavior (code): Builds an embed with fields such as Enabled (yes/no) and Admin Permission (notes that Manage Server/Administrator is required), plus color/footer. (`buildQueueStatusEmbed`).
 
 ### `/queueadmin open`
 

@@ -128,7 +128,6 @@ async function runMatchmakerOnce(client, tier) {
 }
 
 async function dispatchMatch(client, payload, config) {
-	const fallbackChannelId = config.announcementsChannelId;
 	let fallbackChannel = null;
 	let guild = null;
 
@@ -142,12 +141,7 @@ async function dispatchMatch(client, payload, config) {
 			(await client.guilds.fetch(candidateGuildId).catch(() => null));
 	}
 
-	if (!guild && fallbackChannelId) {
-		fallbackChannel =
-			client.channels.cache.get(fallbackChannelId) ??
-			(await client.channels.fetch(fallbackChannelId).catch(() => null));
-		guild = fallbackChannel?.guild ?? guild;
-	}
+	// no global announcementsChannel fallback — require guild context to post or rely on created channels
 
 	if (!guild) {
 		logger.log(`WARNING`, `Match ${payload.queueId} could not resolve a guild context`);
@@ -189,7 +183,7 @@ async function dispatchMatch(client, payload, config) {
 			queueId: payload.queueId,
 			tier: payload.tier,
 			allowedUserIds,
-			staffRoleIds: filterStaffRoles(config.staffRoleId, guild),
+			staffRoleIds: [],
 			enableVoice: config.vcCreate !== false,
 		});
 	} catch (error) {

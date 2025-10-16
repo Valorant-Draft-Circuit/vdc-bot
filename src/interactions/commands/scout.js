@@ -1,5 +1,4 @@
 const { MessageFlags } = require(`discord.js`);
-const { prisma } = require(`../../../prisma/prismadb`);
 const { getRedisClient } = require(`../../core/redis`);
 
 /**
@@ -30,13 +29,17 @@ module.exports = {
 };
 
 async function resolveScoutRoleId() {
-    // try common variants for the control panel key
-    const keys = [`queue_scout_role_id`, `queue_scout_rold_id`, `queue_scout_roldid`];
-    for (const name of keys) {
-        const row = await prisma.controlPanel.findFirst({ where: { name }, select: { value: true } });
-        if (row && row.value) return String(row.value).trim();
+    const redis = getRedisClient();
+    try {
+        const payload = await redis.get(`vdc:config:queue`);
+        if (!payload) return null;
+        const parsed = JSON.parse(payload);
+        if (parsed && parsed.scoutRoleId) return String(parsed.scoutRoleId).trim();
+        return null;
+    } catch (err) {
+        logger.log(`WARNING`, `Failed to read scout role id from Redis`, err);
+        return null;
     }
-    return null;
 }
 
 async function ensureHasScoutRole(interaction) {
