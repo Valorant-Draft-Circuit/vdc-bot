@@ -20,9 +20,9 @@ const tierSortWeights = {
 (async () => {
     await clearCache();
     await generateCache();
-    await emoteSync();
     await buildMMRCache();
-    await buildCombineCountCache()
+    await buildCombineCountCache();
+    await emoteSync();
 })();
 
 // export functions if the bot needs to regenerate cache
