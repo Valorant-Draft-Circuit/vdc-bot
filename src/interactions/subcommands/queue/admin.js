@@ -302,6 +302,10 @@ async function resetQueues(client, actorLabel) {
 			`vdc:tier:${tier}:queue:DE`,
 			`vdc:tier:${tier}:queue:FA_RFA`,
 			`vdc:tier:${tier}:queue:SIGNED`,
+			// include completed/low-priority sibling lists
+			`vdc:tier:${tier}:queue:DE:completed`,
+			`vdc:tier:${tier}:queue:FA_RFA:completed`,
+			`vdc:tier:${tier}:queue:SIGNED:completed`,
 		];
 
 		for (const key of listKeys) {
@@ -467,3 +471,6 @@ async function clearTierQueues(redis, tiers) {
 module.exports = {
 	handleAdminCommand,
 };
+
+// Export setTierState so other modules (e.g. startup jobs) can programmatically open/close tiers
+module.exports.setTierState = setTierState;
