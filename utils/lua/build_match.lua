@@ -1,13 +1,16 @@
 local cjson = _G.cjson
 
 --[[
-Atomic match builder for Combines queues.
-
 KEYS
-  1 -> vdc:league_state
-  2 -> vdc:tier:{tier}:queue:DE
-  3 -> vdc:tier:{tier}:queue:FA_RFA
-  4 -> vdc:tier:{tier}:queue:SIGNED
+	1 -> vdc:league_state
+	2 -> vdc:tier:{tier}:queue:DE
+	3 -> vdc:tier:{tier}:queue:FA_RFA
+	4 -> vdc:tier:{tier}:queue:SIGNED
+	5 -> vdc:match:{queueId}
+	6 -> vdc:events stream key (optional)
+	7 -> vdc:tier:{tier}:queue:DE:completed (optional)
+	8 -> vdc:tier:{tier}:queue:FA_RFA:completed (optional)
+	9 -> vdc:tier:{tier}:queue:SIGNED:completed (optional)
   5 -> vdc:match:{queueId}
   6 -> vdc:events stream key (optional)
 
@@ -68,6 +71,9 @@ local KEY_QUEUE_FA = KEYS[3]
 local KEY_QUEUE_SIGNED = KEYS[4]
 local KEY_MATCH = KEYS[5]
 local KEY_EVENTS = KEYS[6]
+local KEY_QUEUE_DE_COMPLETED = KEYS[7]
+local KEY_QUEUE_FA_COMPLETED = KEYS[8]
+local KEY_QUEUE_SIGNED_COMPLETED = KEYS[9]
 
 local tier = ARGV[1]
 if tier == nil or tier == "" then
@@ -119,6 +125,16 @@ local queueLengths = {
 	FA_RFA = tonumber(redis.call("LLEN", KEY_QUEUE_FA)) or 0,
 	SIGNED = tonumber(redis.call("LLEN", KEY_QUEUE_SIGNED)) or 0,
 }
+-- include completed lists in total queued counts if present
+if KEY_QUEUE_DE_COMPLETED ~= nil and KEY_QUEUE_DE_COMPLETED ~= "" then
+	queueLengths.DE = queueLengths.DE + (tonumber(redis.call("LLEN", KEY_QUEUE_DE_COMPLETED)) or 0)
+end
+if KEY_QUEUE_FA_COMPLETED ~= nil and KEY_QUEUE_FA_COMPLETED ~= "" then
+	queueLengths.FA_RFA = queueLengths.FA_RFA + (tonumber(redis.call("LLEN", KEY_QUEUE_FA_COMPLETED)) or 0)
+end
+if KEY_QUEUE_SIGNED_COMPLETED ~= nil and KEY_QUEUE_SIGNED_COMPLETED ~= "" then
+	queueLengths.SIGNED = queueLengths.SIGNED + (tonumber(redis.call("LLEN", KEY_QUEUE_SIGNED_COMPLETED)) or 0)
+end
 local totalQueued = queueLengths.DE + queueLengths.FA_RFA + queueLengths.SIGNED
 if totalQueued < totalRequired then
 	return failure("INSUFFICIENT_QUEUE", {
@@ -131,9 +147,9 @@ if totalQueued < totalRequired then
 end
 
 local queueMetas = {
-	{ name = "DE", key = KEY_QUEUE_DE },
-	{ name = "FA_RFA", key = KEY_QUEUE_FA },
-	{ name = "SIGNED", key = KEY_QUEUE_SIGNED },
+	{ name = "DE", key = KEY_QUEUE_DE, completed = KEY_QUEUE_DE_COMPLETED },
+	{ name = "FA_RFA", key = KEY_QUEUE_FA, completed = KEY_QUEUE_FA_COMPLETED },
+	{ name = "SIGNED", key = KEY_QUEUE_SIGNED, completed = KEY_QUEUE_SIGNED_COMPLETED },
 }
 
 local playerCache = {}
@@ -186,7 +202,17 @@ local function selectPlayers(ignoreRecent)
 	local blockedRecent = 0
 
 	for _, bucket in ipairs(queueMetas) do
-		local queueItems = redis.call("LRANGE", bucket.key, 0, -1)
+		-- prefer primary queue then its completed sibling
+		local primaryItems = redis.call("LRANGE", bucket.key, 0, -1)
+		local completedItems = {}
+		if bucket.completed ~= nil and bucket.completed ~= "" then
+			completedItems = redis.call("LRANGE", bucket.completed, 0, -1)
+		end
+		-- iterate primary then completed
+		local combined = {}
+		for i = 1, #primaryItems do table.insert(combined, primaryItems[i]) end
+		for i = 1, #completedItems do table.insert(combined, completedItems[i]) end
+		local queueItems = combined
 		local queueSize = #queueItems
 		if queueSize > 0 then
 			local limit = queueSize
@@ -206,7 +232,14 @@ local function selectPlayers(ignoreRecent)
 				if userId and userId ~= "" and not selectionLookup[userId] then
 					local playerData = getPlayerData(userId)
 					if next(playerData) == nil then
-						table.insert(cleanup, { key = bucket.key, value = userId })
+						-- determine which list this user came from (primary or completed)
+						local originKey = bucket.key
+						-- if userId appears in completed list, use that key for cleanup
+						if bucket.completed ~= nil and bucket.completed ~= "" then
+							local foundInCompleted = (redis.call("LPOS", bucket.completed, userId) ~= false and redis.call("LPOS", bucket.completed, userId) ~= nil)
+							if foundInCompleted then originKey = bucket.completed end
+						end
+						table.insert(cleanup, { key = originKey, value = userId })
 					else
 						local status = toLower(playerData.status)
 						local playerTier = playerData.tier
@@ -222,16 +255,22 @@ local function selectPlayers(ignoreRecent)
 								blockedRecent = blockedRecent + 1
 							else
 								selectionLookup[userId] = true
-						table.insert(selection, {
-							id = userId,
-							bucket = bucket.name,
-							queueKey = bucket.key,
-							joinedAt = joinAt,
-							eligibility = playerData.eligibilityStatus or "",
-							cooldownUntil = playerData.cooldownUntil,
-							mmr = tonumber(playerData.mmr) or 0,
-							guildId = playerData.guildId,
-						})
+							-- determine queueKey origin
+							local originKey = bucket.key
+							if bucket.completed ~= nil and bucket.completed ~= "" then
+								local foundInCompleted = (redis.call("LPOS", bucket.completed, userId) ~= false and redis.call("LPOS", bucket.completed, userId) ~= nil)
+								if foundInCompleted then originKey = bucket.completed end
+							end
+							table.insert(selection, {
+								id = userId,
+								bucket = bucket.name,
+								queueKey = originKey,
+								joinedAt = joinAt,
+								eligibility = playerData.eligibilityStatus or "",
+								cooldownUntil = playerData.cooldownUntil,
+								mmr = tonumber(playerData.mmr) or 0,
+								guildId = playerData.guildId,
+							})
 							end
 						end
 					end

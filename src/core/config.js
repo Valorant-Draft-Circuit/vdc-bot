@@ -158,12 +158,7 @@ async function persistQueueConfigToRedis(config) {
 	try {
 		const redis = getRedisClient();
 		const payload = sanitizeQueueConfigForRedis(config);
-		await redis.set(
-			QUEUE_CONFIG_CACHE_KEY,
-			JSON.stringify(payload),
-			`EX`,
-			QUEUE_CONFIG_CACHE_TTL_SECONDS,
-		);
+		await redis.set(QUEUE_CONFIG_CACHE_KEY, JSON.stringify(payload));
 	} catch (error) {
 		logger.log(`WARNING`, `Failed to persist queue config to Redis`, error);
 	}

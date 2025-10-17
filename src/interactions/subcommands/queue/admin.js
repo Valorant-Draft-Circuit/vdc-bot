@@ -96,6 +96,8 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const count = Math.min(Math.max(interaction.options.getInteger(`count`, true) || 0, 1), 50);
 			const bucket = interaction.options.getString(`bucket`, true);
+			const games = interaction.options.getInteger(`games`) ?? null;
+			const completedFlag = interaction.options.getBoolean(`completed`) ?? false;
 			const redis = getRedisClient();
 
 			const validBuckets = new Set([`DE`, `FA_RFA`, `SIGNED`]);
@@ -112,17 +114,21 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 				const playerKey = `vdc:player:${dummyId}`;
 				const nowMs = Date.now().toString();
 				// Set a simple player hash
-				await redis.hset(playerKey, {
+				const hashPayload = {
 					status: `queued`,
 					tier: tierSelection,
 					queueJoinedAt: nowMs,
 					mmr: `1000`,
 					guildId: ``,
-				});
+				};
+				if (typeof games === 'number') hashPayload.gameCount = String(games);
+				await redis.hset(playerKey, hashPayload);
 				// set TTL so these expire after 5 minutes (short-lived test players)
 				await redis.pexpire(playerKey, 300000);
-				// Push to the selected queue list
-				const queueKey = `vdc:tier:${tierSelection}:queue:${bucket}`;
+				// Push to the selected queue list (primary or completed sibling depending on flag)
+				const queueKey = completedFlag
+					? `vdc:tier:${tierSelection}:queue:${bucket}:completed`
+					: `vdc:tier:${tierSelection}:queue:${bucket}`;
 				await redis.rpush(queueKey, dummyId);
 				created.push({ id: dummyId, queueKey });
 			}
@@ -423,11 +429,15 @@ async function clearTierQueues(redis, tiers) {
 	const affectedUsers = new Set();
 
 	for (const tier of tiers) {
-		const listKeys = [
-			`vdc:tier:${tier}:queue:DE`,
-			`vdc:tier:${tier}:queue:FA_RFA`,
-			`vdc:tier:${tier}:queue:SIGNED`,
-		];
+			const listKeys = [
+				`vdc:tier:${tier}:queue:DE`,
+				`vdc:tier:${tier}:queue:FA_RFA`,
+				`vdc:tier:${tier}:queue:SIGNED`,
+				// completed/low-priority siblings
+				`vdc:tier:${tier}:queue:DE:completed`,
+				`vdc:tier:${tier}:queue:FA_RFA:completed`,
+				`vdc:tier:${tier}:queue:SIGNED:completed`,
+			];
 
 		for (const key of listKeys) {
 			const members = await redis.lrange(key, 0, -1);

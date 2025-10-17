@@ -119,6 +119,18 @@ module.exports = {
                         { name: `SIGNED`, value: `SIGNED` },
                     ],
                 },
+                {
+                    name: `games`,
+                    description: `Optional: how many games the dummy player has played (used to seed gameCount).`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: false,
+                },
+                {
+                    name: `completed`,
+                    description: `Optional: place dummies into the lower-priority completed pool instead of the primary queue.`,
+                    type: ApplicationCommandOptionType.Boolean,
+                    required: false,
+                },
             ],
         },
     ],

@@ -20,6 +20,7 @@ ARGV
   5 -> current timestamp in milliseconds (optional; defaults to Redis TIME)
   6 -> mmr (number as string)
   7 -> guildId (Discord guild snowflake)
+	8 -> gameCount (optional; number as string)
 ]]
 
 local function respond(payload)
@@ -96,6 +97,7 @@ local eligibility = ARGV[4] or ""
 local now = currentTimeMillis(ARGV[5])
 local mmr = tonumber(ARGV[6]) or 0
 local guildId = ARGV[7] or ""
+local gameCount = ARGV[8]
 
 local leagueState = toLower(redis.call("GET", KEYS[1]) or "")
 if leagueState ~= "combines" then
@@ -116,13 +118,13 @@ local bucketUpper = string.upper(bucket)
 local priorityIndex
 
 if bucketUpper == "DE" then
-    queueKey = KEYS[3]
+	queueKey = KEYS[3]
 	priorityIndex = "DE"
 elseif bucketUpper == "FA_RFA" then
-    queueKey = KEYS[4]
+	queueKey = KEYS[4]
 	priorityIndex = "FA_RFA"
 elseif bucketUpper == "SIGNED" then
-    queueKey = KEYS[5]
+	queueKey = KEYS[5]
 	priorityIndex = "SIGNED"
 else
 	return failure("INVALID_PRIORITY_BUCKET", { bucket = bucket })
@@ -130,6 +132,13 @@ end
 
 if queueKey == nil or queueKey == "" then
 	return failure("MISSING_QUEUE_KEY", { bucket = bucketUpper })
+end
+
+-- If an explicit target queue key was provided (KEYS[8]) use it instead — this allows placing
+-- players into a lower-priority "completed" sibling list while preserving the same bucket label.
+local explicitTarget = KEYS[8]
+if explicitTarget ~= nil and explicitTarget ~= "" then
+	queueKey = explicitTarget
 end
 
 local playerKey = KEYS[6]
@@ -151,6 +160,14 @@ if existingCooldown ~= nil and existingCooldown > now then
 end
 
 local queueKeys = { KEYS[3], KEYS[4], KEYS[5] }
+-- include completed sibling lists in duplicate checks if provided
+if KEYS[8] ~= nil and KEYS[8] ~= "" then
+	table.insert(queueKeys, KEYS[8])
+	-- also include other completed siblings to avoid duplicates across siblings
+	table.insert(queueKeys, KEYS[3] .. ":completed")
+	table.insert(queueKeys, KEYS[4] .. ":completed")
+	table.insert(queueKeys, KEYS[5] .. ":completed")
+end
 for _, key in ipairs(queueKeys) do
 	if key ~= nil and key ~= "" then
 		local existingIndex = redis.call("LPOS", key, userId)
@@ -169,7 +186,10 @@ redis.call("HSET", playerKey,
 	"eligibilityStatus", eligibility,
 	"queueJoinedAt", tostring(now),
     "mmr", tostring(mmr),
-	"guildId", guildId
+    -- only set gameCount if provided (preserve existing ordering: place gameCount near guildId)
+    (gameCount ~= nil and gameCount ~= "") and "gameCount" or nil,
+    (gameCount ~= nil and gameCount ~= "") and tostring(gameCount) or nil,
+    "guildId", guildId
 )
 redis.call("PEXPIRE", playerKey, 43200000)
 redis.call("HDEL", playerKey, "currentQueueId")

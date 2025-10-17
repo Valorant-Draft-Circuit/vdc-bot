@@ -43,7 +43,15 @@ async function joinQueue(interaction, queueConfig) {
 
 	const redis = getRedisClient();
 
-	const keys = buildJoinKeys(context.tier, interaction.user.id);
+	// determine whether player has completed required combines and should be placed in lower-priority 'completed' sibling
+	const queueConfigForUser = queueConfig;
+	const gamesPlayed = Number(context.gameCount ?? 0);
+	const isReturning = context.leagueStatus && String(context.leagueStatus).toUpperCase() !== `DRAFT_ELIGIBLE`;
+	const required = isReturning ? queueConfigForUser.returningPlayerGameReq : queueConfigForUser.newPlayerGameReq;
+	const completedSibling = gamesPlayed >= (Number(required) || 0);
+
+	// build keys and append the selected target queue key as an extra KEYS arg (KEYS[8]) so the Lua script can LPUSH into it
+	const keys = buildJoinKeys(context.tier, interaction.user.id, completedSibling, priorityBucket);
 	const args = [
 		interaction.user.id,
 		context.tier,
@@ -52,6 +60,8 @@ async function joinQueue(interaction, queueConfig) {
 		String(Date.now()),
 		String(context.mmr ?? 0),
 		interaction.guildId ?? ``,
+		// pass gameCount explicitly (may be undefined/null/0) so the Lua script can set it
+		context.gameCount != null ? String(context.gameCount) : "",
 	];
 
 	try {
@@ -67,11 +77,14 @@ async function joinQueue(interaction, queueConfig) {
 		await redis.sadd(`vdc:tiers`, context.tier);
 
 		const queueDepth = payload.queueDepth ?? `unknown`;
-		const lines = [
-			`You're in! Added to **${context.tier}** queue (${priorityBucket}).`,
-			`• Queue position: ${queueDepth}`,
-			`• League status: ${context.leagueStatus}`,
-		];
+		const lines = [];
+		if (completedSibling) {
+			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}) — placed in the lower-priority completed pool.`);
+		} else {
+			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}).`);
+		}
+		lines.push(`• Queue position: ${queueDepth}`);
+		lines.push(`• League status: ${context.leagueStatus}`);
 
 		if (await isMmrDisplayEnabled()) {
 			lines.push(`• MMR: ${context.mmr}`);
@@ -129,16 +142,39 @@ function mapJoinErrorToMessage(payload, tier) {
 	}
 }
 
-function buildJoinKeys(tier, userId) {
-	return [
-		`vdc:league_state`,
-		`vdc:tier:${tier}:open`,
-		`vdc:tier:${tier}:queue:DE`,
-		`vdc:tier:${tier}:queue:FA_RFA`,
-		`vdc:tier:${tier}:queue:SIGNED`,
-		`vdc:player:${userId}`,
-		EVENTS_KEY,
-	];
+function buildJoinKeys(tier, userId, completedSibling, priorityBucket) {
+	const keys = [
+ 		`vdc:league_state`,
+ 		`vdc:tier:${tier}:open`,
+ 		`vdc:tier:${tier}:queue:DE`,
+ 		`vdc:tier:${tier}:queue:FA_RFA`,
+ 		`vdc:tier:${tier}:queue:SIGNED`,
+ 		`vdc:player:${userId}`,
+ 		EVENTS_KEY,
+ 	];
+
+	if (completedSibling) {
+		// choose completed sibling key based on the priority bucket
+		let completedKey;
+		switch (String(priorityBucket)) {
+			case `DE`:
+				completedKey = `vdc:tier:${tier}:queue:DE:completed`;
+				break;
+			case `FA_RFA`:
+				completedKey = `vdc:tier:${tier}:queue:FA_RFA:completed`;
+				break;
+			case `SIGNED`:
+				completedKey = `vdc:tier:${tier}:queue:SIGNED:completed`;
+				break;
+			default:
+				completedKey = `vdc:tier:${tier}:queue:DE:completed`;
+		}
+
+		// append the explicit target queue key (KEYS[8]) which the Lua script will prefer if present
+		keys.push(completedKey);
+	}
+
+	return keys;
 }
 
 function parseLuaJson(payload) {

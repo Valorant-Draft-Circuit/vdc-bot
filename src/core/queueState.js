@@ -25,7 +25,9 @@ const BUCKET_BY_STATUS = new Map([
 async function resolvePlayerQueueContext(discordId) {
 	const cacheHit = readFromMmrCache(discordId);
 	if (cacheHit && cacheHit.leagueStatus && cacheHit.tier && cacheHit.mmr != null) {
-		return { ...cacheHit, dataSource: `cache` };
+		// try to read live gameCount from Redis player hash first
+		const gameCount = await readGameCountFromRedis(discordId);
+		return { ...cacheHit, dataSource: `cache`, gameCount };
 	}
 
 	const dbRecord = await Player.getBy({ discordID: discordId });
@@ -44,12 +46,40 @@ async function resolvePlayerQueueContext(discordId) {
 		throw new Error(`TIER_NOT_RESOLVED`);
 	}
 
+	const gameCount = await readGameCountFromRedis(discordId);
 	return {
 		leagueStatus,
 		tier,
 		mmr,
 		dataSource: `database`,
+		gameCount,
 	};
+}
+
+async function readGameCountFromRedis(discordId) {
+	try {
+		const { getRedisClient } = require(`./redis`);
+		const redis = getRedisClient();
+		const key = `vdc:player:${discordId}`;
+		const val = await redis.hget(key, `gameCount`);
+		if (val != null) return Number(val);
+	} catch (err) {
+		// ignore and fall back to file cache
+	}
+
+	// fallback to combineCountCache.json loaded into global
+	try {
+		const cache = global.combineCountCache;
+		if (Array.isArray(cache)) {
+			const entry = cache.find((r) => r.discordID === discordId || r.discordId === discordId);
+			if (entry && entry.gameCount != null) return Number(entry.gameCount);
+			if (entry && entry.gamesPlayed != null) return Number(entry.gamesPlayed);
+		}
+	} catch (err) {
+		// ignore
+	}
+
+	return 0;
 }
 
 /**

@@ -76,8 +76,9 @@ module.exports = {
                     const key = `vdc:player:${playerId}`;
                     pipeline.hset(key, `status`, `idle`);
                     pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-                    // set a short TTL so stale player hashes don't persist forever
-                    // pipeline.pexpire(key, 3600000); // 1 hour
+                       // increment combines/games played so the live Redis record reflects the submitted game
+                       // this matches the shape written by buildCombineCountCache (gameCount)
+                       pipeline.hincrby(key, 'gameCount', 1);
                 }
 
                 // apply anti-rematch recent sets now that the match is complete

@@ -68,14 +68,17 @@ async function attemptMatchForTier(client, tier, config) {
 
 	try {
 	const queueId = await generateQueueId(getRedisClient());
-        const keys = [
-            `vdc:league_state`,
-            `vdc:tier:${tier}:queue:DE`,
-            `vdc:tier:${tier}:queue:FA_RFA`,
-            `vdc:tier:${tier}:queue:SIGNED`,
-            `vdc:match:${queueId}`,
-            EVENTS_KEY,
-        ];
+		const keys = [
+			`vdc:league_state`,
+			`vdc:tier:${tier}:queue:DE`,
+			`vdc:tier:${tier}:queue:FA_RFA`,
+			`vdc:tier:${tier}:queue:SIGNED`,
+			`vdc:match:${queueId}`,
+			EVENTS_KEY,
+			`vdc:tier:${tier}:queue:DE:completed`,
+			`vdc:tier:${tier}:queue:FA_RFA:completed`,
+			`vdc:tier:${tier}:queue:SIGNED:completed`,
+		];
 
 		const args = [
 			tier,
