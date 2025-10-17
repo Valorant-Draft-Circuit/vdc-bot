@@ -61,7 +61,7 @@ fs.watchFile(mmrTierLinesCache, () => {
 
 fs.watchFile(combineCountCache, () => {
     delete require.cache[require.resolve(combineCountCache)];
-    global.mmrTierLinesCache = require(combineCountCache);
+    global.combineCountCache = require(combineCountCache);
 
     return logger.log(`INFO`, `Reloaded file: \`${combineCountCache}\``);
 });
