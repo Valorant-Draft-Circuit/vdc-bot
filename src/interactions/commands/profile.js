@@ -38,10 +38,10 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 
 	// if there is a tagged user, use that, otherwise use the interaction author
 	const guildMember = interaction.options._hoistedOptions.length > 0 ? interaction.guild.members.cache.get(interaction.options._hoistedOptions[0].value) : interaction.member;
-	const guildUser = guildMember.user;
+	const guildUser = await guildMember.user.fetch();
 	const guildNickname = guildMember.nickname ? guildMember.nickname : guildMember.user.username;
 	const guildUserAvatar = guildUser.displayAvatarURL({ format: "png", dynamic: true });
-	const guildUserBanner = guildUser.displayBannerURL({ format: "png", dynamic: true });
+	const guildUserBanner = guildUser.bannerURL({ format: "png", dynamic: true, size: 2048});
 
 	// get the member's roles
 	const allUserRoles = guildMember.roles.cache.sort((a, b) => b.position - a.position).map(r => r);
