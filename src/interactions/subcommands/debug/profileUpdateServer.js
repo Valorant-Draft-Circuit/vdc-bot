@@ -412,7 +412,7 @@ async function update(
     if (!imageLookup.ok) {
         logger.log(`INFO`, `Player \`${player.name}\` (\`${player.id}\`) updated their profile picture. Attempting to update...`);
 
-        const guildMemberAvatar = guildMember.displayAvatarURL({ format: `png`, dynamic: true });
+        const guildMemberAvatar = guildMember.displayAvatarURL({ format: `png`, dynamic: true, size: 2048 });
         const user = await prisma.user.update({
             where: { id: player.id },
             data: { image: guildMemberAvatar },
@@ -421,6 +421,25 @@ async function update(
             logger.log(`WARNING`, `Looks like there was an error updating the database for \`${player.name}\` (\`${player.id}\`)'s profile picture!`);
         }
     }
+
+    const user = await guildMember.user.fetch(); 
+	const guildUserBanner = user.bannerURL({ dynamic: true, size: 2048 });
+	
+	if (guildUserBanner !== player.banner) {
+		const bannerLookup = await fetch(player.banner)
+		if (!bannerLookup.ok){
+            logger.log(`INFO`, `Player \`${player.name}\` (\`${player.id}\`) updated their banner. Attempting to update...`);
+
+			const user = await prisma.user.update({
+				where: { id: player.id },
+				data: { banner: guildUserBanner },
+			});
+
+			if (user.banner !== guildUserBanner) {
+                logger.log(`WARNING`, `Looks like there was an error updating the database for \`${player.name}\` (\`${player.id}\`)'s banner!`);
+			}
+		}
+	}
     // --------------------------------------------------------------------------------------------
 
 
