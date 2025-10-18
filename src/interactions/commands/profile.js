@@ -627,20 +627,21 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		await interaction.editReply(progress.join(`\n`));
 	}
 	
+	const user = await guildMember.user.fetch(); 
+	const guildUserBanner = user.bannerURL({ dynamic: true, size: 2048 });
+	
 	if (guildUserBanner !== player.banner) {
 		const bannerLookup = await fetch(player.banner)
-		if(!bannerLookup.ok){
+		if (!bannerLookup.ok){
 			progress[progress.length - 1] = `🤔 Seems like you changed your banner. We'll try to update it.`;
 			await interaction.editReply(progress.join(`\n`));
 
-			const guildMemberBanner = guildMember.displayBannerURL({ format: "png", dynamic: true });
-
 			const user = await prisma.user.update({
 				where: { id: player.id },
-				data: { banner: guildMemberBanner },
+				data: { banner: guildUserBanner },
 			});
 
-			if (user.image !== guildMemberBanner) {
+			if (user.image !== guildUserBanner) {
 				progress[progress.length - 1] = 
 					`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
 			}
