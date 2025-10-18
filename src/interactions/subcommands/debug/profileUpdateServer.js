@@ -412,7 +412,7 @@ async function update(
     if (!imageLookup.ok) {
         logger.log(`INFO`, `Player \`${player.name}\` (\`${player.id}\`) updated their profile picture. Attempting to update...`);
 
-        const guildMemberAvatar = guildMember.displayAvatarURL({ format: `png`, dynamic: true });
+        const guildMemberAvatar = guildMember.displayAvatarURL({ format: `png`, dynamic: true, size: 2048 });
         const user = await prisma.user.update({
             where: { id: player.id },
             data: { image: guildMemberAvatar },

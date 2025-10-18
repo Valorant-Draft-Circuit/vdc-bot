@@ -40,7 +40,7 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 	const guildMember = interaction.options._hoistedOptions.length > 0 ? interaction.guild.members.cache.get(interaction.options._hoistedOptions[0].value) : interaction.member;
 	const guildUser = await guildMember.user.fetch();
 	const guildNickname = guildMember.nickname ? guildMember.nickname : guildMember.user.username;
-	const guildUserAvatar = guildUser.displayAvatarURL({ format: "png", dynamic: true });
+	const guildUserAvatar = guildUser.displayAvatarURL({ format: "png", dynamic: true, size: 2048 });
 	const guildUserBanner = guildUser.bannerURL({ format: "png", dynamic: true, size: 2048});
 
 	// get the member's roles
@@ -612,7 +612,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		progress[progress.length - 1] = `🤔 Seems like you changed your profile picture and we missed it. We'll try to update it.`;
 		await interaction.editReply(progress.join(`\n`));
 
-		const guildMemberAvatar = guildMember.displayAvatarURL({ format: "png", dynamic: true });
+		const guildMemberAvatar = guildMember.displayAvatarURL({ format: "png", dynamic: true, size: 2048 });
 
 		const user = await prisma.user.update({
 			where: { id: player.id },
