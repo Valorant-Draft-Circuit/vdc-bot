@@ -100,7 +100,7 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 				where: { id: player.id },
 				data: { banner: guildUserBanner },
 			});
-			if (user.image !== guildUserBanner) logger.log(`ERROR`, `Failed to update player ${player.id}'s discord banner in our DB. Silently failing...`)
+			if (user.banner !== guildUserBanner) logger.log(`ERROR`, `Failed to update player ${player.id}'s discord banner in our DB. Silently failing...`)
 			else {
 				logger.log(`INFO`, `Successfully updated player ${player.id}'s discord banner in our DB.`)
 			}
@@ -641,7 +641,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 				data: { banner: guildUserBanner },
 			});
 
-			if (user.image !== guildUserBanner) {
+			if (user.banner !== guildUserBanner) {
 				progress[progress.length - 1] = 
 					`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
 			}
