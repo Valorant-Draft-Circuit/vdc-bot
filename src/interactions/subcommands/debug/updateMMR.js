@@ -57,7 +57,8 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
     buildMMRCache();
 
     await interaction.editReply({ embeds: [embed] });
-    return await interaction.followUp({ content: flavorResponses[i], ephemeral: true })
+    // Commented out while doing queue testing as it just spams the chat.
+    // return await interaction.followUp({ content: flavorResponses[i], ephemeral: true })
 }
 
 module.exports = { updateMMR };
