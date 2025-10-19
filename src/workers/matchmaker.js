@@ -266,8 +266,8 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 				`**Map**: ${mapInfo.name}`,
 		)
 		.addFields(
-			{ name: `Defenders Roster`, value: teamA || `TBD`, inline: true },
 			{ name: `Attackers Roster`, value: teamB || `TBD`, inline: true },
+			{ name: `Defenders Roster`, value: teamA || `TBD`, inline: true }, // TODO: Fix this later, it shows teamB on the left vs teamA on the right
 		);
 
 	if (mmrFieldValue) {

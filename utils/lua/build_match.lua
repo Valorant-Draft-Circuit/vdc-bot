@@ -195,90 +195,95 @@ local function shouldConsiderRecent(ignoreRecent, selected, candidateId)
 	return false
 end
 
+-- selectPlayers performs a two-pass scan to enforce priority ordering.
+-- First pass scans the primary queues in order (DE, FA_RFA, SIGNED).
+-- Second pass scans the completed sibling lists (DE:completed, FA_RFA:completed, SIGNED:completed).
+-- This ensures active (non-completed) players are always preferred over completed ones
+-- while preserving the DE > FA_RFA > SIGNED precedence.
 local function selectPlayers(ignoreRecent)
 	local selection = {}
 	local selectionLookup = {}
 	local cleanup = {}
 	local blockedRecent = 0
 
-	for _, bucket in ipairs(queueMetas) do
-		-- prefer primary queue then its completed sibling
-		local primaryItems = redis.call("LRANGE", bucket.key, 0, -1)
-		local completedItems = {}
-		if bucket.completed ~= nil and bucket.completed ~= "" then
-			completedItems = redis.call("LRANGE", bucket.completed, 0, -1)
+	local function scanBucketList(bucket, useCompleted)
+		local listKey = bucket.key
+		if useCompleted then
+			if bucket.completed == nil or bucket.completed == "" then
+				return
+			end
+			listKey = bucket.completed
 		end
-		-- iterate primary then completed
-		local combined = {}
-		for i = 1, #primaryItems do table.insert(combined, primaryItems[i]) end
-		for i = 1, #completedItems do table.insert(combined, completedItems[i]) end
-		local queueItems = combined
+		local queueItems = redis.call("LRANGE", listKey, 0, -1)
 		local queueSize = #queueItems
-		if queueSize > 0 then
-			local limit = queueSize
-			if maxScanPerBucket > 0 then
-				limit = math.min(queueSize, maxScanPerBucket)
-			end
-			local startIndex = queueSize - limit + 1
-			if startIndex < 1 then
-				startIndex = 1
-			end
+		if queueSize <= 0 then
+			return
+		end
+		local limit = queueSize
+		if maxScanPerBucket > 0 then
+			limit = math.min(queueSize, maxScanPerBucket)
+		end
+		local startIndex = queueSize - limit + 1
+		if startIndex < 1 then
+			startIndex = 1
+		end
 
-			for idx = queueSize, startIndex, -1 do
-				if #selection >= totalRequired then
-					break
-				end
-				local userId = queueItems[idx]
-				if userId and userId ~= "" and not selectionLookup[userId] then
-					local playerData = getPlayerData(userId)
-					if next(playerData) == nil then
-						-- determine which list this user came from (primary or completed)
-						local originKey = bucket.key
-						-- if userId appears in completed list, use that key for cleanup
-						if bucket.completed ~= nil and bucket.completed ~= "" then
-							local foundInCompleted = (redis.call("LPOS", bucket.completed, userId) ~= false and redis.call("LPOS", bucket.completed, userId) ~= nil)
-							if foundInCompleted then originKey = bucket.completed end
-						end
-						table.insert(cleanup, { key = originKey, value = userId })
+		for idx = queueSize, startIndex, -1 do
+			if #selection >= totalRequired then
+				break
+			end
+			local userId = queueItems[idx]
+			if userId and userId ~= "" and not selectionLookup[userId] then
+				local playerData = getPlayerData(userId)
+				if next(playerData) == nil then
+					table.insert(cleanup, { key = listKey, value = userId })
+				else
+					local status = toLower(playerData.status)
+					local playerTier = playerData.tier
+					local joinAt = tonumber(playerData.queueJoinedAt) or nowMs
+
+					if status ~= "queued" then
+						table.insert(cleanup, { key = listKey, value = userId })
+					elseif playerTier ~= nil and playerTier ~= tier then
+						table.insert(cleanup, { key = listKey, value = userId })
 					else
-						local status = toLower(playerData.status)
-						local playerTier = playerData.tier
-						local joinAt = tonumber(playerData.queueJoinedAt) or nowMs
-
-						if status ~= "queued" then
-							table.insert(cleanup, { key = bucket.key, value = userId })
-						elseif playerTier ~= nil and playerTier ~= tier then
-							table.insert(cleanup, { key = bucket.key, value = userId })
+						updateEarliest(joinAt)
+						if shouldConsiderRecent(ignoreRecent, selection, userId) then
+							blockedRecent = blockedRecent + 1
 						else
-							updateEarliest(joinAt)
-							if shouldConsiderRecent(ignoreRecent, selection, userId) then
-								blockedRecent = blockedRecent + 1
-							else
-								selectionLookup[userId] = true
-							-- determine queueKey origin
-							local originKey = bucket.key
-							if bucket.completed ~= nil and bucket.completed ~= "" then
-								local foundInCompleted = (redis.call("LPOS", bucket.completed, userId) ~= false and redis.call("LPOS", bucket.completed, userId) ~= nil)
-								if foundInCompleted then originKey = bucket.completed end
-							end
+							selectionLookup[userId] = true
 							table.insert(selection, {
 								id = userId,
 								bucket = bucket.name,
-								queueKey = originKey,
+								queueKey = listKey,
 								joinedAt = joinAt,
 								eligibility = playerData.eligibilityStatus or "",
 								cooldownUntil = playerData.cooldownUntil,
 								mmr = tonumber(playerData.mmr) or 0,
 								guildId = playerData.guildId,
 							})
-							end
 						end
 					end
 				end
 			end
 		end
+	end
+
+	-- First pass: scan primary queues only (DE, FA_RFA, SIGNED)
+	for _, bucket in ipairs(queueMetas) do
+		scanBucketList(bucket, false)
 		if #selection >= totalRequired then
 			break
+		end
+	end
+
+	-- Second pass: scan completed lists (DE:completed, FA_RFA:completed, SIGNED:completed)
+	if #selection < totalRequired then
+		for _, bucket in ipairs(queueMetas) do
+			scanBucketList(bucket, true)
+			if #selection >= totalRequired then
+				break
+			end
 		end
 	end
 
