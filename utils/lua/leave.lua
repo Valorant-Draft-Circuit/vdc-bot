@@ -57,28 +57,17 @@ if status == "in_match" then
 	return failure("IN_MATCH", { queueId = playerData.currentQueueId })
 end
 
-if status ~= "queued" then
+-- Allow players who are either actively queued or in the "completed" list to leave.
+if status ~= "queued" and status ~= "completed" then
 	return failure("NOT_QUEUED")
 end
 
 local tier = playerData.tier
-local priority = playerData.queuePriority
+-- queuePriority may be missing for players in the :completed list; default to empty string
+-- so we can safely include it in XADD and skip strict validation.
+local priority = playerData.queuePriority or ""
 if tier == nil or tier == "" then
 	return failure("TIER_UNKNOWN")
-end
-if priority == nil or priority == "" then
-	return failure("PRIORITY_UNKNOWN")
-end
-
-local queueKey
-if priority == "DE" then
-	queueKey = "vdc:tier:" .. tier .. ":queue:DE"
-elseif priority == "FA_RFA" then
-	queueKey = "vdc:tier:" .. tier .. ":queue:FA_RFA"
-elseif priority == "SIGNED" then
-	queueKey = "vdc:tier:" .. tier .. ":queue:SIGNED"
-else
-	return failure("PRIORITY_UNKNOWN", { priority = priority })
 end
 
 redis.call("LREM", queueKey, 0, userId)

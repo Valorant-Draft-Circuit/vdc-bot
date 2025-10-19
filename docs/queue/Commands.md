@@ -144,6 +144,10 @@ Notes and related files:
 		- Description: Stop following a player. Removes the scout from the follow list so they no longer receive DMs for that player.
 		- Args: `player` — the Discord user to unfollow (required).
 
+	- `/scout unfollowall`
+		- Description: Stop following all players you're currently following. Removes you from all `vdc:scouts:followers:{playerId}` sets and clears your `vdc:scouts:following:{scoutId}` set.
+		- Args: none.
+
 	- `/scout list`
 		- Description: List players you are currently following.
 		- Args: none.

@@ -346,7 +346,7 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 	if (!Array.isArray(scoutIds) || scoutIds.length === 0) return;
 
 	const uniqueScouts = [...new Set(scoutIds)];
-	const scoutContent = `A player you follow has a match! Match chat: ${channelLink}`;
+	const scoutContent = `A player you've followed has found a match! Match chat: ${channelLink}`;
 	for (const scoutId of uniqueScouts) {
 		try {
 			const user = await client.users.fetch(scoutId);

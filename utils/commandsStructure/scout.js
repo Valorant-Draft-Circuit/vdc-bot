@@ -33,6 +33,11 @@ module.exports = {
             ],
         },
         {
+            name: `unfollowall`,
+            description: `Stop following all players you're currently following.`,
+            type: ApplicationCommandOptionType.Subcommand,
+        },
+        {
             name: `list`,
             description: `List players you're currently following.`,
             type: ApplicationCommandOptionType.Subcommand,

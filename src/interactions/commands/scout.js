@@ -20,6 +20,8 @@ module.exports = {
                 return follow(interaction);
             case `unfollow`:
                 return unfollow(interaction);
+            case `unfollowall`:
+                return unfollowAll(interaction);
             case `list`:
                 return listFollowing(interaction);
             default:
@@ -114,4 +116,26 @@ async function listFollowing(interaction) {
     // Build a simple mention list
     const lines = members.map((id) => `<@${id}>`);
     return interaction.editReply({ content: `You're following the following players:\n${lines.join(`\n`)}` });
+}
+
+async function unfollowAll(interaction) {
+    if (!(await ensureHasScoutRole(interaction))) return;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const redis = getRedisClient();
+    const followingSet = buildKeysForScoutFollowing(interaction.user.id);
+    const members = await redis.smembers(followingSet) || [];
+    if (!members.length) return interaction.editReply({ content: `You're not following any players.` });
+
+    // For each player the scout follows, remove the scout from that player's follower set
+    const pipeline = redis.multi();
+    for (const playerId of members) {
+        const followerSet = buildKeysForPlayerFollowers(playerId);
+        pipeline.srem(followerSet, interaction.user.id);
+    }
+    // Remove all entries from the scout's following set
+    pipeline.del(followingSet);
+    await pipeline.exec();
+
+    return interaction.editReply({ content: `You have unfollowed all players (${members.length}).` });
 }
