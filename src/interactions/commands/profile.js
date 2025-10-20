@@ -92,18 +92,20 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 		}
 	}
 	
-	if (guildUserBanner !== player.banner){
-		const bannerResponse = await fetch(player.banner)
-		if (!bannerResponse.ok) {
-			logger.log(`DEBUG`, `Player ${player.id}'s discord banner from the database is invalid. Attempting to update...`);
-			const user = await prisma.user.update({
-				where: { id: player.id },
-				data: { banner: guildUserBanner },
-			});
-			if (user.banner !== guildUserBanner) logger.log(`ERROR`, `Failed to update player ${player.id}'s discord banner in our DB. Silently failing...`)
-			else {
-				logger.log(`INFO`, `Successfully updated player ${player.id}'s discord banner in our DB.`)
+	if (guildUserBanner !== player.banner) {
+		if (player.banner !== null) {
+			const bannerResponse = await fetch(player.banner)
+			if (!bannerResponse.ok) {
+				logger.log(`DEBUG`, `Player ${player.id}'s discord banner from the database is invalid. Attempting to update...`);
 			}
+		}
+		const user = await prisma.user.update({
+			where: { id: player.id },
+			data: { banner: guildUserBanner },
+		});
+		if (user.banner !== guildUserBanner) logger.log(`ERROR`, `Failed to update player ${player.id}'s discord banner in our DB. Silently failing...`)
+		else {
+			logger.log(`INFO`, `Successfully updated player ${player.id}'s discord banner in our DB.`)
 		}
 	}
 	const riotAccounts = player.Accounts.filter(a => a.provider === `riot`).map(a => `[\`${a.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(a.riotIGN)}`})`).join(`, `)
@@ -631,24 +633,27 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	const guildUserBanner = user.bannerURL({ dynamic: true, size: 2048 });
 	
 	if (guildUserBanner !== player.banner) {
-		const bannerLookup = await fetch(player.banner)
-		if (!bannerLookup.ok){
-			progress[progress.length - 1] = `🤔 Seems like you changed your banner. We'll try to update it.`;
-			await interaction.editReply(progress.join(`\n`));
-
-			const user = await prisma.user.update({
-				where: { id: player.id },
-				data: { banner: guildUserBanner },
-			});
-
-			if (user.banner !== guildUserBanner) {
-				progress[progress.length - 1] = 
-					`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
+		if (player.banner !== null) {
+			const bannerLookup = await fetch(player.banner)
+			if (!bannerLookup.ok){
+				progress[progress.length - 1] = `🤔 Seems like you changed your banner. We'll try to update it.`;
+				await interaction.editReply(progress.join(`\n`));
 			}
-			else progress[progress.length - 1] = `✅ Your banner has been updated!`
-			await interaction.editReply(progress.join(`\n`));
 		}
+		const user = await prisma.user.update({
+			where: { id: player.id },
+			data: { banner: guildUserBanner },
+		});
+
+		if (user.banner !== guildUserBanner) {
+			progress[progress.length - 1] = 
+				`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
+		}
+		else progress[progress.length - 1] = `✅ Your banner has been updated!`
+		await interaction.editReply(progress.join(`\n`));
 	}
+	progress[progress.length - 1] = `✅ Your server roles have been updated!`;
+	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
 	// lastly, update meilisearch to contain their new information
@@ -656,7 +661,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	// All done!
 	// --------------------------------------------------------------------------------------------
-	progress.push(`\n✅ Your profile has been updated!`);
+	progress.push(`\n✅ Your pfp/banner has been updated!`);
 	return await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 }
