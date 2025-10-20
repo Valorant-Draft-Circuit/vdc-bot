@@ -254,8 +254,9 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
  const sumB = hasMmr ? Math.round(teamMmr.teamB) : 0;
  const diff = hasMmr ? Math.abs(sumA - sumB) : 0;
  const mmrFieldValue = hasMmr
- 	? `Team A: **${sumA}**\nTeam B: **${sumB}**\nΔ: **${diff}**`
+ 	? `Team A: **${sumB}**\nTeam B: **${sumA}**\nΔ: **${diff}**`
  	: null;
+	// Swap teamA and teamB in display so attackers are on the right side
 
 	const embed = new EmbedBuilder()
 		.setTitle(`MATCH FOUND!`)

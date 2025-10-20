@@ -70,7 +70,32 @@ if tier == nil or tier == "" then
 	return failure("TIER_UNKNOWN")
 end
 
-redis.call("LREM", queueKey, 0, userId)
+-- Determine which queue list(s) to remove the user from.
+-- Prefer the explicit priority bucket if present; otherwise attempt all known
+-- priority lists (including their :completed siblings) for the player's tier.
+local function safeLRem(key, value)
+	if key ~= nil and key ~= "" then
+		pcall(function()
+			redis.call("LREM", key, 0, value)
+		end)
+	end
+end
+
+local priorityUpper = (priority ~= nil and priority ~= "") and string.upper(tostring(priority)) or ""
+if priorityUpper ~= "" then
+	local target = "vdc:tier:" .. tier .. ":queue:" .. priorityUpper
+	safeLRem(target, userId)
+	-- Also remove from completed sibling just in case the player was moved there
+	safeLRem(target .. ":completed", userId)
+else
+	-- Unknown priority: try removing from all known buckets for the tier.
+	local buckets = { "DE", "FA_RFA", "SIGNED" }
+	for _, b in ipairs(buckets) do
+		local k = "vdc:tier:" .. tier .. ":queue:" .. b
+		safeLRem(k, userId)
+		safeLRem(k .. ":completed", userId)
+	end
+end
 
 redis.call("HSET", playerKey, "status", "idle")
 redis.call("HDEL", playerKey, "queuePriority", "queueJoinedAt")
