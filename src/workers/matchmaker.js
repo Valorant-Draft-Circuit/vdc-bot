@@ -144,8 +144,6 @@ async function dispatchMatch(client, payload, config) {
 			(await client.guilds.fetch(candidateGuildId).catch(() => null));
 	}
 
-	// no global announcementsChannel fallback — require guild context to post or rely on created channels
-
 	if (!guild) {
 		logger.log(`WARNING`, `Match ${payload.queueId} could not resolve a guild context`);
 		return;
@@ -213,6 +211,7 @@ async function dispatchMatch(client, payload, config) {
 	const mapInfo = await getRandomMapInfo(config);
 	const mmrDisplay = await isMmrDisplayEnabled();
 	const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
+	const priorityEmbed = buildPriorityEmbed(payload);
 	const embedData = embed.toJSON();
 	const components = buildMatchComponents(payload.queueId);
 	const mentionLine = playerIds.map((id) => `<@${id}>`).join(` `);
@@ -236,11 +235,17 @@ async function dispatchMatch(client, payload, config) {
 
 		await message.pin().catch(() => null);
 		await updateMatchChannelsInRedis(payload.queueId, channelDescriptor);
+
+		// Second message: Agent Lock Order only
+		await textChannel.send({
+			embeds: [priorityEmbed],
+		});
 		await notifyPlayersDirectly(client, payload, embedData, channelDescriptor.textChannelId, guild, Array.from(scoutsSet));
 	} catch (error) {
 		logger.log(`ERROR`, `Failed to send match embed`, error);
 	}
 }
+
 
 function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 	const teamA = payload.teamA.map((id) => `<@${id}>`).join(`\n`);
@@ -269,7 +274,8 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 		.addFields(
 			{ name: `Attackers Roster`, value: teamB || `TBD`, inline: true },
 			{ name: `Defenders Roster`, value: teamA || `TBD`, inline: true }, // TODO: Fix this later, it shows teamB on the left vs teamA on the right
-		);
+		)
+		.setColor(0xde3845);
 
 	if (mmrFieldValue) {
 		embed.addFields({ name: `MMR Totals`, value: mmrFieldValue, inline: false });
@@ -283,6 +289,53 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 
 	return embed;
 }
+
+function buildPriorityEmbed(payload) {
+	const players = Array.isArray(payload.players) ? payload.players.slice() : [];
+	if (players.length === 0) {
+		return new EmbedBuilder().setTitle(`Agent Lock Order`).setDescription(`No players found`).setColor(0x5865F2);
+	}
+
+	const order = ["DE", "FA_RFA", "SIGNED"];
+	const bucketIndex = (b) => {
+		const i = order.indexOf(String(b || "").toUpperCase());
+		return i === -1 ? 999 : i;
+	};
+
+	// Compute weight: primaries first, then completed of same bucket
+	players.sort((a, b) => {
+		const aCompleted = !!a.completed;
+		const bCompleted = !!b.completed;
+		const aw = bucketIndex(a.bucket) + (aCompleted ? 3 : 0);
+		const bw = bucketIndex(b.bucket) + (bCompleted ? 3 : 0);
+		if (aw !== bw) return aw - bw;
+		// Tiebreaker by earlier join time (earlier gets priority)
+		const aj = typeof a.joinedAt === "number" ? a.joinedAt : 0;
+		const bj = typeof b.joinedAt === "number" ? b.joinedAt : 0;
+		if (aj !== bj) return aj - bj;
+		// Final tiebreaker by id for determinism
+		return String(a.id).localeCompare(String(b.id));
+	});
+
+	const lines = players.map((p) => {
+		const mention = `<@${p.id}>`;
+		const bucket = String(p.bucket || "?");
+		const isCompleted = p.completed ? `, Requirements Fulfilled` : ``;
+		const groupIdx = bucketIndex(p.bucket) + (p.completed ? 3 : 0);
+		const displayNumber = groupIdx === 999 ? "?" : String(groupIdx + 1);
+		// Insert a zero-width space after the period to avoid Discord's auto-numbered list formatting
+		const dot = ".\u200B ";
+		return `${displayNumber}${dot}${mention} — ${bucket}${isCompleted}`;
+	});
+
+	const embed = new EmbedBuilder()
+		.setTitle(`Agent Lock Order`)
+		.setDescription(lines.join(`\n`))
+		.setFooter({ text: `The order listed is the order that should be followed when locking in. If you see anyone ignoring the order, please open a ticket.` });
+
+	return embed;
+}
+
 
 function buildMatchComponents(queueId) {
 	const joinLobby = new ButtonBuilder()
@@ -388,11 +441,6 @@ function runSafely(fn) {
 		.catch((error) => logger.log(`ERROR`, `Matchmaker tick failure`, error));
 }
 
-function filterStaffRoles(roleId, guild) {
-	if (!roleId) return [];
-	const role = guild.roles.cache.get(roleId);
-	return role ? [role.id] : [];
-}
 
 async function getRandomMapInfo(config) {
 	const pool = await resolveMapPool(config);

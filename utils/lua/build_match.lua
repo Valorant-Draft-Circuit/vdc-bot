@@ -261,6 +261,7 @@ local function selectPlayers(ignoreRecent)
 								cooldownUntil = playerData.cooldownUntil,
 								mmr = tonumber(playerData.mmr) or 0,
 								guildId = playerData.guildId,
+								completed = useCompleted and true or false,
 							})
 						end
 					end
@@ -375,7 +376,7 @@ end
 local playersDetailed = {}
 local matchGuildId = nil
 for _, entry in ipairs(selection) do
-    local waitMs = nowMs - (entry.joinedAt or nowMs)
+	local waitMs = nowMs - (entry.joinedAt or nowMs)
     if waitMs < 0 then
         waitMs = 0
     end
@@ -391,6 +392,7 @@ for _, entry in ipairs(selection) do
         mmr = entry.mmr,
         team = entry.team,
         guildId = entry.guildId,
+		completed = entry.completed and true or false,
     })
 end
 
