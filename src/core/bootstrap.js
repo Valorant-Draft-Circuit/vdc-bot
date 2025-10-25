@@ -17,13 +17,12 @@ async function bootstrapRedisIfNeeded() {
 		throw new Error(`ControlPanel league_state is missing`);
 	}
 
-	const queueConfig = await getQueueConfig();
-const tiers = Object.values(Tier).filter((value) => typeof value === `string` && value !== `MIXED`);
+	const tiers = Object.values(Tier).filter((value) => typeof value === `string` && String(value).toUpperCase() !== `MIXED`);
 
-const tierPayload = tiers.map((name) => ({
-	name,
-	open: false,
-}));
+	const tierPayload = tiers.map((name) => ({
+		name,
+		open: false,
+	}));
 
 	await runLua(`bootstrap`, {
 		keys: [`vdc:league_state`, `vdc:tiers`],

@@ -143,7 +143,7 @@ async function resolveTiers(selection) {
 	const redis = getRedisClient();
 	const knownTiers = new Set(
 		Object.values(Tier)
-			.filter((value) => typeof value === `string`)
+			.filter((value) => typeof value === `string` && String(value).toUpperCase() !== `MIXED`)
 			.map((value) => value.toUpperCase()),
 	);
 	(await redis.smembers(`vdc:tiers`)).forEach((tier) => tier && knownTiers.add(tier.toUpperCase()));

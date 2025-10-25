@@ -2,6 +2,8 @@ const { Games, ControlPanel } = require(`../../../prisma`);
 const { MessageFlags } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
 const { getQueueConfig } = require(`../../core/config`);
+const { GameType } = require(`@prisma/client`);
+const redis = getRedisClient();
 
 module.exports = {
     id: `queueManager_submitModal`,
@@ -23,10 +25,16 @@ module.exports = {
             const exists = await Games.exists({ id: gameID });
             if (exists) return await interaction.editReply({ content: `Looks like this match was already submitted!` });
 
-            const redis = getRedisClient();
+            
             const matchKey = `vdc:match:${queueId}`;
             const matchData = await redis.hgetall(matchKey);
-            const tier = matchData?.tier ?? null;
+
+            if (!matchData || Object.keys(matchData).length === 0) {
+                logger.log(`ERROR`, `Failed to parse tier from match data for submitted match ${queueId}`, err);
+                return await interaction.editReply({ content: `Could not find match data for queue ID ${queueId}. Please open a tech ticket.` });
+            }
+            
+            const tier = matchData.tier;
 
             // Verify user is in_match and in this match
             const playerKey = `vdc:player:${interaction.user.id}`;
@@ -49,16 +57,9 @@ module.exports = {
             if (data.matchInfo === undefined) return await interaction.editReply({ content: `There was a problem checking Riot's servers! Please try again or open a tech ticket!` });
             if (data.matchInfo.provisioningFlowId !== `CustomGame`) return await interaction.editReply({ content: `The match you submitted ([\`${gameID}\`](${url})) doesn't look like a custom game! Please double check your match and try again` });
 
-            let type;
-            const state = await ControlPanel.getLeagueState();
-            const { GameType } = require(`@prisma/client`);
-            if (state === `COMBINES`) type = GameType.COMBINE;
-            else if (state === `REGULAR_SEASON`) type = GameType.SEASON;
-            else if (state === `PLAYOFFS`) type = GameType.PLAYOFF;
-            else return await interaction.editReply({ content: `The league state enum in the control panel is set incorrectly. Please open a tech ticket.` });
 
             // call Games.saveMatch
-            await Games.saveMatch({ id: gameID, tier: tier ?? undefined, type: type });
+            await Games.saveMatch({ id: gameID, tier: tier, type: GameType.COMBINE });
 
             // mark match completed in Redis and unlock players
             try {
@@ -104,6 +105,8 @@ module.exports = {
                 // execute pipeline
                 await pipeline.exec();
 
+                await interaction.editReply({ content: `Match submission queued for processing and players have been unlocked. Channels have been queued for deletion.` });
+
                 // attempt to cleanup channels for the match
                 try {
                     const { deleteMatchChannels } = require(`../../core/matchChannels`);
@@ -131,8 +134,6 @@ module.exports = {
             } catch (err) {
                 logger.log(`WARNING`, `Failed to update Redis state/unlock players for submitted match ${gameID}`, err);
             }
-
-            return await interaction.editReply({ content: `Match submission queued for processing and players have been unlocked. Channels have been cleaned up where possible.` });
         } catch (error) {
             logger.log(`ERROR`, `Failed processing match submit modal`, error);
             return await interaction.editReply({ content: `There was an error processing that submission.` });
