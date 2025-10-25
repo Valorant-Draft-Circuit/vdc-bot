@@ -133,7 +133,7 @@ async function handleCancel(interaction) {
 
 		const embed = new EmbedBuilder()
 			.setTitle(`Cancel Vote — Match ${queueId}`)
-			.setDescription(`${interaction.user} has started a vote to cancel this match.`)
+			.setDescription(`${interaction.user} has started a vote to cancel this match. \n\n **If the match cancellation was denied by bad apples please open an admin ticket for help**`)
 			.addFields(
 				{ name: `Yes`, value: `${votes}`, inline: true },
 				{ name: `No`, value: `0`, inline: true },

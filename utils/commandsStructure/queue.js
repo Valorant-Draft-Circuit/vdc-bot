@@ -13,7 +13,7 @@ const TIER_CHOICES = [
 /** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
 	name: `queue`,
-	description: `Join or manage the Combines queue system.`,
+	description: `Join or Leave the Combines queue system.`,
 	contexts: [InteractionContextType.Guild],
 	options: [
 		{

@@ -15,7 +15,7 @@ const { PermissionFlagsBits } = require(`discord.js`);
 /** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
     name: `queueadmin`,
-    description: `Administrative queue controls (admin role required).`,
+    description: `Administrative queue controls.`,
     // Hide this command from users without Manage Guild (Manage Server) or Administrator
     default_member_permissions: String(PermissionFlagsBits.ManageGuild),
     contexts: [InteractionContextType.Guild],

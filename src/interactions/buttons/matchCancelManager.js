@@ -79,7 +79,7 @@ module.exports = {
                     if (message) {
                         const embed = new EmbedBuilder()
                             .setTitle(`Cancel Vote — Match ${queueId}`)
-                            .setDescription(`Vote to cancel this match is in progress.`)
+                            .setDescription(`Vote to cancel this match is in progress. \n\n **If the match cancellation was denied by bad apples please open an admin ticket for help**`)
                             .addFields(
                                 { name: `Yes`, value: `${yesCount}`, inline: true },
                                 { name: `No`, value: `${noCount}`, inline: true },
@@ -139,16 +139,6 @@ module.exports = {
                 // don't block cancel flow for event emission failures
             }
 
-            // attempt to cleanup channels
-            try {
-                const { deleteMatchChannels } = require(`../../core/matchChannels`);
-                const guild = interaction.guild;
-                const descriptor = JSON.parse(matchData.channelIdsJSON || `{}`);
-                await deleteMatchChannels(guild, descriptor);
-            } catch (err) {
-                logger.log(`WARNING`, `Failed to cleanup channels for cancelled match ${queueId}`, err);
-            }
-
             // edit vote message to indicate cancellation
             if (cancelMsgId && textChannelId) {
                 try {
@@ -164,7 +154,17 @@ module.exports = {
             }
 
             logger.log(`ALERT`, `Match ${queueId} cancelled by vote (votes: ${yesCount}/${total})`);
-            return interaction.reply({ content: `Vote passed (${yesCount}/${total}, ${percent}%). Match has been cancelled.`, flags: MessageFlags.Ephemeral });
+            interaction.reply({ content: `Vote passed (${yesCount}/${total}, ${percent}%). Match has been cancelled.`, flags: MessageFlags.Ephemeral });
+
+            // attempt to cleanup channels
+            try {
+                const { deleteMatchChannels } = require(`../../core/matchChannels`);
+                const guild = interaction.guild;
+                const descriptor = JSON.parse(matchData.channelIdsJSON || `{}`);
+                await deleteMatchChannels(guild, descriptor);
+            } catch (err) {
+                logger.log(`WARNING`, `Failed to cleanup channels for cancelled match ${queueId}`, err);
+            }
         }
 
         return interaction.reply({ content: `Your vote has been recorded. Current: ${yesCount} yes / ${noCount} no (${percent}% yes).`, flags: MessageFlags.Ephemeral });
