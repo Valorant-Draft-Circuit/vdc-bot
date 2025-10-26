@@ -8,7 +8,6 @@ const {
 const { runLua, getRedisClient } = require(`../core/redis`);
 const { getQueueConfig, DEFAULT_MAP_POOL } = require(`../core/config`);
 const { createMatchChannels } = require(`../core/matchChannels`);
-const { isMmrDisplayEnabled } = require(`../core/mmrDisplay`);
 const { generateQueueId } = require(`../core/id`);
 
 const LUA_SCRIPT = `build_match`;
@@ -209,7 +208,7 @@ async function dispatchMatch(client, payload, config) {
 	}
 
 	const mapInfo = await getRandomMapInfo(config);
-	const mmrDisplay = await isMmrDisplayEnabled();
+	const mmrDisplay = Boolean(config?.displayMmr);
 	const embed = buildMatchEmbed(payload, mapInfo, mmrDisplay);
 	const priorityEmbed = buildPriorityEmbed(payload);
 	const embedData = embed.toJSON();

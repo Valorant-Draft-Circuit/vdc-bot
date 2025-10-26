@@ -1,7 +1,6 @@
 const { MessageFlags } = require(`discord.js`);
 const { resolvePlayerQueueContext, resolvePriorityBucket } = require(`../../../core/queueState`);
 const { getRedisClient, runLua } = require(`../../../core/redis`);
-const { isMmrDisplayEnabled } = require(`../../../core/mmrDisplay`);
 
 const EVENTS_KEY = `vdc:events`;
 
@@ -91,7 +90,7 @@ async function joinQueue(interaction, queueConfig) {
 		lines.push(`• Queue position: ${queueDepth}`);
 		lines.push(`• League status: ${context.leagueStatus}`);
 
-		if (await isMmrDisplayEnabled()) {
+		if (queueConfig?.displayMmr) {
 			lines.push(`• MMR: ${context.mmr}`);
 		}
 
