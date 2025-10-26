@@ -262,15 +262,15 @@ async function invalidateQueueConfigCache() {
 }
 
 async function hydrateGlobalFallbacks(config) {
-const copy = { ...config };
-const mapPool = await fetchGlobalMapPool();
-if (!Array.isArray(mapPool) || mapPool.length === 0) {
-	throw new Error(`ControlPanel map pool (MAP_POOL) is empty or missing`);
-}
-copy.mapPool = mapPool;
+	const copy = { ...config };
+	const mapPool = await fetchGlobalMapPool();
+	if (!Array.isArray(mapPool) || mapPool.length === 0) {
+		throw new Error(`ControlPanel map pool (MAP_POOL) is empty or missing`);
+	}
+	copy.mapPool = mapPool;
 
-copy.displayMmr = await fetchDisplayMmrFallback(copy.displayMmr);
-return copy;
+	copy.displayMmr = await fetchDisplayMmrFallback(copy.displayMmr);
+	return copy;
 }
 
 async function fetchGlobalMapPool() {
