@@ -110,12 +110,13 @@ module.exports = {
                 },
                 {
                     name: `bucket`,
-                    description: `Which queue bucket to add dummies to (DE, FA_RFA, SIGNED).`,
+                    description: `Which queue bucket to add dummies to (DE, FA, RFA, SIGNED).`,
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     choices: [
                         { name: `DE`, value: `DE` },
-                        { name: `FA_RFA`, value: `FA_RFA` },
+                        { name: `FA`, value: `FA` },
+                        { name: `RFA`, value: `RFA` },
                         { name: `SIGNED`, value: `SIGNED` },
                     ],
                 },

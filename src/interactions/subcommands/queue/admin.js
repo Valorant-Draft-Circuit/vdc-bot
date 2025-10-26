@@ -102,7 +102,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			const completedFlag = interaction.options.getBoolean(`completed`) ?? false;
 			const redis = getRedisClient();
 
-			const validBuckets = new Set([`DE`, `FA_RFA`, `SIGNED`]);
+			const validBuckets = new Set([`DE`, `FA`, `RFA`, `SIGNED`]);
 			if (!validBuckets.has(bucket)) {
 				return interaction.editReply({ content: `Invalid bucket type: ${bucket}` });
 			}
@@ -300,15 +300,17 @@ async function resetQueues(client, actorLabel) {
 	for (const tier of tiers) {
 		if (!tier) continue;
 
-		const listKeys = [
-			`vdc:tier:${tier}:queue:DE`,
-			`vdc:tier:${tier}:queue:FA_RFA`,
-			`vdc:tier:${tier}:queue:SIGNED`,
-			// include completed/low-priority sibling lists
-			`vdc:tier:${tier}:queue:DE:completed`,
-			`vdc:tier:${tier}:queue:FA_RFA:completed`,
-			`vdc:tier:${tier}:queue:SIGNED:completed`,
-		];
+			const listKeys = [
+				`vdc:tier:${tier}:queue:DE`,
+				`vdc:tier:${tier}:queue:FA`,
+				`vdc:tier:${tier}:queue:RFA`,
+				`vdc:tier:${tier}:queue:SIGNED`,
+				// include completed/low-priority sibling lists
+				`vdc:tier:${tier}:queue:DE:completed`,
+				`vdc:tier:${tier}:queue:FA:completed`,
+				`vdc:tier:${tier}:queue:RFA:completed`,
+				`vdc:tier:${tier}:queue:SIGNED:completed`,
+			];
 
 		for (const key of listKeys) {
 			const members = await redis.lrange(key, 0, -1);
@@ -435,15 +437,17 @@ async function clearTierQueues(redis, tiers) {
 	const affectedUsers = new Set();
 
 	for (const tier of tiers) {
-			const listKeys = [
-				`vdc:tier:${tier}:queue:DE`,
-				`vdc:tier:${tier}:queue:FA_RFA`,
-				`vdc:tier:${tier}:queue:SIGNED`,
-				// completed/low-priority siblings
-				`vdc:tier:${tier}:queue:DE:completed`,
-				`vdc:tier:${tier}:queue:FA_RFA:completed`,
-				`vdc:tier:${tier}:queue:SIGNED:completed`,
-			];
+				const listKeys = [
+					`vdc:tier:${tier}:queue:DE`,
+					`vdc:tier:${tier}:queue:FA`,
+					`vdc:tier:${tier}:queue:RFA`,
+					`vdc:tier:${tier}:queue:SIGNED`,
+					// completed/low-priority siblings
+					`vdc:tier:${tier}:queue:DE:completed`,
+					`vdc:tier:${tier}:queue:FA:completed`,
+					`vdc:tier:${tier}:queue:RFA:completed`,
+					`vdc:tier:${tier}:queue:SIGNED:completed`,
+				];
 
 		for (const key of listKeys) {
 			const members = await redis.lrange(key, 0, -1);

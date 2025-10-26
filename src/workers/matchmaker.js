@@ -70,12 +70,14 @@ async function attemptMatchForTier(client, tier, config) {
 		const keys = [
 			`vdc:league_state`,
 			`vdc:tier:${tier}:queue:DE`,
-			`vdc:tier:${tier}:queue:FA_RFA`,
+			`vdc:tier:${tier}:queue:FA`,
+			`vdc:tier:${tier}:queue:RFA`,
 			`vdc:tier:${tier}:queue:SIGNED`,
 			`vdc:match:${queueId}`,
 			EVENTS_KEY,
 			`vdc:tier:${tier}:queue:DE:completed`,
-			`vdc:tier:${tier}:queue:FA_RFA:completed`,
+			`vdc:tier:${tier}:queue:FA:completed`,
+			`vdc:tier:${tier}:queue:RFA:completed`,
 			`vdc:tier:${tier}:queue:SIGNED:completed`,
 		];
 
@@ -295,7 +297,7 @@ function buildPriorityEmbed(payload) {
 		return new EmbedBuilder().setTitle(`Agent Lock Order`).setDescription(`No players found`).setColor(0x5865F2);
 	}
 
-	const order = ["DE", "FA_RFA", "SIGNED"];
+	const order = ["DE", "FA", "RFA", "SIGNED"];
 	const bucketIndex = (b) => {
 		const i = order.indexOf(String(b || "").toUpperCase());
 		return i === -1 ? 999 : i;

@@ -148,14 +148,15 @@ function mapJoinErrorToMessage(payload, tier) {
 
 function buildJoinKeys(tier, userId, completedSibling, priorityBucket) {
 	const keys = [
- 		`vdc:league_state`,
- 		`vdc:tier:${tier}:open`,
- 		`vdc:tier:${tier}:queue:DE`,
- 		`vdc:tier:${tier}:queue:FA_RFA`,
- 		`vdc:tier:${tier}:queue:SIGNED`,
- 		`vdc:player:${userId}`,
- 		EVENTS_KEY,
- 	];
+		`vdc:league_state`,
+		`vdc:tier:${tier}:open`,
+		`vdc:tier:${tier}:queue:DE`,
+		`vdc:tier:${tier}:queue:FA`,
+		`vdc:tier:${tier}:queue:RFA`,
+		`vdc:tier:${tier}:queue:SIGNED`,
+		`vdc:player:${userId}`,
+		EVENTS_KEY,
+	];
 
 	if (completedSibling) {
 		// choose completed sibling key based on the priority bucket
@@ -164,8 +165,11 @@ function buildJoinKeys(tier, userId, completedSibling, priorityBucket) {
 			case `DE`:
 				completedKey = `vdc:tier:${tier}:queue:DE:completed`;
 				break;
-			case `FA_RFA`:
-				completedKey = `vdc:tier:${tier}:queue:FA_RFA:completed`;
+			case `FA`:
+				completedKey = `vdc:tier:${tier}:queue:FA:completed`;
+				break;
+			case `RFA`:
+				completedKey = `vdc:tier:${tier}:queue:RFA:completed`;
 				break;
 			case `SIGNED`:
 				completedKey = `vdc:tier:${tier}:queue:SIGNED:completed`;

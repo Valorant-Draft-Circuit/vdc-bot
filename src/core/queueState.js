@@ -11,8 +11,8 @@ const ALLOWED_STATUSES = new Set([
 
 const BUCKET_BY_STATUS = new Map([
 	[LeagueStatus.DRAFT_ELIGIBLE, `DE`],
-	[LeagueStatus.FREE_AGENT, `FA_RFA`],
-	[LeagueStatus.RESTRICTED_FREE_AGENT, `FA_RFA`],
+	[LeagueStatus.FREE_AGENT, `FA`],
+	[LeagueStatus.RESTRICTED_FREE_AGENT, `RFA`],
 	[LeagueStatus.SIGNED, `SIGNED`],
 	[LeagueStatus.GENERAL_MANAGER, `SIGNED`]
 ]);

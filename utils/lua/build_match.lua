@@ -4,13 +4,15 @@ local cjson = _G.cjson
 KEYS
 	1 -> vdc:league_state
 	2 -> vdc:tier:{tier}:queue:DE
-	3 -> vdc:tier:{tier}:queue:FA_RFA
-	4 -> vdc:tier:{tier}:queue:SIGNED
-	5 -> vdc:match:{queueId}
-	6 -> vdc:events stream key (optional)
-	7 -> vdc:tier:{tier}:queue:DE:completed (optional)
-	8 -> vdc:tier:{tier}:queue:FA_RFA:completed (optional)
-	9 -> vdc:tier:{tier}:queue:SIGNED:completed (optional)
+	3 -> vdc:tier:{tier}:queue:FA
+	4 -> vdc:tier:{tier}:queue:RFA
+	5 -> vdc:tier:{tier}:queue:SIGNED
+	6 -> vdc:match:{queueId}
+	7 -> vdc:events stream key (optional)
+	8 -> vdc:tier:{tier}:queue:DE:completed (optional)
+	9 -> vdc:tier:{tier}:queue:FA:completed (optional)
+	10 -> vdc:tier:{tier}:queue:RFA:completed (optional)
+	11 -> vdc:tier:{tier}:queue:SIGNED:completed (optional)
 
 ARGV
   1 -> tier identifier
@@ -66,12 +68,14 @@ end
 local KEY_LEAGUE_STATE = KEYS[1]
 local KEY_QUEUE_DE = KEYS[2]
 local KEY_QUEUE_FA = KEYS[3]
-local KEY_QUEUE_SIGNED = KEYS[4]
-local KEY_MATCH = KEYS[5]
-local KEY_EVENTS = KEYS[6]
-local KEY_QUEUE_DE_COMPLETED = KEYS[7]
-local KEY_QUEUE_FA_COMPLETED = KEYS[8]
-local KEY_QUEUE_SIGNED_COMPLETED = KEYS[9]
+local KEY_QUEUE_RFA = KEYS[4]
+local KEY_QUEUE_SIGNED = KEYS[5]
+local KEY_MATCH = KEYS[6]
+local KEY_EVENTS = KEYS[7]
+local KEY_QUEUE_DE_COMPLETED = KEYS[8]
+local KEY_QUEUE_FA_COMPLETED = KEYS[9]
+local KEY_QUEUE_RFA_COMPLETED = KEYS[10]
+local KEY_QUEUE_SIGNED_COMPLETED = KEYS[11]
 
 local tier = ARGV[1]
 if tier == nil or tier == "" then
@@ -120,7 +124,8 @@ end
 
 local queueLengths = {
 	DE = tonumber(redis.call("LLEN", KEY_QUEUE_DE)) or 0,
-	FA_RFA = tonumber(redis.call("LLEN", KEY_QUEUE_FA)) or 0,
+	FA = tonumber(redis.call("LLEN", KEY_QUEUE_FA)) or 0,
+	RFA = tonumber(redis.call("LLEN", KEY_QUEUE_RFA)) or 0,
 	SIGNED = tonumber(redis.call("LLEN", KEY_QUEUE_SIGNED)) or 0,
 }
 -- include completed lists in total queued counts if present
@@ -128,25 +133,30 @@ if KEY_QUEUE_DE_COMPLETED ~= nil and KEY_QUEUE_DE_COMPLETED ~= "" then
 	queueLengths.DE = queueLengths.DE + (tonumber(redis.call("LLEN", KEY_QUEUE_DE_COMPLETED)) or 0)
 end
 if KEY_QUEUE_FA_COMPLETED ~= nil and KEY_QUEUE_FA_COMPLETED ~= "" then
-	queueLengths.FA_RFA = queueLengths.FA_RFA + (tonumber(redis.call("LLEN", KEY_QUEUE_FA_COMPLETED)) or 0)
+	queueLengths.FA = queueLengths.FA + (tonumber(redis.call("LLEN", KEY_QUEUE_FA_COMPLETED)) or 0)
+end
+if KEY_QUEUE_RFA_COMPLETED ~= nil and KEY_QUEUE_RFA_COMPLETED ~= "" then
+	queueLengths.RFA = queueLengths.RFA + (tonumber(redis.call("LLEN", KEY_QUEUE_RFA_COMPLETED)) or 0)
 end
 if KEY_QUEUE_SIGNED_COMPLETED ~= nil and KEY_QUEUE_SIGNED_COMPLETED ~= "" then
 	queueLengths.SIGNED = queueLengths.SIGNED + (tonumber(redis.call("LLEN", KEY_QUEUE_SIGNED_COMPLETED)) or 0)
 end
-local totalQueued = queueLengths.DE + queueLengths.FA_RFA + queueLengths.SIGNED
+local totalQueued = queueLengths.DE + queueLengths.FA + queueLengths.RFA + queueLengths.SIGNED
 if totalQueued < totalRequired then
 	return failure("INSUFFICIENT_QUEUE", {
 		required = totalRequired,
 		total = totalQueued,
 		DE = queueLengths.DE,
-		FA_RFA = queueLengths.FA_RFA,
+		FA = queueLengths.FA,
+		RFA = queueLengths.RFA,
 		SIGNED = queueLengths.SIGNED,
 	})
 end
 
 local queueMetas = {
 	{ name = "DE", key = KEY_QUEUE_DE, completed = KEY_QUEUE_DE_COMPLETED },
-	{ name = "FA_RFA", key = KEY_QUEUE_FA, completed = KEY_QUEUE_FA_COMPLETED },
+	{ name = "FA", key = KEY_QUEUE_FA, completed = KEY_QUEUE_FA_COMPLETED },
+	{ name = "RFA", key = KEY_QUEUE_RFA, completed = KEY_QUEUE_RFA_COMPLETED },
 	{ name = "SIGNED", key = KEY_QUEUE_SIGNED, completed = KEY_QUEUE_SIGNED_COMPLETED },
 }
 
@@ -194,10 +204,10 @@ local function shouldConsiderRecent(ignoreRecent, selected, candidateId)
 end
 
 -- selectPlayers performs a two-pass scan to enforce priority ordering.
--- First pass scans the primary queues in order (DE, FA_RFA, SIGNED).
--- Second pass scans the completed sibling lists (DE:completed, FA_RFA:completed, SIGNED:completed).
+-- First pass scans the primary queues in order (DE, FA, RFA, SIGNED).
+-- Second pass scans the completed sibling lists (DE:completed, FA:completed, RFA:completed, SIGNED:completed).
 -- This ensures active (non-completed) players are always preferred over completed ones
--- while preserving the DE > FA_RFA > SIGNED precedence.
+-- while preserving the DE > FA > RFA > SIGNED precedence.
 local function selectPlayers(ignoreRecent)
 	local selection = {}
 	local selectionLookup = {}
@@ -268,7 +278,7 @@ local function selectPlayers(ignoreRecent)
 		end
 	end
 
-	-- First pass: scan primary queues only (DE, FA_RFA, SIGNED)
+	-- First pass: scan primary queues only (DE, FA, RFA, SIGNED)
 	for _, bucket in ipairs(queueMetas) do
 		scanBucketList(bucket, false)
 		if #selection >= totalRequired then
@@ -276,7 +286,7 @@ local function selectPlayers(ignoreRecent)
 		end
 	end
 
-	-- Second pass: scan completed lists (DE:completed, FA_RFA:completed, SIGNED:completed)
+	-- Second pass: scan completed lists (DE:completed, FA:completed, RFA:completed, SIGNED:completed)
 	if #selection < totalRequired then
 		for _, bucket in ipairs(queueMetas) do
 			scanBucketList(bucket, true)
@@ -328,7 +338,8 @@ if #selection < totalRequired then
 		selected = #selection,
 		required = totalRequired,
 		DE = queueLengths.DE,
-		FA_RFA = queueLengths.FA_RFA,
+		FA = queueLengths.FA,
+		RFA = queueLengths.RFA,
 		SIGNED = queueLengths.SIGNED,
 		relaxApplied = relaxApplied,
 		relaxEligible = relaxEligible,
@@ -340,7 +351,7 @@ if #selection < totalRequired then
 	return failure("MATCH_BUILD_INCOMPLETE", remainingDetails)
 end
 
-local bucketCounts = { DE = 0, FA_RFA = 0, SIGNED = 0 }
+local bucketCounts = { DE = 0, FA = 0, RFA = 0, SIGNED = 0 }
 for _, entry in ipairs(selection) do
     bucketCounts[entry.bucket] = (bucketCounts[entry.bucket] or 0) + 1
 end
@@ -438,7 +449,8 @@ if KEY_EVENTS ~= nil and KEY_EVENTS ~= "" then
 		"teamB", cjson.encode(teamB),
 		"players", cjson.encode(playersDetailed),
 		"bucket_de", tostring(bucketCounts.DE or 0),
-		"bucket_fa_rfa", tostring(bucketCounts.FA_RFA or 0),
+		"bucket_fa", tostring(bucketCounts.FA or 0),
+		"bucket_rfa", tostring(bucketCounts.RFA or 0),
 		"bucket_signed", tostring(bucketCounts.SIGNED or 0),
 	}
 	eventId = redis.call("XADD", KEY_EVENTS, "*", unpack(eventFields))
@@ -446,7 +458,8 @@ end
 
 local remainingQueues = {
 	DE = tonumber(redis.call("LLEN", KEY_QUEUE_DE)) or 0,
-	FA_RFA = tonumber(redis.call("LLEN", KEY_QUEUE_FA)) or 0,
+	FA = tonumber(redis.call("LLEN", KEY_QUEUE_FA)) or 0,
+	RFA = tonumber(redis.call("LLEN", KEY_QUEUE_RFA)) or 0,
 	SIGNED = tonumber(redis.call("LLEN", KEY_QUEUE_SIGNED)) or 0,
 }
 

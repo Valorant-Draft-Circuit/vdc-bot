@@ -89,7 +89,7 @@ if priorityUpper ~= "" then
 	safeLRem(target .. ":completed", userId)
 else
 	-- Unknown priority: try removing from all known buckets for the tier.
-	local buckets = { "DE", "FA_RFA", "SIGNED" }
+	local buckets = { "DE", "FA", "RFA", "SIGNED" }
 	for _, b in ipairs(buckets) do
 		local k = "vdc:tier:" .. tier .. ":queue:" .. b
 		safeLRem(k, userId)
