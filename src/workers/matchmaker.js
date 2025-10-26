@@ -260,7 +260,7 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
  const mmrFieldValue = hasMmr
  	? `Team A: **${sumB}**\nTeam B: **${sumA}**\nΔ: **${diff}**`
  	: null;
-	// Swap teamA and teamB in display so attackers are on the right side
+	// TODO: Swap teamA and teamB in display so attackers are on the right side
 
 	const embed = new EmbedBuilder()
 		.setTitle(`MATCH FOUND!`)
