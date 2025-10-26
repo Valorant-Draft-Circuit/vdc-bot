@@ -199,7 +199,7 @@ async function readQueueConfigFromRedis() {
 		const redis = getRedisClient();
 		const payload = await redis.get(QUEUE_CONFIG_CACHE_KEY);
 		if (!payload) return null;
-			const parsed = JSON.parse(payload);
+		const parsed = JSON.parse(payload);
 			const base = cloneDefaultQueueConfig();
 			return {
 				...base,
