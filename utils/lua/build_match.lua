@@ -11,8 +11,6 @@ KEYS
 	7 -> vdc:tier:{tier}:queue:DE:completed (optional)
 	8 -> vdc:tier:{tier}:queue:FA_RFA:completed (optional)
 	9 -> vdc:tier:{tier}:queue:SIGNED:completed (optional)
-  5 -> vdc:match:{queueId}
-  6 -> vdc:events stream key (optional)
 
 ARGV
   1 -> tier identifier
