@@ -8,6 +8,11 @@ const EVENTS_KEY = `vdc:events`;
 async function joinQueue(interaction, queueConfig) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+	// check if user has the Inactive or Muted role and deny if so
+	if (interaction.member.roles.cache.has(`1060750208746668132`) || interaction.member.roles.cache.has('979222361708589096')) {
+		return interaction.editReply({ content: `You are not allowed to join the queue.` });
+	}
+
 	const availabilityMessage = await evaluateQueueAvailability(queueConfig);
 	if (availabilityMessage) {
 		return interaction.editReply({ content: availabilityMessage });
@@ -79,7 +84,7 @@ async function joinQueue(interaction, queueConfig) {
 		const queueDepth = payload.queueDepth ?? `unknown`;
 		const lines = [];
 		if (completedSibling) {
-			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}) — placed in the lower-priority completed pool.`);
+			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}).  As you've completed your required combines, you've been placed in the completed players queue.`);
 		} else {
 			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}).`);
 		}
@@ -108,11 +113,11 @@ function mapContextErrorToMessage(error) {
 	const code = error?.message || error;
 	switch (code) {
 		case `PLAYER_NOT_FOUND`:
-			return `We couldn't find your player profile. Please ensure you're registered for Combines.`;
+			return `We couldn't find your player profile. Please ensure you're registered for VDC.`;
 		case `MMR_NOT_AVAILABLE`:
-			return `We couldn't determine your MMR. Please reach out to staff to validate your player profile.`;
+			return `We couldn't determine your MMR. Please create a ticket.`;
 		case `TIER_NOT_RESOLVED`:
-			return `We couldn't determine your tier. Please reach out to staff to validate your player profile.`;
+			return `We couldn't determine your tier. Please create a ticket.`;
 		case `INELIGIBLE_STATUS`:
 			return `Your current league status doesn't allow queueing for Combines.`;
 		default:
