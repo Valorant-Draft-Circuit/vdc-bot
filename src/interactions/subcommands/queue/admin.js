@@ -21,8 +21,9 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const tiers = await resolveTiers(tierSelection);
+			// This should never happen since we validate at least one tier on input
 			if (tiers.length === 0) {
-				return interaction.editReply({ content: `No tiers matched \">${tierSelection}\".` });
+				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
 
 			await setTierState(tiers, true);
@@ -34,8 +35,9 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const tiers = await resolveTiers(tierSelection);
+			// This should never happen since we validate at least one tier on input
 			if (tiers.length === 0) {
-				return interaction.editReply({ content: `No tiers matched \">${tierSelection}\".` });
+				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
 
 			await setTierState(tiers, false);
@@ -230,7 +232,7 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 			},
 			{
 				name: `Scout Role`,
-				value: `<@&${queueConfig.scoutRoleId}> (${queueConfig.scoutRoleId})` + (queueConfig.scoutRoleId ? `` : `*Not configured*`),
+				value: queueConfig.scoutRoleId ? `<@&${queueConfig.scoutRoleId}> (${queueConfig.scoutRoleId})` : `*Not configured*`,
 				inline: false,
 			},
 			{ name: `Active Map Pool`,

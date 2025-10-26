@@ -30,7 +30,7 @@ module.exports = {
             const matchData = await redis.hgetall(matchKey);
 
             if (!matchData || Object.keys(matchData).length === 0) {
-                logger.log(`ERROR`, `Failed to parse tier from match data for submitted match ${queueId}`, err);
+                logger.log(`ERROR`, `Failed to parse tier from match data for submitted match ${queueId}`);
                 return await interaction.editReply({ content: `Could not find match data for queue ID ${queueId}. Please open a tech ticket.` });
             }
             
