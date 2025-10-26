@@ -160,7 +160,14 @@ function buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds) {
 				PermissionFlagsBits.ViewChannel,
 				PermissionFlagsBits.Connect,
 				PermissionFlagsBits.Speak,
+				PermissionFlagsBits.UseVAD,
 				PermissionFlagsBits.SendMessages,
+				PermissionFlagsBits.EmbedLinks,
+				PermissionFlagsBits.AttachFiles,
+				PermissionFlagsBits.AddReactions,
+				PermissionFlagsBits.UseExternalEmojis,
+				PermissionFlagsBits.UseExternalStickers,
+				PermissionFlagsBits.ReadMessageHistory,
 			],
 		});
 	}
