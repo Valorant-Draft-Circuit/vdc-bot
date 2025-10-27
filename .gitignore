@@ -26,3 +26,5 @@ utils/commandsStructure/test.js
 src/interactions/commands/test.js
 pnpm-lock.yaml
 ################################################################
+
+clear-discord-commands.js

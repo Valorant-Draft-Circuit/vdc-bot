@@ -43,6 +43,7 @@ const combineCountCache = `./cache/combineCountCache.json`;
 // initial requires
 global.mmrCache = require(mmrCachePath);
 global.mmrTierLinesCache = require(mmrTierLinesCache);
+global.combineCountCache = require(combineCountCache);
 
 // create watch files for hot-reloading
 fs.watchFile(mmrCachePath, () => {
