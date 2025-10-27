@@ -8,7 +8,7 @@ const CONTROL_PANEL_MAP_POOL_KEY = `MAP_POOL`;
 const CONTROL_PANEL_DISPLAY_KEY = `display_mmr`;
 
 const DEFAULT_QUEUE_CONFIG = Object.freeze({
-	enabled: true,
+	enabled: false,
 	health: {
 		checkIntervalMs: 5000,
 		dbTimeoutMs: 1000,

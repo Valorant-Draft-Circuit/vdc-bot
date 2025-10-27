@@ -1,23 +1,25 @@
+
 # Queue Commands
 
-This document describes the available queue and match-related slash commands implemented in the bot, their arguments, current behavior (based on code), and permission notes.
+This document describes the queue and match-related slash commands implemented in the bot, the arguments they accept, how they behave (based on the current implementation), and permission notes. The content below was synced from the command handlers and command structure in the codebase.
 
 ## `/match cancel`
 
-- Description: Player-facing command intended to initiate a cancel vote for an active match.
-- Current behavior (code): Not yet implemented — the command handler replies ephemerally: "Match cancel voting will be enabled soon. For now, please contact a queue admin." (`src/interactions/commands/match.js`).
-- Intended / planned behavior (requirements): When live, only players in the match (or DM mirror) should be able to run this. Calling the command adds the voter to `vdc:match:{id}:cancel_votes`. If votes meet the configured threshold (design docs reference ~80% of players), the match is marked canceled, players are unlocked, channels are removed/archived, and no backfill occurs.
-- Args: none (should be invoked from the match context/thread or DM mirror so the bot can resolve the queue id).
-- Permissions: only members of the match (implementation planned).
+- Description: Player-facing command to start or cast a vote to cancel an active match.
+- Current behavior (code): Implemented. When run the command:
+  - Resolves the current match ID from the caller's `vdc:player:{id}.currentQueueId` (so it should be run from the match context or a user in the match).
+  - Verifies the caller is marked `in_match` and is a participant of the match.
+  - Adds the caller to the `vdc:match:{id}:cancel_votes_yes` set and removes them from the `...:cancel_votes_no` set.
+  - If the yes vote percentage meets or exceeds the configured `queue.cancelThreshold` (default ~80%), the match is cancelled: players' `status` reset to `idle`, match keys and vote keys deleted, and the bot attempts channel cleanup.
+  - If no formal vote is active yet, the command will post a pinned vote message in the match chat with Yes/No buttons and set a short TTL (vote state stored in Redis for ~5 minutes).
+
+- Args: none.
+- Permissions: only players in the match (the code checks the player's in-match state and membership in the match roster).
 
 ## Match submission (use `/submit` or the match embed Submit button)
 
-- Description: Finalize a match by submitting an external Tracker.gg match URL (manual end). Use the global `/submit` command or the Submit button on the match embed.
-
-- Behavior: Opening the Submit modal (via `/submit` or the match embed) asks for a Tracker.gg match URL. The bot validates the URL/format, extracts the Riot gameID, POSTS to the Numbers service, marks the match completed, and unlocks players.
-
+- Description: Finalize a match by submitting an external Tracker.gg match URL (manual end). This currently uses a modal to collect a Tracker.gg URL, validates/extracts the Riot gameID, and posts to the Numbers service to mark the match completed and unlock players.
 - Args: none (modal collects the Tracker URL).
-
 - Permissions: only members of the match may submit results.
 
 ## `/queue join`
@@ -25,151 +27,120 @@ This document describes the available queue and match-related slash commands imp
 - Description: Join the Combines queue for the player's resolved tier.
 - Usage: `/queue join` (no arguments).
 - Current behavior (code): The command:
-	- Defers the reply (ephemeral).
-	- Validates queue availability via queue config (`queueConfig.enabled`).
-	- Resolves the player's queue context (tier, MMR, league status) via `resolvePlayerQueueContext`.
-	- Checks per-tier configuration and resolves a priority bucket.
-	- Runs the atomic Lua `join` script (`utils/lua/join.lua`) with keys/args to add the player to the appropriate queue lists.
-	- On success replies with queue confirmation, queue position, league status and (if enabled) MMR.
-	- Error cases are mapped to friendly messages (examples):
-		- `LEAGUE_STATE_NOT_COMBINES` -> "Queues only run during Combines."
-		- `TIER_CLOSED` -> "The <tier> queue is currently closed."
-		- `ALREADY_QUEUED` -> "You're already queued for ..."
-		- `IN_MATCH` -> "You're currently in a match (<id>)."
-		- `PLAYER_LOCKED`, `ON_COOLDOWN`, `DUPLICATE_IN_QUEUE` -> appropriate messages.
-	(See `src/interactions/subcommands/queue/join.js` for the mapping and flow.)
+  - Defers the reply (ephemeral).
+  - Verifies queue is enabled via the queue configuration.
+  - Resolves player context (tier, MMR, league status, gameCount) via `resolvePlayerQueueContext`.
+  - Maps the player's league status to a priority bucket and checks per-tier flags.
+  - Calls the atomic Lua `join` script (via `runLua('join', ...)`) which performs queue membership checks and list insertion.
+  - On success replies with a confirmation including tier, bucket, queue position, league status, and (if configured) MMR.
+  - Errors are mapped to friendly messages (examples include `LEAGUE_STATE_NOT_COMBINES`, `TIER_CLOSED`, `ALREADY_QUEUED`, `IN_MATCH`, `PLAYER_LOCKED`, `ON_COOLDOWN`, `DUPLICATE_IN_QUEUE`).
+
 - Args: none. The command uses the calling user's profile to determine tier/priority.
-- Permissions / requirements: the user must have a resolvable player profile (registered). If the player context can't be resolved, the command returns an explanatory error.
+- Permissions / requirements: the user must have a resolvable player profile (registered). If the player context can't be resolved the command replies with an explanatory message.
 
 ## `/queue leave`
 
 - Description: Leave the Combines queue if currently queued.
 - Usage: `/queue leave` (no arguments).
-- Current behavior (code): The command runs the atomic Lua `leave` script (`utils/lua/leave.lua`) and returns one of:
-	- Success: "You have been removed from the <tier> queue."
-	- Errors: `NOT_QUEUED` -> "You're not currently queued.", `IN_MATCH` -> "You can't leave the queue because you're in an active match.", or a generic error message.
-	(See `src/interactions/subcommands/queue/leave.js`.)
+- Current behavior (code): The command:
+  - Defers the reply (ephemeral).
+  - Calls the atomic Lua `leave` script which removes the player from any queue lists and returns a payload.
+  - On success: replies `You have been removed from the <tier> queue.`
+  - Known error mappings: `NOT_QUEUED` -> `You're not currently queued.`, `IN_MATCH` -> `You can't leave the queue because you're in an active match.`
+
 - Args: none.
-- Permissions: any user may call, but they must be queued for the command to have effect.
+- Permissions: any user may call this command; it only takes effect when the player is currently queued.
 
-## `/queueadmin <subcommand>` (admin top-level command)
+## Admin command(s)
 
-Admin functionality was moved to a top-level command to avoid Discord limitations on hiding subcommands. Use `/queueadmin <subcommand>` instead of `/queue admin <subcommand>`.
+There are admin-only queue controls implemented in the codebase (permission is enforced by the command registration; Discord will only show these to users with Manage Guild / Administrator permissions). The implementation relies on Discord-level permission hiding and returns ephemeral replies where appropriate.
 
-Permission: Discord will only show this command to users with Manage Server (Manage Guild) or Administrator permission. The command is registered with those required permissions so it will be hidden from users who lack them.
+Common files: admin handlers are implemented in `src/interactions/subcommands/queue/admin.js`.
 
-Common note: Replies are ephemeral when appropriate.
+### `status`
 
-### `/queueadmin status`
+- Description: Show a live snapshot of the queue configuration and status.
+- Usage: `/queueadmin status` (or the registered admin top-level/subcommand).
+- Behavior: Builds an embed (title `Queue Status`) that shows flags like Enabled, Display MMR, Channel management, Cancel threshold, Relax timeout, Scout role, active map pool, and game requirements.
 
-- Description: Shows a live snapshot of basic queue controls.
-- Usage: `/queue admin status` (no args)
-- Current behavior (code): Builds an embed with fields such as Enabled (yes/no) and Admin Permission (notes that Manage Server/Administrator is required), plus color/footer. (`buildQueueStatusEmbed`).
+### `open` / `close`
 
-### `/queueadmin open`
+- Description: Open or close queues for a tier or ALL tiers.
+- Usage: `/queueadmin open tier:<tier>` and `/queueadmin close tier:<tier>`
+- Args: `tier` (required) — `ALL` or a specific tier choice (configured tiers include Recruit, Prospect, Apprentice, Expert, Mythic, and any discovered in Redis).
+- Behavior: Resolves tiers (from Prisma enum + `vdc:tiers` Redis set), sets `vdc:tier:{tier}:open` = `1` for open or `0` for closed. When closing, queued players in those tiers are cleared/reset.
 
-- Description: Open a queue for a specific tier (or ALL).
-- Usage: `/queue admin open tier:<tier>`
-- Args:
-	- `tier` (required string) — choice from configured tiers (e.g. All, Recruit, Prospect, Apprentice, Expert, Mythic). The command accepts `ALL` or a specific tier.
-- Current behavior (code): Resolves tiers (including existing tiers discovered in Redis), then sets `vdc:tier:{tier}:open` = `1` for each selected tier and returns a confirmation message.
+### `build`
 
-### `/queueadmin close`
+- Description: Trigger the matchmaker to run immediately for a tier (or all tiers).
+- Usage: `/queueadmin build tier:<tier>`
+- Args: `tier` (required) — `ALL` or a specific tier.
+- Behavior: Calls the matchmaker worker's `runMatchmakerOnce(client, tierSelection)` and replies confirming the trigger.
 
-- Description: Close a queue for a specific tier (or ALL).
-- Usage: `/queue admin close tier:<tier>`
-- Args: same as `open`.
-- Current behavior (code): Sets `vdc:tier:{tier}:open` = `0` for the selected tiers and returns a confirmation message.
+### `kill`
 
-### `/queueadmin build`
+- Description: Force-cancel a match record (server-side) and reset affected players.
+- Usage: `/queueadmin kill queue_id:<id>`
+- Args: `queue_id` (required) — the internal queue identifier used in `vdc:match:{id}`.
+- Behavior: Reads the match hash, resets affected players (`status=idle`, clears queue fields, sets a short TTL), deletes the match and its cancel vote keys, and attempts to cleanup match channels.
 
-- Description: Force-run the matchmaker for a tier (or ALL).
-- Usage: `/queue admin build tier:<tier>`
-- Args:
-	- `tier` (required string) — `ALL` or a specific tier.
-- Current behavior (code): Calls `runMatchmakerOnce(client, tierSelection)` from the matchmaker worker and replies indicating the matchmaker was triggered for the selected tier(s).
+### `reset`
 
-### `/queueadmin kill`
+- Description: Clear all queues and match records and reset player profiles.
+- Usage: `/queueadmin reset` (no args)
+- Behavior: Iterates known tiers, deletes queue lists (including completed sibling lists), scans and deletes `vdc:match:*` keys (attempting channel cleanup), and resets player hashes to `status=idle`.
 
-- Description: Force-cancel a match record and reset affected players.
-- Usage: `/queue admin kill queue_id:<id>`
-- Args:
-	- `queue_id` (required string) — the internal queue identifier (Queue ID) (the key portion used with `vdc:match:{id}`).
--- Current behavior (code): Reads `vdc:match:{id}` from Redis, sets each player's `status` to `idle`, removes queue and match-related fields (`queuePriority`, `queueJoinedAt`, `currentQueueId`), deletes the match key and its cancel_votes, and returns a message. It also attempts to clean up match channels (category/text/voice) if present (`cleanupMatchChannels`). (`src/interactions/subcommands/queue/admin.js`).
-
-### `/queueadmin reset`
-
-- Description: Clear all queues, match records, and reset player profiles.
-- Usage: `/queue admin reset` (no args)
-- Current behavior (code): Iterates over known tiers stored in `vdc:tiers`, deletes queue lists (`vdc:tier:{tier}:queue:*`), scans for `vdc:match:*` keys and deletes them (attempting channel cleanup for matches), and resets affected player hashes to `status=idle` and removes queue/match fields. Returns a summary of cleared entries, matches, and reset players.
-
-### `/queueadmin reload-config`
+### `reload-config`
 
 - Description: Reload queue configuration from the Control Panel.
-- Usage: `/queue admin reload-config` (no args)
-- Current behavior (code): Invalidates the queue config cache and forces a refresh via `getQueueConfig({ forceRefresh: true })`. Replies with a confirmation message.
+- Usage: `/queueadmin reload-config` (no args)
+- Behavior: Invalidates the queue config cache and forces a refresh via `getQueueConfig({ forceRefresh: true })`.
 
-### `/queueadmin create-dummies`
+### `create-dummies`
 
-- Description: Create dummy players and add them to a specified queue for testing the matchmaker.
-- Usage: `/queue admin create-dummies tier:<tier> count:<n> bucket:<DE|FA_RFA|SIGNED>`
+- Description: Create ephemeral dummy players and enqueue them for testing the matchmaker.
+- Usage: `/queueadmin create-dummies tier:<tier> count:<n> bucket:<DE|FA|RFA|SIGNED> [games:<n>] [completed:<bool>]`
 - Args:
-	- `tier` (required) — Tier to which dummy players belong (choices include All, Recruit, Prospect, Apprentice, Expert, Mythic).
-	- `count` (required integer) — Number of dummy players to create (1–50).
-	- `bucket` (required string) — Which queue bucket to place them in: `DE`, `FA_RFA`, or `SIGNED`.
-- Current behavior (code): Creates ephemeral dummy player hashes in Redis (keys `vdc:player:dummy_*`) with `status=queued`, sets a 12-hour TTL, and pushes them onto the specified `vdc:tier:{tier}:queue:{bucket}` list. Replies with a summary of how many dummies were queued.
- - Current behavior (code): Creates ephemeral dummy player hashes in Redis (keys `vdc:player:dummy_*`) with `status=queued`, sets a short 5-minute TTL, and pushes them onto the specified `vdc:tier:{tier}:queue:{bucket}` list. Replies with a summary of how many dummies were queued.
+  - `tier` (required) — Tier to which dummy players belong (choices include All, Recruit, Prospect, Apprentice, Expert, Mythic).
+  - `count` (required integer) — Number of dummy players to create (1-50).
+  - `bucket` (required string) — Which queue bucket: `DE`, `FA`, `RFA`, or `SIGNED`.
+  - `games` (optional integer) — set the dummy player's gameCount (for completed/eligible logic).
+  - `completed` (optional boolean) — if true, push to the `:completed` sibling queue.
+- Behavior (current implementation): For each dummy the command:
+  - creates a `vdc:player:{dummyId}` hash (status=`queued`, tier, queueJoinedAt, mmr=`1000`, optional gameCount),
+  - sets a short TTL (5 minutes / 300000 ms) so dummies expire,
+  - pushes the dummy id to the chosen `vdc:tier:{tier}:queue:{bucket}` or `...:queue:{bucket}:completed` list.
+  - Replies indicating how many dummy players were created and queued.
+
+Notes: the previous doc contained duplicate/conflicting TTL notes; the implementation sets a short 5-minute TTL for dummy player hashes.
 
 ---
 
-Notes and related files:
-- Command structure definitions: `utils/commandsStructure/queue.js`.
-- Queue subcommand handlers: `src/interactions/subcommands/queue/*.js` (join.js, leave.js, admin.js).
-- Admin match-manipulation & reset logic: `src/interactions/subcommands/queue/admin.js`.
+Notes and related files
+- Command structure definitions: `utils/commandsStructure/queue.js` (command registration for `queue` subcommands).
+- Queue subcommand handlers: `src/interactions/subcommands/queue/join.js`, `leave.js`, `admin.js`.
+- Match command: `src/interactions/commands/match.js` (handles `cancel`).
+- Scout commands: `src/interactions/commands/scout.js`.
 - Lua core scripts used by join/leave/build: `utils/lua/join.lua`, `utils/lua/leave.lua`, `utils/lua/build_match.lua`.
-- Button quick-join helpers (voice invites) exist in `src/interactions/buttons/queueManager.js` (for join lobby/attackers/defenders quick actions).
 
 
-## ` /scout` (Scout utilities)
+## `/scout` (Scout utilities)
 
-- Description: Tools for users with the Scout role to follow players and receive notifications and access when those players are matched. Useful for scouts who want to spectate or monitor specific players.
+- Description: Tools for users with the Scout role to follow players and receive DMs and temporary access when those players are matched.
 
 - Subcommands:
-	- `/scout follow player:<@user>`
-		- Description: Start following a player. The scout will receive a DM when that player is matched and will be granted access to the match category/channels for that match.
-		- Args: `player` — the Discord user to follow (required).
-		- Notes: Requires the configured Scout role (see Control Panel key below).
-
-	- `/scout unfollow player:<@user>`
-		- Description: Stop following a player. Removes the scout from the follow list so they no longer receive DMs for that player.
-		- Args: `player` — the Discord user to unfollow (required).
-
-	- `/scout unfollowall`
-		- Description: Stop following all players you're currently following. Removes you from all `vdc:scouts:followers:{playerId}` sets and clears your `vdc:scouts:following:{scoutId}` set.
-		- Args: none.
-
-	- `/scout list`
-		- Description: List players you are currently following.
-		- Args: none.
+  - `/scout follow player:<@user>` — Start following a player. The scout will be DMed and granted per-match access when that player is matched.
+  - `/scout unfollow player:<@user>` — Stop following the specified player.
+  - `/scout unfollowall` — Stop following all players you're currently following.
+  - `/scout list` — List players you are currently following.
 
 - Behavior and implementation notes (code):
-	- The commands are implemented in `src/interactions/commands/scout.js`.
-	- Follow state is stored in Redis using two sets:
-		- `vdc:scouts:followers:{playerId}` — set of scout user IDs following the player.
-		- `vdc:scouts:following:{scoutId}` — set of player IDs a scout follows.
-	- When the matchmaker builds a match that includes a player a scout is following, the scout user IDs are:
-		- DMed with the match embed and a link to the match chat.
-		- Added to the allowedUserIds passed to `createMatchChannels`, so scouts get permission to view the match category and its channels for that match.
+  - Implemented in `src/interactions/commands/scout.js`.
+  - Follows are stored in Redis sets: `vdc:scouts:followers:{playerId}` and `vdc:scouts:following:{scoutId}`.
+  - When a match is built that includes a followed player, scouts are DMed and added to allowedUserIds when creating match channels, so they receive view access for that match.
 
-- Control Panel configuration:
-	- The scout role ID should be set in the Control Panel. The code checks for the following keys (in this order) and uses the first match:
-		- `queue_scout_role_id`
-		- `queue_scout_rold_id` (common typo — supported for backward compatibility)
-		- `queue_scout_roldid`
-	- If no scout role is configured, the /scout commands will inform the caller that the scout role is missing.
+- Control Panel configuration: the scout role ID should be set in the queue config (the code reads `vdc:config:queue` and uses `scoutRoleId`). If not configured the commands will inform the caller.
 
-- Permissions:
-	- Only members who have the configured Scout role may use the `/scout follow`, `/scout unfollow`, and `/scout list` commands.
-	- Scouts who follow a player are granted per-match access to the match category and channels (same permissions as players) so they can view chat and join voice.
+- Permissions: only guild members who have the configured Scout role can use `/scout follow`, `/scout unfollow`, `/scout unfollowall`, and `/scout list`.
 
 

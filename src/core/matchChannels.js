@@ -24,7 +24,7 @@ async function createMatchChannels(guild, options) {
 		queueId,
 		tier,
 		allowedUserIds = [],
-		staffRoleIds = [],
+		staffRoleIds = [1052008749851742258],
 		categoryName = buildCategoryName(tier, queueId),
 		reason = `Queue match ${queueId}`,
 		enableVoice = true,
@@ -151,6 +151,23 @@ function buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds) {
 			});
 		}
 	}
+
+	overwrites.push({
+		id: '1052008749851742258', // Scout Role ID
+		allow: [
+				PermissionFlagsBits.ViewChannel,
+				PermissionFlagsBits.Connect,
+				PermissionFlagsBits.Speak,
+				PermissionFlagsBits.UseVAD,
+				PermissionFlagsBits.SendMessages,
+				PermissionFlagsBits.EmbedLinks,
+				PermissionFlagsBits.AttachFiles,
+				PermissionFlagsBits.AddReactions,
+				PermissionFlagsBits.UseExternalEmojis,
+				PermissionFlagsBits.UseExternalStickers,
+				PermissionFlagsBits.ReadMessageHistory,
+		],
+	});
 
 	for (const userId of allowedUserIds) {
 		if (!isValidSnowflake(userId)) continue;
