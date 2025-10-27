@@ -10,27 +10,6 @@ const {
 } = require("discord.js").GatewayIntentBits;
 const { Channel } = require("discord.js").Partials;
 
-/**
- * Recursively collect JavaScript file paths within a directory.
- * @param {string} absoluteDirectory
- * @returns {string[]}
- */
-function collectCommandFiles(absoluteDirectory) {
-    const entries = fs.readdirSync(absoluteDirectory, { withFileTypes: true });
-    const files = [];
-
-    for (const entry of entries) {
-        const entryPath = path.join(absoluteDirectory, entry.name);
-        if (entry.isDirectory()) {
-            files.push(...collectCommandFiles(entryPath));
-        } else if (entry.isFile() && entry.name.endsWith(`.js`)) {
-            files.push(entryPath);
-        }
-    }
-
-    return files;
-}
-
 module.exports = class BotClient extends Client {
     constructor(environment) {
         super({
@@ -162,11 +141,11 @@ module.exports = class BotClient extends Client {
      */
     loadSlashCommands(directory) {
         // register all slash commands
-        const absoluteDirectory = path.resolve(__dirname, `../../${directory}`);
-        const slashCommandFiles = collectCommandFiles(absoluteDirectory);
+        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
         let success = 0;
 
-        slashCommandFiles.forEach(commandPath => {
+        slashCommandFiles.forEach(slashCommandFile => {
+            const commandPath = path.resolve(__dirname, `../../${directory}/${slashCommandFile}`);
             const slashCommand = require(commandPath);
             this.slashCommands.set(slashCommand.name, slashCommand);
             success++;
