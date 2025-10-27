@@ -3,7 +3,6 @@ const { Tier } = require(`@prisma/client`);
 const { getRedisClient } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/config`);
 const { deleteMatchChannels } = require(`../../../core/matchChannels`);
-const { buildCombineCountCache } = require(`../../../../cache/cache`);
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
 	// Permission is enforced by Discord via command registration (ManageGuild or Administrator).
@@ -50,9 +49,8 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			logger.log(`INFO`, `Queue admin config reload executed by ${actorLabel}`);
 			await invalidateQueueConfigCache();
 			await getQueueConfig({ forceRefresh: true });
-			await buildCombineCountCache();
 			return interaction.editReply({
-				content: `Queue configuration cache reloaded.`,
+				content: `Queue configuration cache reloaded. \n If you want to refresh game count cache please use /debug refresh-cache.`,
 			});
 		}
 
