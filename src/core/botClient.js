@@ -10,6 +10,26 @@ const {
 } = require("discord.js").GatewayIntentBits;
 const { Channel } = require("discord.js").Partials;
 
+/**
+ * Recursively collect JavaScript file paths within a directory.
+ * @param {string} absoluteDirectory
+ * @returns {string[]}
+ */
+function collectCommandFiles(absoluteDirectory) {
+    const entries = fs.readdirSync(absoluteDirectory, { withFileTypes: true });
+    const files = [];
+
+    for (const entry of entries) {
+        const entryPath = path.join(absoluteDirectory, entry.name);
+        if (entry.isDirectory()) {
+            files.push(...collectCommandFiles(entryPath));
+        } else if (entry.isFile() && entry.name.endsWith(`.js`)) {
+            files.push(entryPath);
+        }
+    }
+
+    return files;
+}
 
 module.exports = class BotClient extends Client {
     constructor(environment) {
@@ -40,11 +60,34 @@ module.exports = class BotClient extends Client {
         /** @type {Collection} - button manager collection */
         this.buttons = new Collection();
 
+    /** @type {Collection} - modal handlers */
+        this.modals = new Collection();
+
         /** @type {Collection} - button manager collection */
         this.autocompletes = new Collection();
 
         /** @member {Class} logger instanciated by ready.js  */
         this.logger;
+    };
+
+    /**
+     * Load modal handler files from specified directory
+     * @param {String} directory
+     */
+    loadModals(directory) {
+        const absoluteDirectory = path.resolve(__dirname, `../../${directory}`);
+        const modalFiles = fs.readdirSync(absoluteDirectory).filter(f => f.endsWith(`.js`));
+        let success = 0;
+
+        modalFiles.forEach(modalPath => {
+            const modalFilePath = path.resolve(__dirname, `../../${directory}/${modalPath}`);
+            const modal = require(modalFilePath);
+            const key = modal.id ?? modalPath.replace(/\.js$/, ``);
+            this.modals.set(key, modal);
+            success++;
+        });
+
+        logger.log(`DEBUG`, `Loaded ${success} modal(s) from (${directory}/)!`);
     };
 
     /**
@@ -119,11 +162,11 @@ module.exports = class BotClient extends Client {
      */
     loadSlashCommands(directory) {
         // register all slash commands
-        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
+        const absoluteDirectory = path.resolve(__dirname, `../../${directory}`);
+        const slashCommandFiles = collectCommandFiles(absoluteDirectory);
         let success = 0;
 
-        slashCommandFiles.forEach(slashCommandFile => {
-            const commandPath = path.resolve(__dirname, `../../${directory}/${slashCommandFile}`);
+        slashCommandFiles.forEach(commandPath => {
             const slashCommand = require(commandPath);
             this.slashCommands.set(slashCommand.name, slashCommand);
             success++;

@@ -45,9 +45,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: DATABASE_URL=${{ secrets.DATABASE_URL }}
 
-      - name: Send POST request to auto-refresh
-        uses: fjogeleit/http-request-action@v1
-        with:
-          url: ${{ secrets.PORTAINER_WEBHOOK }}
-          method: 'POST'
-          preventFailureOnNoResponse: true
+      # Disabled.  If container is recreated, the URL will change and break things.
+      # May be worth looking into a API endpoint to trigger a refresh instead.
+
+      # - name: Send POST request to auto-refresh
+      #   uses: fjogeleit/http-request-action@v1
+      #   with:
+      #     url: ${{ secrets.PORTAINER_WEBHOOK }}
+      #     method: 'POST'
+      #     preventFailureOnNoResponse: true

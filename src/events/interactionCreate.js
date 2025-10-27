@@ -30,6 +30,7 @@ module.exports = {
             if (interaction.isCommand()) return await executeCommand(client, interaction);
             if (interaction.isButton()) return await executeButton(client, interaction);
             if (interaction.isAnySelectMenu()) return await executeSelectMenu(client, interaction);
+            if (interaction.isModalSubmit()) return await executeModal(client, interaction);
             if (interaction.isAutocomplete()) return await executeAutocomplete(client, interaction);
         } catch (err) {
             logger.log(`ERROR`, `${err.name} - ${this.name}`, err.stack);
@@ -50,6 +51,24 @@ async function executeCommand(client, interaction) {
         await command.execute(interaction);
 
     } else throw new ReferenceError(`Cannot find the application command file!`, { cause: `File is either missing or does not exist.` });
+}
+
+/**
+ * Handle modal submits dynamically via client.modals
+ * @param {Client} client
+ * @param {import('discord.js').ModalSubmitInteraction} interaction
+ */
+async function executeModal(client, interaction) {
+    const customId = interaction.customId ?? ``;
+    const modalId = customId.split(`-`)[0];
+    const modalHandler = client.modals.get(modalId);
+    if (!modalHandler) {
+        logger.log(`WARNING`, `No modal handler found for ${modalId}`);
+        return interaction.reply({ content: `This modal is not supported.`, flags: 64 });
+    }
+
+    const args = customId.split(`-`).slice(1);
+    return await modalHandler.execute(interaction, ...args);
 }
 
 /**

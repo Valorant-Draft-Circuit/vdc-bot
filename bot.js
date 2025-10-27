@@ -38,6 +38,7 @@ process.on(`warning`, (warning) => {
 // create hotreloading for cache
 const mmrCachePath = `./cache/mmrCache.json`;
 const mmrTierLinesCache = `./cache/mmrTierLinesCache.json`;
+const combineCountCache = `./cache/combineCountCache.json`;
 
 // initial requires
 global.mmrCache = require(mmrCachePath);
@@ -57,6 +58,13 @@ fs.watchFile(mmrTierLinesCache, () => {
 
     return logger.log(`INFO`, `Reloaded file: \`${mmrTierLinesCache}\``);
 });
+
+fs.watchFile(combineCountCache, () => {
+    delete require.cache[require.resolve(combineCountCache)];
+    global.combineCountCache = require(combineCountCache);
+
+    return logger.log(`INFO`, `Reloaded file: \`${combineCountCache}\``);
+});
 // ################################################################################################
 
 
@@ -72,6 +80,9 @@ client.loadSelectMenus(`src/interactions/selectMenus`);
 
 logger.log(`VERBOSE`, `Loading autocomplete queries...`);
 client.loadAutocomplete(`src/interactions/autocomplete`);
+
+logger.log(`VERBOSE`, `Loading modal handlers...`);
+client.loadModals(`src/interactions/modals`);
 
 logger.log(`VERBOSE`, `Loading events...`);
 client.loadEvents(`src/events`);
