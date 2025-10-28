@@ -13,6 +13,7 @@ async function status(interaction) {
 
         const rows = [];
 
+        // Build base tier queue counts
         for (const tier of tiers) {
             if (!tier) continue;
 
@@ -30,7 +31,45 @@ async function status(interaction) {
             // run LLEN for each list and sum
             const counts = await Promise.all(listKeys.map((k) => redis.llen(k).catch(() => 0)));
             const sum = counts.reduce((acc, v) => acc + (Number(v) || 0), 0);
-            rows.push({ tier, count: sum });
+            rows.push({ tier, queued: sum, ongoingMatches: 0 });
+        }
+
+        // Count ongoing matches per tier by scanning vdc:match:* keys and reading their 'tier' and 'status' fields.
+        try {
+            let cursor = `0`;
+            const matchKeys = [];
+            do {
+                const [nextCursor, results] = await redis.scan(cursor, `MATCH`, `vdc:match:*`, `COUNT`, 250);
+                cursor = nextCursor;
+                if (Array.isArray(results) && results.length) matchKeys.push(...results);
+            } while (cursor !== `0`);
+
+            if (matchKeys.length > 0) {
+                // Process in batches to avoid huge HMGETs
+                const batchSize = 100;
+                for (let i = 0; i < matchKeys.length; i += batchSize) {
+                    const batch = matchKeys.slice(i, i + batchSize);
+                    const pipeline = redis.pipeline();
+                    for (const key of batch) pipeline.hmget(key, `tier`, `status`);
+                    const results = await pipeline.exec();
+                    for (let j = 0; j < results.length; j++) {
+                        const [err, vals] = results[j];
+                        if (err) continue;
+                        const tierVal = vals && vals[0] ? String(vals[0]) : null;
+                        const statusVal = vals && vals[1] ? String(vals[1]) : null;
+                        if (!tierVal) continue;
+                        // consider ongoing if status is not 'completed'
+                        if (String(statusVal || ``).toLowerCase() !== `completed`) {
+                            const row = rows.find((r) => String(r.tier) === String(tierVal));
+                            if (row) row.ongoingMatches = (row.ongoingMatches || 0) + 1;
+                            else rows.push({ tier: tierVal, queued: 0, ongoingMatches: 1 });
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            // non-fatal: if match scanning fails, log and continue with queued counts only
+            logger.log && logger.log(`WARNING`, `Failed to compute ongoing match counts`, err);
         }
 
         // Sort tiers alphabetically for stable output
@@ -41,7 +80,7 @@ async function status(interaction) {
             .setColor(0x5865F2);
 
         for (const r of rows) {
-            embed.addFields({ name: `${r.tier}`, value: `${r.count}`, inline: true });
+            embed.addFields({ name: `${r.tier}`, value: `Queued: ${r.queued}\nOngoing matches: ${r.ongoingMatches || 0}`, inline: true });
         }
 
         return interaction.editReply({ embeds: [embed] });
