@@ -40,7 +40,7 @@ async function createMatchChannels(guild, options) {
 		});
 
 	const textChannel = await guild.channels.create({
-		name: MATCH_CHANNEL_NAMES.text,
+		name: `${MATCH_CHANNEL_NAMES.text}${queueId ? `-${queueId}` : ``}`,
 		type: ChannelType.GuildText,
 		parent: category.id,
 		reason,
@@ -54,21 +54,21 @@ async function createMatchChannels(guild, options) {
 	if (enableVoice) {
 		[lobbyChannel, teamAChannel, teamBChannel] = await Promise.all([
 			guild.channels.create({
-				name: MATCH_CHANNEL_NAMES.lobby,
+				name: `${MATCH_CHANNEL_NAMES.lobby}${queueId ? ` - ${queueId}` : ``}`,
 				type: ChannelType.GuildVoice,
 				parent: category.id,
 				reason,
 				permissionOverwrites: permissions,
 			}),
 			guild.channels.create({
-				name: MATCH_CHANNEL_NAMES.teamA,
+				name: `${MATCH_CHANNEL_NAMES.teamA}${queueId ? ` - ${queueId}` : ``}`,
 				type: ChannelType.GuildVoice,
 				parent: category.id,
 				reason,
 				permissionOverwrites: permissions,
 			}),
 			guild.channels.create({
-				name: MATCH_CHANNEL_NAMES.teamB,
+				name: `${MATCH_CHANNEL_NAMES.teamB}${queueId ? ` - ${queueId}` : ``}`,
 				type: ChannelType.GuildVoice,
 				parent: category.id,
 				reason,
