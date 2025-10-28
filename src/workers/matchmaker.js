@@ -270,7 +270,8 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 		.setDescription(
 			`**Tier**: ${payload.tier}\n` +
 				`**Queue ID**: ${payload.queueId}\n` +
-				`**Map**: ${mapInfo.name}`,
+				`**Map**: ${mapInfo.name}\n` + 
+				`Relaxed: ${payload.relaxed ? `Yes` : `No`}`,
 		)
 		.addFields(
 			{ name: `Attackers Roster`, value: teamB || `TBD`, inline: true },
@@ -282,7 +283,7 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 		embed.addFields({ name: `MMR Totals`, value: mmrFieldValue, inline: false });
 	}
 
-	embed.setFooter({ text: `Relaxed: ${payload.relaxed ? `Yes` : `No`}` });
+	embed.setFooter({ text: `If you'd still like to change the map, feel free to do so!` });
 
 	if (mapInfo.image) {
 		embed.setImage(mapInfo.image);

@@ -26,5 +26,10 @@ module.exports = {
 			description: `Leave the queue if you are waiting for a match.`,
 			type: ApplicationCommandOptionType.Subcommand,
 		},
+        {
+            name: `status`,
+            description: `Show the number of queued players in each tier.`,
+            type: ApplicationCommandOptionType.Subcommand,
+        },
 	],
 };

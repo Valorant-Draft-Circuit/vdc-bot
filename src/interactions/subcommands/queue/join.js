@@ -80,14 +80,40 @@ async function joinQueue(interaction, queueConfig) {
 
 		await redis.sadd(`vdc:tiers`, context.tier);
 
-		const queueDepth = payload.queueDepth ?? `unknown`;
+		// Compute total number of queued players across the entire tier (all buckets + completed siblings)
+		let tierQueueCount = `unknown`;
+		try {
+			const listKeys = [
+				`vdc:tier:${context.tier}:queue:DE`,
+				`vdc:tier:${context.tier}:queue:FA`,
+				`vdc:tier:${context.tier}:queue:RFA`,
+				`vdc:tier:${context.tier}:queue:SIGNED`,
+				`vdc:tier:${context.tier}:queue:DE:completed`,
+				`vdc:tier:${context.tier}:queue:FA:completed`,
+				`vdc:tier:${context.tier}:queue:RFA:completed`,
+				`vdc:tier:${context.tier}:queue:SIGNED:completed`,
+			];
+
+			// Use LLEN to avoid transferring list contents
+			const counts = await Promise.all(
+				listKeys.map((k) => redis.llen(k).catch(() => 0)),
+			);
+			const sum = counts.reduce((acc, v) => acc + (Number(v) || 0), 0);
+			tierQueueCount = sum;
+		} catch (err) {
+			// if anything fails, leave as `unknown` and log a warning
+			logger.log && logger.log(`WARNING`, `Failed to compute tier queue count for ${context.tier}`, err);
+		}
+
+		// const queueDepth = payload.queueDepth ?? `unknown`; 
 		const lines = [];
 		if (completedSibling) {
 			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}).  As you've completed your required combines, you've been placed in the completed players queue.`);
 		} else {
 			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}).`);
 		}
-		lines.push(`• Queue position: ${queueDepth}`);
+		// Show tier-wide queued players instead of per-bucket queue depth
+		lines.push(`• Players in tier queue: ${tierQueueCount}`);
 		lines.push(`• League status: ${context.leagueStatus}`);
 
 		if (queueConfig?.displayMmr) {
