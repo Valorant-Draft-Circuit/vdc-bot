@@ -1,6 +1,6 @@
 const { MessageFlags } = require(`discord.js`);
 const { getQueueConfig } = require(`../../core/config`);
-const { joinQueue, leaveQueue } = require(`../subcommands/queue`);
+const { joinQueue, leaveQueue, status } = require(`../subcommands/queue`);
 
 module.exports = {
 	name: `queue`,
@@ -20,6 +20,10 @@ module.exports = {
 		const queueConfig = await getQueueConfig();
 		if (subcommand === `leave`) {
 			return leaveQueue(interaction, queueConfig);
+		}
+
+		if (subcommand === `status`) {
+			return status(interaction);
 		}
 
 		return joinQueue(interaction, queueConfig);

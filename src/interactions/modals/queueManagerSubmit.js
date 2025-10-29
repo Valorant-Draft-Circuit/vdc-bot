@@ -60,7 +60,8 @@ module.exports = {
 
             // call Games.saveMatch
             await Games.saveMatch({ id: gameID, tier: tier, type: GameType.COMBINE });
-
+            logger.matchdrain(`<t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Match submission** - __Tier__: \`${tier}\`, __Type__: \`${GameType.COMBINE}\`, __Match ID__: [\`${gameID}\`](${url})`);
+            
             // mark match completed in Redis and unlock players
             try {
                 const matchKey = `vdc:match:${queueId}`;

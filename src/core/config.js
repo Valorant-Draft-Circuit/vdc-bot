@@ -131,6 +131,9 @@ function hydrateConfigFromRows(rows) {
 			case `queue_returning_game_req`:
 				if (typeof value === `number`) config.returningPlayerGameReq = value;
 				break;
+			case `queue_scout_channel_id`:
+				if (value != null) config.scoutChannelId = String(value);
+				break;
 			default:
 				if (key.startsWith(`queue_open_`)) {
 					const tierKey = key.replace(`queue_open_`, ``).toUpperCase();
@@ -189,6 +192,7 @@ function sanitizeQueueConfigForRedis(config) {
 		scoutRoleId: typeof config.scoutRoleId === `string` && config.scoutRoleId.length ? config.scoutRoleId : undefined,
 		newPlayerGameReq: Number.isInteger(config.newPlayerGameReq) ? config.newPlayerGameReq : undefined,
 		returningPlayerGameReq: Number.isInteger(config.returningPlayerGameReq) ? config.returningPlayerGameReq : undefined,
+		scoutChannelId: typeof config.scoutChannelId === `string` && config.scoutChannelId.length ? config.scoutChannelId : undefined,
 	};
 
 	return out;

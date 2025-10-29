@@ -1,4 +1,5 @@
 const { ChannelType, PermissionFlagsBits } = require(`discord.js`);
+const { getQueueConfig } = require(`./config`);
 
 const MATCH_CHANNEL_NAMES = Object.freeze({
 	text: `match-chat`,
@@ -24,13 +25,41 @@ async function createMatchChannels(guild, options) {
 		queueId,
 		tier,
 		allowedUserIds = [],
-		staffRoleIds = [1052008749851742258],
+		staffRoleIds = [],
 		categoryName = buildCategoryName(tier, queueId),
 		reason = `Queue match ${queueId}`,
 		enableVoice = true,
 	} = options;
 
 	const permissions = buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds);
+
+	// Attempt to read the configured scout role from the queue config (Redis / ControlPanel)
+	// and add a permission overwrite for it if present. This replaces the previous
+	// hardcoded scout role ID so non-prod servers don't break.
+	try {
+		const cfg = await getQueueConfig();
+		const scoutRoleId = cfg && cfg.scoutRoleId ? String(cfg.scoutRoleId) : null;
+		if (scoutRoleId && !permissions.some((o) => String(o.id) === scoutRoleId)) {
+			permissions.push({
+				id: scoutRoleId,
+				allow: [
+					PermissionFlagsBits.ViewChannel,
+					PermissionFlagsBits.Connect,
+					PermissionFlagsBits.Speak,
+					PermissionFlagsBits.UseVAD,
+					PermissionFlagsBits.SendMessages,
+					PermissionFlagsBits.EmbedLinks,
+					PermissionFlagsBits.AttachFiles,
+					PermissionFlagsBits.AddReactions,
+					PermissionFlagsBits.UseExternalEmojis,
+					PermissionFlagsBits.UseExternalStickers,
+					PermissionFlagsBits.ReadMessageHistory,
+				],
+			});
+		}
+	} catch (error) {
+		// If config read fails, fall back to existing permission set without scout role.
+	}
 
 	const category = await guild.channels.create({
 		name: categoryName,
@@ -40,7 +69,7 @@ async function createMatchChannels(guild, options) {
 		});
 
 	const textChannel = await guild.channels.create({
-		name: MATCH_CHANNEL_NAMES.text,
+		name: `${MATCH_CHANNEL_NAMES.text}${queueId ? `-${queueId}` : ``}`,
 		type: ChannelType.GuildText,
 		parent: category.id,
 		reason,
@@ -54,21 +83,21 @@ async function createMatchChannels(guild, options) {
 	if (enableVoice) {
 		[lobbyChannel, teamAChannel, teamBChannel] = await Promise.all([
 			guild.channels.create({
-				name: MATCH_CHANNEL_NAMES.lobby,
+				name: `${MATCH_CHANNEL_NAMES.lobby}${queueId ? ` - ${queueId}` : ``}`,
 				type: ChannelType.GuildVoice,
 				parent: category.id,
 				reason,
 				permissionOverwrites: permissions,
 			}),
 			guild.channels.create({
-				name: MATCH_CHANNEL_NAMES.teamA,
+				name: `${MATCH_CHANNEL_NAMES.teamA}${queueId ? ` - ${queueId}` : ``}`,
 				type: ChannelType.GuildVoice,
 				parent: category.id,
 				reason,
 				permissionOverwrites: permissions,
 			}),
 			guild.channels.create({
-				name: MATCH_CHANNEL_NAMES.teamB,
+				name: `${MATCH_CHANNEL_NAMES.teamB}${queueId ? ` - ${queueId}` : ``}`,
 				type: ChannelType.GuildVoice,
 				parent: category.id,
 				reason,
@@ -152,22 +181,7 @@ function buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds) {
 		}
 	}
 
-	overwrites.push({
-		id: '1052008749851742258', // Scout Role ID
-		allow: [
-				PermissionFlagsBits.ViewChannel,
-				PermissionFlagsBits.Connect,
-				PermissionFlagsBits.Speak,
-				PermissionFlagsBits.UseVAD,
-				PermissionFlagsBits.SendMessages,
-				PermissionFlagsBits.EmbedLinks,
-				PermissionFlagsBits.AttachFiles,
-				PermissionFlagsBits.AddReactions,
-				PermissionFlagsBits.UseExternalEmojis,
-				PermissionFlagsBits.UseExternalStickers,
-				PermissionFlagsBits.ReadMessageHistory,
-		],
-	});
+	// Scout role permission will be added at runtime from queue config (if configured).
 
 	for (const userId of allowedUserIds) {
 		if (!isValidSnowflake(userId)) continue;
