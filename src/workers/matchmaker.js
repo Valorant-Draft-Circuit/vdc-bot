@@ -241,7 +241,26 @@ async function dispatchMatch(client, payload, config) {
 		await textChannel.send({
 			embeds: [priorityEmbed],
 		});
+
+		// Notify players directly via DM and scouts as well
 		await notifyPlayersDirectly(client, payload, embedData, channelDescriptor.textChannelId, guild, Array.from(scoutsSet));
+
+		// Send match embed to scout channel if configured
+		if (config.scoutChannelId) {
+			let scoutChannel = null;
+			try {
+				scoutChannel = await guild.channels.fetch(config.scoutChannelId).catch(() => null);
+			} catch (error) {
+				// ignore
+			}
+
+			if (scoutChannel) {
+				await scoutChannel.send({
+					content: `A new match has been started in <#${channelDescriptor.textChannelId}>`,
+					embeds: [embed],
+				});
+			}
+		}
 	} catch (error) {
 		logger.log(`ERROR`, `Failed to send match embed`, error);
 	}
@@ -271,7 +290,7 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 			`**Tier**: ${payload.tier}\n` +
 				`**Queue ID**: ${payload.queueId}\n` +
 				`**Map**: ${mapInfo.name}\n` + 
-				`Relaxed: ${payload.relaxed ? `Yes` : `No`}`,
+				`**Relaxed**: ${payload.relaxed ? `Yes` : `No`}`,
 		)
 		.addFields(
 			{ name: `Attackers Roster`, value: teamB || `TBD`, inline: true },
