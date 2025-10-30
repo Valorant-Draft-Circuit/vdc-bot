@@ -398,7 +398,7 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 			const user = await client.users.fetch(playerId);
 			await user.send({ content: playerContent, embeds: [embedData] });
 		} catch (error) {
-			logger.log(`WARNING`, `Failed to DM player ${playerId} about match ${payload.queueId}`, error);
+			logger.log(`WARNING`, `Failed to DM player ${playerId} about match ${payload.queueId}`);
 		}
 	}
 
@@ -428,7 +428,7 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 			const user = await client.users.fetch(scoutId);
 			await user.send({ content: scoutContent, embeds: [embedData] });
 		} catch (error) {
-			logger.log(`WARNING`, `Failed to DM scout ${scoutId} about match ${payload.queueId}`, error);
+			logger.log(`WARNING`, `Failed to DM scout ${scoutId} about match ${payload.queueId}`);
 		}
 	}
 }
