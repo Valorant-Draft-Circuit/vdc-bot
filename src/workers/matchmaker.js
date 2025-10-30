@@ -9,6 +9,7 @@ const { runLua, getRedisClient } = require(`../core/redis`);
 const { getQueueConfig, DEFAULT_MAP_POOL } = require(`../core/config`);
 const { createMatchChannels } = require(`../core/matchChannels`);
 const { generateQueueId } = require(`../core/id`);
+const { COLORS } = require("../../utils/enums/colors");
 
 const LUA_SCRIPT = `build_match`;
 const EVENTS_KEY = `vdc:events`;
@@ -296,7 +297,7 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 			{ name: `Attackers Roster`, value: teamB || `TBD`, inline: true },
 			{ name: `Defenders Roster`, value: teamA || `TBD`, inline: true }, // TODO: Fix this later, it shows teamB on the left vs teamA on the right
 		)
-		.setColor(0xde3845);
+		.setColor(COLORS[payload.tier] || COLORS.RED);
 
 	if (mmrFieldValue) {
 		embed.addFields({ name: `MMR Totals`, value: mmrFieldValue, inline: false });
