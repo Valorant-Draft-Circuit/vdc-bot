@@ -297,7 +297,7 @@ function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 			{ name: `Attackers Roster`, value: teamB || `TBD`, inline: true },
 			{ name: `Defenders Roster`, value: teamA || `TBD`, inline: true }, // TODO: Fix this later, it shows teamB on the left vs teamA on the right
 		)
-		.setColor(COLORS[payload.tier] || COLORS.RED);
+		.setColor(COLORS[payload.tier] || 0xDE3845);
 
 	if (mmrFieldValue) {
 		embed.addFields({ name: `MMR Totals`, value: mmrFieldValue, inline: false });
