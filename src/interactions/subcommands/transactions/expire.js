@@ -173,7 +173,7 @@ async function confirmExpire(interaction) {
 		await guildMember.send({ embeds: [dmEmbed], components: [dmRow] });
 
 	} catch (e) {
-		logger.log(`WARNING`, `User ${player.name} does not have DMs open & will not receive the contract expiration message`);
+		logger.log(`WARNING`, `User ${playerData.name} does not have DMs open & will not receive the contract expiration message`);
 	}
 
 	// lastly, update meilisearch to contain their new information

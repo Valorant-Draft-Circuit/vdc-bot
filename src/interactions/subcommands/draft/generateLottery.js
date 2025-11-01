@@ -7,13 +7,13 @@ const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ROLES } = require(`../../../../utils/enums`)
 
 // 2.5 pts - First Place
-const first = [`Decaf`, `Mayhem`, `Surge`, `Latte`];
+const first = [`Decaf`, `Calamity`, `Surge`, `Latte`];
 
 // 2 pts - Second Place
-const second = [`Havoc`, `Astral Annihilators`, `Espresso`, `Anarchy`];
+const second = [`Mayhem`, `Astral Annihilators`, `Espresso`, `Anarchy`];
 
 // 1 pts - Third/Fourth Place
-const thirdfourth = [`Jesters`, `Snake Eyes`, `Crest`, `Hydrus`, `Draco`, `Purple Iris`, `Dons`, `Meteor Marauders`];
+const thirdfourth = [`Phantoms`, `Snake Eyes`, `Crest`, `Hydrus`, `Draco`, `Purple Iris`, `Dons`, `Meteor Marauders`];
 
 
 async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
