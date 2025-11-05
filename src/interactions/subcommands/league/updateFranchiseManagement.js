@@ -29,7 +29,8 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
         franchise.GM?.Accounts.find(a => a.provider == `discord`).providerAccountId,
         franchise.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
         franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-        franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+        franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+        franchise.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
     ].filter(v => v !== undefined);
 
 
@@ -65,6 +66,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             if (franchise.agm1ID == player.id) agmNumber = 1;
             else if (franchise.agm2ID == player.id) agmNumber = 2;
             else if (franchise.agm3ID == player.id) agmNumber = 3;
+            else if (franchise.agm4ID == player.id) agmNumber = 4;
             else return await interaction.editReply(`This player is not an AGM of this franchise`);
 
             await prisma.franchise.update({ where: { id: franchise.id }, data: { [`agm${agmNumber}ID`]: null } });
@@ -95,7 +97,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
     } else {
         const allGMIDs = (await prisma.franchise.findMany({
             where: { active: true },
-            select: { gmID: true, agm1ID: true, agm2ID: true, agm3ID: true }
+            select: { gmID: true, agm1ID: true, agm2ID: true, agm3ID: true, agm4ID: true }
         })).map(gms => Object.values(gms)).flat().filter(id => id != null);
 
         if (allGMIDs.includes(player.id)) return await interaction.editReply(`This player is already in franchise management! Please remove them from their current position to add them to their new position!`);
@@ -134,12 +136,13 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             return await interaction.editReply(`This operation is complete. ${guildMember} was set as the general manager for ${franchise.name}!`);
 
         } else {
-            if (franchise.agm1ID != null && franchise.agm2ID != null && franchise.agm3ID != null) return await interaction.editReply(`There are no assistant general manager slots available for this ${franchise.name}! Please remove one before adding ${guildMember} as a new assistant general manager!`);
+            if (franchise.agm1ID != null && franchise.agm2ID != null && franchise.agm3ID != null && franchise.agm4ID != null) return await interaction.editReply(`There are no assistant general manager slots available for this ${franchise.name}! Please remove one before adding ${guildMember} as a new assistant general manager!`);
 
             let openSlot = 0;
             if (franchise.agm1ID == null) openSlot = 1;
             else if (franchise.agm2ID == null) openSlot = 2;
             else if (franchise.agm3ID == null) openSlot = 3;
+            else if (franchise.agm4ID == null) openSlot = 4;
             else return await interaction.editReply(`no open slots`);
 
             await prisma.franchise.update({ where: { id: franchise.id }, data: { [`agm${openSlot}ID`]: player.id } });
