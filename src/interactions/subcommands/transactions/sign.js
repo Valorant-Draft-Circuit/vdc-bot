@@ -144,6 +144,7 @@ async function confirmSign(interaction) {
 				AGM1: { include: { Accounts: true } },
 				AGM2: { include: { Accounts: true } },
 				AGM3: { include: { Accounts: true } },
+				AGM4: { include: { Accounts: true } },
 			}
 		});
 
@@ -154,7 +155,8 @@ async function confirmSign(interaction) {
 		const agmIDs = [
 			fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 			fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-			fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+			fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			fchse.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 		].filter(v => v !== undefined);
 
 

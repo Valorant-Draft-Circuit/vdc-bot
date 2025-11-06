@@ -316,13 +316,15 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			AGM1: { include: searchSelectParams },
 			AGM2: { include: searchSelectParams },
 			AGM3: { include: searchSelectParams },
+			AGM4: { include: searchSelectParams },
 		}
 	})).map(f => {
 		return [
 			f.GM?.Accounts[0].providerAccountId,
 			f.AGM1?.Accounts[0].providerAccountId,
 			f.AGM2?.Accounts[0].providerAccountId,
-			f.AGM3?.Accounts[0].providerAccountId
+			f.AGM3?.Accounts[0].providerAccountId,
+			f.AGM4?.Accounts[0].providerAccountId,
 		]
 	}).flat().filter(v => v !== undefined);
 
@@ -389,6 +391,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 					{ AGM1: gmFranchiseSearchParam },
 					{ AGM2: gmFranchiseSearchParam },
 					{ AGM3: gmFranchiseSearchParam },
+					{ AGM4: gmFranchiseSearchParam },
 				]
 			},
 			include: {

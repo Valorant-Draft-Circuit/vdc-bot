@@ -147,6 +147,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
                         { agm1ID: playerData.id },
                         { agm2ID: playerData.id },
                         { agm3ID: playerData.id },
+                        { agm4ID: playerData.id },
                     ]
                 }
             });
@@ -167,6 +168,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
                         { agm1ID: playerData.id },
                         { agm2ID: playerData.id },
                         { agm3ID: playerData.id },
+                        { agm4ID: playerData.id }, 
                     ]
                 }
             });
