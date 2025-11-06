@@ -44,7 +44,7 @@ async function beginOfflineDraft(/** @type ChatInputCommandInteraction */ intera
     const pick = draftBoard[0];
 
     // get GMs
-    const drafterUserFilter = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID]
+    const drafterUserFilter = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID, pick.Franchise.agm4ID]
         .filter(id => id !== null)
         .map(id => { return { id: id } });
 
@@ -124,7 +124,7 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     const drafterDiscordID = interaction.user.id;
     const drafterRoles = interaction.member._roles;
     const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID, pick.Franchise.agm4ID].filter(id => id !== null);
     if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot draft for this pick.`);
 
     const franchise = await Franchise.getBy({ id: pick.franchise })
@@ -196,7 +196,7 @@ async function cancelDraft(/** @type ButtonInteraction */ interaction) {
     const drafterDiscordID = interaction.user.id;
     const drafterRoles = interaction.member._roles;
     const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID, pick.Franchise.agm4ID].filter(id => id !== null);
     if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot cancel this pick.`);
 
     // delete the reply...
@@ -234,10 +234,10 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     const drafterDiscordID = interaction.user.id;
     const drafterRoles = interaction.member._roles;
     const drafter = await Player.getBy({ discordID: drafterDiscordID });
-    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID].filter(id => id !== null);
+    const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID, pick.Franchise.agm4ID].filter(id => id !== null);
     if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and so you cannot confirm this draft pick.`);
 
-    const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID, nextPick.Franchise.agm3ID]
+    const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID, nextPick.Franchise.agm3ID, nextPick.Franchise.agm4ID]
         .filter(id => id !== null)
         .map(id => { return { id: id } });
 

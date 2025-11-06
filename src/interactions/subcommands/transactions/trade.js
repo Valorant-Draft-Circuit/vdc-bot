@@ -775,6 +775,7 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 					AGM1: { include: { Accounts: true } },
 					AGM2: { include: { Accounts: true } },
 					AGM3: { include: { Accounts: true } },
+					AGM4: { include: { Accounts: true } },
 				}
 			});
 
@@ -785,7 +786,8 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 			const agmIDs = [
 				fchse.AGM1?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 				fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
-				fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId
+				fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+				fchse.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 			].filter(v => v !== undefined);
 
 
