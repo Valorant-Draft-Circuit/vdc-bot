@@ -8,7 +8,18 @@ const Canvas = require('@napi-rs/canvas');
 const { Tier } = require('@prisma/client');
 const { ControlPanel } = require('../../../../prisma');
 const { GlobalFonts } = require('@napi-rs/canvas');
-const { COLORS } = require('../../../../utils/enums');
+const COLORS = {
+    RECRUIT: `#FF5733`,
+    PROSPECT: `#FEC335`,
+    APPRENTICE: `#72C357`,
+    EXPERT: `#04AEE4`,
+    MYTHIC: `#A657A6`,
+
+    RED: `#DE3845`,
+    WHITE: `#DE3845`,
+    GRAY: `#181818`,
+    BLACK: `#71C358`,
+}
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 
