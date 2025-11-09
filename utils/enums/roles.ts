@@ -76,6 +76,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
         OPERATIONS: {
             ADMIN: `963298727810990101`,
             MOD: `966910372894343168`,
+            TRANSACTIONS: `966910433070030858`,
 
             // GM/AGM IDs
             GM: `963862762881175572`,
