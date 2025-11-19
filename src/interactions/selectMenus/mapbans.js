@@ -51,7 +51,7 @@ module.exports = {
         const emote = splitInteractionMessage[0].match(/(<:\w+:)\d+>/)[0];
         const teamName = splitInteractionMessage[1];
         const mapBanType = splitInteractionMessage[3];
-        const mapSelection = values[0][0].toUpperCase() + values[0].substring(1).toLowerCase();
+        const mapSelection = values[0][0].toUpperCase() + values[0].substring(1).toUpperCase();
         // ########################################################################################
 
 
@@ -110,7 +110,11 @@ module.exports = {
         if (!response.ok) return logger.log(`ERROR`, `There was an error fetching map data!`)
         const maps = (await response.json()).data;
 
-        const mapData = maps.find(m => m.displayName == mapSelection);
+        // I know this is bad.  Ill try fix it later when games are not being played.
+        // TODO: Fix capitalization later Pt. 1
+        capitalizedMap = mapSelection.charAt(0).toUpperCase() + mapSelection.slice(1).toLowerCase();
+
+        const mapData = maps.find(m => m.displayName == capitalizedMap);
         await interaction.message.edit({ content: `${emote} \`${teamName}\` select \`${mapSelection}\` as their \`${mapBanType}\``, components: [], files: [mapData.listViewIcon] });
         logger.log(`VERBOSE`, `\`${interaction.user.tag}\` selected \`${mapSelection}\` as their \`${mapBanType}\` for \`${teamName}\` (Match ID: \`${matchID}\`)`);
         // ########################################################################################
@@ -141,8 +145,12 @@ module.exports = {
         const nextBanState = banOrder[1];
         if (nextBanState == MapBanType.DISCARD || nextBanState == MapBanType.DECIDER) {
 
+            // I know this is bad.  Ill try fix it later when games are not being played.
+            // TODO: Fix capitalization later Pt. 2
+            capitalizedRemainingMap = remainingMaps[0].charAt(0).toUpperCase() + remainingMaps[0].slice(1).toLowerCase();
+
             // update the last map in the database
-            const mapData = maps.find(m => m.displayName == remainingMaps[0]);
+            const mapData = maps.find(m => m.displayName == capitalizedRemainingMap);
             await prisma.mapBans.update({
                 where: { id: updatedDB.id + 1 },
                 data: { map: remainingMaps[0] }
