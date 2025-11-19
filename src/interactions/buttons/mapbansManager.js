@@ -64,8 +64,8 @@ module.exports = {
 
         if (!isOnTeam) {
             return await Promise.all([
-            interaction.deleteReply(),
-            interaction.channel.send({ content: `${interaction.member}, you are not a rostered player for \`${pickingTeam.name}\`, and cannot make this selection` })
+                interaction.deleteReply(),
+                interaction.channel.send({ content: `${interaction.member}, you are not a rostered player for \`${pickingTeam.name}\`, and cannot make this selection` })
             ]);
         };
         // ########################################################################################
