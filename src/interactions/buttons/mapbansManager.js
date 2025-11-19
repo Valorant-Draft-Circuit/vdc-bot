@@ -106,7 +106,10 @@ module.exports = {
 
 
         // send data for map selection
-        const mapData = maps.find(m => m.displayName == currentSelection.map);
+        // I know this is bad.  Ill try fix it later when games are not being played.
+        // TODO: Fix capitalization later Pt. 3
+        capitalizedMap = currentSelection.map.charAt(0).toUpperCase() + currentSelection.map.slice(1).toLowerCase();
+        const mapData = maps.find(m => m.displayName == capitalizedMap);
         const curSelFran = pickingTeam.Franchise;
         await interaction.message.edit({
             content: `<${curSelFran.Brand.discordEmote}> \`${pickingTeam.name}\` select ${sideEmote} \`${side}\` on \`${currentSelection.map}\``,
@@ -141,7 +144,10 @@ module.exports = {
 
             for (let i = 0; i < finalMapBans.length; i++) {
                 const finalData = finalMapBans[i];
-                new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(maps.find(m => m.displayName == finalData.map).listViewIcon))
+                // I know this is bad.  Ill try fix it later when games are not being played.
+                // TODO: Fix capitalization later Pt. 4
+                capitalizedMap = finalData.map.charAt(0).toUpperCase() + finalData.map.slice(1).toLowerCase();
+                new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(maps.find(m => m.displayName == capitalizedMap).listViewIcon))
 
 
                 const sidePickingTeamID = teamIDs.find(tid => tid != finalData.team);
@@ -151,7 +157,7 @@ module.exports = {
                     `<${finalData.Team.Franchise.Brand.discordEmote}> \`${finalData.Team.name}\` picks \`${finalData.map}\``;
 
                 components.push(...[
-                    new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(maps.find(m => m.displayName == finalData.map).listViewIcon)),
+                    new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(maps.find(m => m.displayName == capitalizedMap).listViewIcon)),
                     new TextDisplayBuilder({ content: `Map \`${i + 1}\` : ${mapPickText} — <${sidePickingTeam.Franchise.Brand.discordEmote}> \`${sidePickingTeam.name}\` picks ${finalData.side == MapBansSide.ATTACK ? `⚔️` : `🛡️`} \`${finalData.side}\`` })
                 ]);
 
