@@ -63,10 +63,10 @@ module.exports = {
 
 
         if (!isOnTeam) {
-        return await Promise.all([
-        interaction.deleteReply(),
-        interaction.channel.send({ content: `${interaction.member}, you are not a rostered player for \`${pickingTeam.name}\`, and cannot make this selection` })
-        ]);
+            return await Promise.all([
+            interaction.deleteReply(),
+            interaction.channel.send({ content: `${interaction.member}, you are not a rostered player for \`${pickingTeam.name}\`, and cannot make this selection` })
+            ]);
         };
         // ########################################################################################
 
@@ -153,8 +153,8 @@ module.exports = {
                 const sidePickingTeamID = teamIDs.find(tid => tid != finalData.team);
                 const sidePickingTeam = teams.find(t => t.id == sidePickingTeamID);
                 const mapPickText = finalData.type == MapBanType.DECIDER ?
-                    `The decider is \`${capitalizedMap}\`` :
-                    `<${finalData.Team.Franchise.Brand.discordEmote}> \`${finalData.Team.name}\` picks \`${capitalizedMap}\``;
+                    `The decider is \`${finalData.map}\`` :
+                    `<${finalData.Team.Franchise.Brand.discordEmote}> \`${finalData.Team.name}\` picks \`${finalData.map}\``;
 
                 components.push(...[
                     new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(maps.find(m => m.displayName == capitalizedMap).listViewIcon)),
