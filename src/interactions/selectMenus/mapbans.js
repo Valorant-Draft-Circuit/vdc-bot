@@ -111,7 +111,11 @@ module.exports = {
         const maps = (await response.json()).data;
 
         const mapData = maps.find(m => m.displayName == mapSelection);
-        await interaction.message.edit({ content: `${emote} \`${teamName}\` select \`${mapSelection}\` as their \`${mapBanType}\``, components: [], files: [mapData.listViewIcon] });
+        await interaction.message.edit({ 
+            content: `${emote} \`${teamName}\` select \`${mapSelection}\` as their \`${mapBanType}\``, 
+            components: [], 
+            files: mapData?.listViewIcon ? [mapData.listViewIcon] : [] 
+        });
         logger.log(`VERBOSE`, `\`${interaction.user.tag}\` selected \`${mapSelection}\` as their \`${mapBanType}\` for \`${teamName}\` (Match ID: \`${matchID}\`)`);
         // ########################################################################################
 
@@ -152,7 +156,7 @@ module.exports = {
             await interaction.channel.send({
                 content: `\`${remainingMaps[0]}\` remains as the \`${nextBanState}\``,
                 components: [],
-                files: [mapData.listViewIcon]
+                files: mapData?.listViewIcon ? [mapData.listViewIcon] : []
             });
 
             // get the side selection data
