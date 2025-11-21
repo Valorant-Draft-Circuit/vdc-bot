@@ -130,12 +130,14 @@ module.exports = {
                     ],
                     allowMultiselect: false,
                     duration: hoursTill,
-                    components: []
-                }
+                    // components: []
+                },
+                components: []
             };
 
             if (homeOptionsArr.length !== 0) {
                 // create the action row, add the component to it & then reply with all the data
+                logger.log(`INFO`, `Home Options Array: ${JSON.stringify(homeOptionsArr)}`);
                 const homeRow = new ActionRowBuilder({
                     components: [new StringSelectMenuBuilder({
                         customId: `maphistory_home`,
