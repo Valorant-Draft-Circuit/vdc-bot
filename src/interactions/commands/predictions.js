@@ -130,8 +130,9 @@ module.exports = {
                     ],
                     allowMultiselect: false,
                     duration: hoursTill,
-                    components: []
-                }
+                    // components: []
+                },
+                components: []
             };
 
             if (homeOptionsArr.length !== 0) {
