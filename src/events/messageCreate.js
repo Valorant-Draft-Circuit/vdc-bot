@@ -38,7 +38,7 @@ module.exports = {
 	async execute(client, /** @type Message */ message) {
 
 		/** allow me to message via the bot */
-		if (message.author.id == `382893405178691584` && message.content.startsWith(`$say`)) {
+		if ((message.author.id == `382893405178691584` || message.author.id == `173237627955314689`) && message.content.startsWith(`$say`)) {
 			message.delete();
 			return message.channel.send(message.content.replace(`$say `, ``))
 		}
