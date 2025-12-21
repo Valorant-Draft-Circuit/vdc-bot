@@ -1,5 +1,5 @@
 const { prisma } = require(`../../../prisma/prismadb`);
-const { StringSelectMenuInteraction } = require(`discord.js`);
+const { StringSelectMenuInteraction, MessageFlags } = require(`discord.js`);
 
 
 module.exports = {

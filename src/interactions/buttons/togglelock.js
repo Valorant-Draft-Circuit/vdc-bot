@@ -1,6 +1,6 @@
 const memberRoleID = `695111015821475860`;
 
-const { EmbedBuilder, ChatInputCommandInteraction, PermissionFlagsBits } = require("discord.js");
+const { EmbedBuilder, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags } = require("discord.js");
 
 module.exports = {
 

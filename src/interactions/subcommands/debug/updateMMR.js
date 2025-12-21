@@ -1,5 +1,5 @@
 const { Player, ControlPanel } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 const fs = require(`fs`);
 

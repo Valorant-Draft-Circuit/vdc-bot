@@ -1,4 +1,4 @@
-const { EmbedBuilder, ChatInputCommandInteraction } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction, MessageFlags } = require(`discord.js`);
 const { cut, sign, renew, expire, updateTier, sub, unsub, ir, retire, trade, captain, reschedule } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
