@@ -20,6 +20,6 @@ module.exports = {
         if (_subcommand === `refresh-cache`) return refreshCache(interaction);
         if (_subcommand === `profile-update-server`) return profileUpdateServer(interaction);
         if (_subcommand === 'offseason-reset') return offseasonReset(interaction);
-        if (_subcommand === 'reset-map-ban') return resetMapBan(interaction);
+        if (_subcommand === 'reset-mapban') return resetMapBan(interaction);
         }
 };

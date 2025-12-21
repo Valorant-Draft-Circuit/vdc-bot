@@ -212,7 +212,7 @@ module.exports = {
             type: ApplicationCommandOptionType.Subcommand
         },
         {
-            name: `reset-map-ban`,
+            name: `reset-mapban`,
             description: `Reset the map bans for a specific match.`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [
