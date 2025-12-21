@@ -162,6 +162,9 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
     const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
     let embedcolor;
     switch (true) {
+        case tierLines.RECRUIT.min < mmr && mmr < tierLines.RECRUIT.max:
+            embedcolor = COLORS.RECRUIT
+            break;
         case tierLines.PROSPECT.min < mmr && mmr < tierLines.PROSPECT.max:
             embedcolor = COLORS.PROSPECT
             break;
@@ -329,7 +332,8 @@ async function createSubOverview(player) {
 
     const mmrCaps = await ControlPanel.getMMRCaps(`PLAYER`);
 
-    if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.PROSPECT.max) tier = `Prospect`;
+    if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.RECRUIT.max) tier = `Recruit`;
+    else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.PROSPECT.max) tier = `Prospect`;
     else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.APPRENTICE.max) tier = `Apprentice`;
     else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.EXPERT.max) tier = `Expert`;
     else tier = `Mythic`;
