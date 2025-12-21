@@ -8,6 +8,7 @@ const { profileUpdate } = require("./profileUpdate");
 const { refreshCache } = require("./refreshCache");
 const { profileUpdateServer } = require("./profileUpdateServer");
 const { offseasonReset } = require("./offseasonReset");
+const { resetMapBan } = require("./resetMapBan");
 
 
 module.exports = {
@@ -21,4 +22,5 @@ module.exports = {
     refreshCache: refreshCache,
     profileUpdateServer: profileUpdateServer,
     offseasonReset: offseasonReset,
+    resetMapBan: resetMapBan
 }

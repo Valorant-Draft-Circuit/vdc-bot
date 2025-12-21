@@ -211,5 +211,18 @@ module.exports = {
             description: `WARNING: THIS WILL UPDATE A LOT OF DATA. This will set up the database for the new season.`,
             type: ApplicationCommandOptionType.Subcommand
         },
+        {
+            name: `reset-map-ban`,
+            description: `Reset the map bans for a specific match.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `match-id`,
+                    description: `The ID of the match to reset map bans for.`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: true
+                }
+            ]
+        }
     ]
 }
