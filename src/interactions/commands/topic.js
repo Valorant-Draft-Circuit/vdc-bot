@@ -8,7 +8,7 @@ module.exports = {
 
         const topic = interaction.channel.topic;
 
-        if (topic == undefined) return interaction.reply({ content: `This channel doesn't have a topic!`, ephemeral: true });
+        if (topic == undefined) return interaction.reply({ content: `This channel doesn't have a topic!`, flags: [MessageFlags.Ephemeral] });
 
         const embed = new EmbedBuilder({
             description: `Please keep conversations in this channel on topic!`,

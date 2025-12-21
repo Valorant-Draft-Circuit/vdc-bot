@@ -15,7 +15,7 @@ module.exports = {
                 description: `You're not in this voice channel and thus cannot modify its settings!`,
                 color: 0x235A81
             });
-            return await interaction.reply({ embeds: [notallowed], ephemeral: true });
+            return await interaction.reply({ embeds: [notallowed], flags: [MessageFlags.Ephemeral] });
         }
 
         const memberUptate = Number(interaction.values[0]);

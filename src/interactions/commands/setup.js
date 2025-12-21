@@ -18,7 +18,7 @@ module.exports = {
             case `activity-check`:
                 return await activityCheck(interaction);
             default:
-                return await interaction.editReply({ content: `Hey there! Looks like you're looking for functionality that doesn't exist! If you think this is wrong, please contact Travestey!`, ephemeral: true });
+                return await interaction.editReply({ content: `Hey there! Looks like you're looking for functionality that doesn't exist! If you think this is wrong, please contact Tech!`, flags: [MessageFlags.Ephemeral] });
         }
     }
 };

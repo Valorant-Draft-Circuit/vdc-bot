@@ -14,7 +14,7 @@ module.exports = {
 
         return await interaction.reply({
             content: `https://tracker.gg/valorant/match/${matches[0].gameID}\nhttps://tracker.gg/valorant/match/${matches[1].gameID}`,
-            ephemeral: true
+            flags: [MessageFlags.Ephemeral]
         });
     }
 };

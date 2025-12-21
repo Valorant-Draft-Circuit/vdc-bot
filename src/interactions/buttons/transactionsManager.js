@@ -7,7 +7,7 @@ module.exports = {
 	id: `transactionsManager`,
 
 	async execute(/** @type ChatInputCommandInteraction */ interaction, args) {
-		await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] }); // defer as early as possible
 
 		switch (Number(args)) {
 			//  CONFIRM BUTTONS  ###################################

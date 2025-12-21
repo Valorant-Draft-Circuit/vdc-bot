@@ -14,7 +14,7 @@ module.exports = {
     name: `predictions`,
 
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
         const options = interaction.options._hoistedOptions;
         const tier = options.find(o => o.name == `tier`).value;
