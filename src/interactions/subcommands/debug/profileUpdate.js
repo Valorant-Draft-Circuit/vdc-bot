@@ -1,6 +1,6 @@
 const { GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
 const { Player, ControlPanel } = require(`../../../../prisma`);
-const { LeagueStatus } = require("@prisma/client");
+const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES } = require("../../../../utils/enums");
 
@@ -200,6 +200,9 @@ async function profileUpdate(/** @type ChatInputCommandInteraction */ interactio
 	const isFM = gmids.includes(userID);
 	const isSigned = player.team !== null;
 
+	// determine if the player is IR
+	const isInactiveReserve = player.Status.contractStatus === ContractStatus.INACTIVE_RESERVE;
+
 	// determine leaguestate
 	const leagueState = await ControlPanel.getLeagueState();
 
@@ -286,6 +289,11 @@ async function profileUpdate(/** @type ChatInputCommandInteraction */ interactio
 		if (franchiseGMDiscordID == userID) isGM = true;
 
 		state = isGM ? `PLAYING GM` : `PLAYING AGM`;
+	} else if (isInactiveReserve) {										// INACTIVE RESERVE PLAYER
+		team = player.Team;
+		franchise = player.Team.Franchise;
+		slug = player.Team.Franchise.slug;
+		state = `INACTIVE RESERVE`;
 	} else if (isSigned) {												// SIGNED PLAYER
 		team = player.Team;
 		franchise = player.Team.Franchise;
@@ -369,7 +377,21 @@ async function profileUpdate(/** @type ChatInputCommandInteraction */ interactio
 			readableRoles.push(...tierroleResponse.readableRoles);
 		}
 
-	} else if (isSigned) {												// SIGNED PLAYER
+	} else if (isInactiveReserve) {										// INACTIVE RESERVE PLAYER
+		const franchiseRole = franchise.roleID;
+	
+		// push roles to array
+		roles.push(ROLES.LEAGUE.LEAGUE, franchiseRole, ROLES.LEAGUE.INACTIVE_RESERVE);
+		readableRoles.push(`League`, franchise.name, `Inactive Reserve`);
+
+		// if the state is not combines, add tier roles
+		if (leagueState !== `COMBINES`) {
+			const tierroleResponse = await getTierRole(player, isSigned);
+			roles.push(...tierroleResponse.roles);
+			readableRoles.push(...tierroleResponse.readableRoles);
+		}
+		
+    } else if (isSigned) {												// SIGNED PLAYER
 		const franchiseRole = franchise.roleID;
 
 		// push roles to array
