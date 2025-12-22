@@ -189,6 +189,12 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         url: trackerURL
     })
 
+    const websiteButton = new ButtonBuilder({
+        style: ButtonStyle.Link,
+        label: `Match History`,
+        url: `https://vdc.gg/player/${guildMember.user.id}`
+    })
+
     // create the embed
     const embed = new EmbedBuilder({
         author: { name: `${[prefix, riotIGN.split(`#`)[0]].join(` | `)}  -  ${`Season ${season} Stats`}`, url: trackerURL },
@@ -208,7 +214,7 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         ],
         footer: { text: `Stats — Player` }
     });
-    const components = new ActionRowBuilder({ components: [trackerButton] })
+    const components = new ActionRowBuilder({ components: [websiteButton, trackerButton] })
     return await interaction.editReply({ embeds: [embed], components: [components] })
 }
 
