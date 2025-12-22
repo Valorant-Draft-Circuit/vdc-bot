@@ -28,7 +28,7 @@
   "homepage": "https://github.com/Valorant-Draft-Circuit/vdc-bot#readme",
   "dependencies": {
     "@napi-rs/canvas": "^0.1.52",
-    "@prisma/client": "^6.15.0",
+    "@prisma/client": "^7.2.0",
     "chalk": "^4.1.2",
     "discord.js": "^14.16.3",
     "dotenv": "^17.0.0",
