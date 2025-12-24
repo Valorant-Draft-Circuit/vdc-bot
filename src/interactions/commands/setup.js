@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ChatInputCommandInteraction } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ChatInputCommandInteraction, MessageFlags } = require("discord.js");
 const { ButtonStyle } = require(`discord.js`)
 
 const { Player } = require("../../../prisma");
@@ -18,7 +18,7 @@ module.exports = {
             case `activity-check`:
                 return await activityCheck(interaction);
             default:
-                return await interaction.editReply({ content: `Hey there! Looks like you're looking for functionality that doesn't exist! If you think this is wrong, please contact Travestey!`, ephemeral: true });
+                return await interaction.editReply({ content: `Hey there! Looks like you're looking for functionality that doesn't exist! If you think this is wrong, please contact Tech!`, flags: [MessageFlags.Ephemeral] });
         }
     }
 };

@@ -1,5 +1,5 @@
 const { Player, ControlPanel } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 const fs = require(`fs`);
 
@@ -43,7 +43,7 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
                 name: `\u200B`,
                 value:
                     `__**MMR Update Summary**__\n` +
-                    `\`${oldMMR} \` => \`${newMMR}\``
+                    `\`${oldMMR}\` => \`${newMMR}\``
                 ,
                 inline: false
             }
@@ -58,7 +58,7 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
 
     await interaction.editReply({ embeds: [embed] });
     // Commented out while doing queue testing as it just spams the chat.
-    // return await interaction.followUp({ content: flavorResponses[i], ephemeral: true })
+    // return await interaction.followUp({ content: flavorResponses[i], flags: [MessageFlags.Ephemeral] })
 }
 
 module.exports = { updateMMR };

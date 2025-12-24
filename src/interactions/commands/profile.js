@@ -332,6 +332,9 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	const isFM = gmids.includes(interaction.user.id);
 	const isSigned = player.team !== null;
 
+	// determine if the player is an inactive reserve
+	const isInactiveReserve = player.Status.contractStatus === ContractStatus.INACTIVE_RESERVE;
+
 	// determine leaguestate
 	const leagueState = await ControlPanel.getLeagueState();
 
@@ -418,6 +421,11 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		if (franchiseGMDiscordID == userID) isGM = true;
 
 		state = isGM ? `PLAYING GM` : `PLAYING AGM`;
+	} else if (isInactiveReserve) {										// INACTIVE RESERVE
+		team = player.Team;
+		franchise = player.Team.Franchise;
+		slug = player.Team.Franchise.slug;
+		state = `INACTIVE RESERVE`;
 	} else if (isSigned) {												// SIGNED PLAYER
 		team = player.Team;
 		franchise = player.Team.Franchise;
@@ -490,6 +498,17 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 			roles.push(...(await getTierRole(player, isSigned)));
 		}
 
+	} else if (isInactiveReserve) {										// INACTIVE RESERVE
+		const franchiseRole = franchise.roleID;
+
+		// push roles to array
+		roles.push(ROLES.LEAGUE.LEAGUE, franchiseRole, ROLES.LEAGUE.INACTIVE_RESERVE);
+
+		// if the state is not combines, add tier roles
+		if (leagueState !== `COMBINES`) {
+			roles.push(...(await getTierRole(player, isSigned)));
+		}
+	
 	} else if (isSigned) {												// SIGNED PLAYER
 		const franchiseRole = franchise.roleID;
 
@@ -667,14 +686,20 @@ async function getTierRole(player, isSigned) {
 
 	let roles = [];
 
-	if ( 											// PROSPECT
+	if ( 											// RECRUIT
+		tierLines.RECRUIT.min <= mmrEffective &&
+		mmrEffective <= tierLines.RECRUIT.max
+	) {
+		roles.push(ROLES.TIER.RECRUIT);
+		if (!isSigned) roles.push(ROLES.TIER.RECRUIT_FREE_AGENT);
+	} else if ( 											// PROSPECT
 		tierLines.PROSPECT.min <= mmrEffective &&
 		mmrEffective <= tierLines.PROSPECT.max
 	) {
 		roles.push(ROLES.TIER.PROSPECT);
 		if (!isSigned) roles.push(ROLES.TIER.PROSPECT_FREE_AGENT);
 
-	} else if ( 									// APPRENCICE
+	} else if ( 									// APPRENTICE
 		tierLines.APPRENTICE.min <= mmrEffective &&
 		mmrEffective <= tierLines.APPRENTICE.max
 	) {

@@ -110,7 +110,7 @@ module.exports = {
             description:
                 `\`Home\` : <${nextMatch.Home.Franchise.Brand.discordEmote}> \`${nextMatch.Home.Franchise.slug.padStart(3, ` `)}\` - \`${nextMatch.Home.name}\`\n` +
                 `\`Away\` : <${nextMatch.Away.Franchise.Brand.discordEmote}> \`${nextMatch.Away.Franchise.slug.padStart(3, ` `)}\` - \`${nextMatch.Away.name}\`\n` +
-                `\`Match ID\` : \`${nextMatch.matchID}\`\n` +
+                `\`Match ID\` : [\`${nextMatch.matchID}\`](https://vdc.gg/match/${nextMatch.matchID})\n` +
                 `\`Date\` : ${timeStampString}\n\n` +
                 `**Ban Order** :\n${banOrder.map(o => `\`${o}\``).join(`, `)}\n\n` +
                 `**Map Pool** :\n${mapPool.map(mp => `\`${mp}\``).join(`, `)}\n`,
@@ -139,6 +139,7 @@ module.exports = {
             name: channelName,
             type: ChannelType.GuildText,
             parent: CHANNELS.CATEGORIES.MAPBANS,
+            topic: `Match ID: ${nextMatch.matchID} | Home: <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} | Away: <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name}`,
             permissionOverwrites: [
                 ...channelOverrides,
                 ...bansCategory.permissionOverwrites.cache.map((p) => {

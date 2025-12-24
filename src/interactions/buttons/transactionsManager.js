@@ -1,4 +1,4 @@
-const { EmbedBuilder, ChatInputCommandInteraction } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction, MessageFlags } = require(`discord.js`);
 const { cut, sign, renew, expire, updateTier, sub, unsub, ir, retire, trade, captain, reschedule } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
@@ -7,7 +7,7 @@ module.exports = {
 	id: `transactionsManager`,
 
 	async execute(/** @type ChatInputCommandInteraction */ interaction, args) {
-		await interaction.deferReply({ ephemeral: true }); // defer as early as possible
+		await interaction.deferReply({ flags: [MessageFlags.Ephemeral] }); // defer as early as possible
 
 		switch (Number(args)) {
 			//  CONFIRM BUTTONS  ###################################

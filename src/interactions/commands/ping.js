@@ -25,10 +25,20 @@ module.exports = {
 
         // Total code latency
         const codeLatency = Math.round(performance.now() - startTime);
-        
+
+
+        const sslCipherRows = await prisma.$queryRaw`SHOW STATUS LIKE 'Ssl_cipher';`;
+        const sslVersionRows = await prisma.$queryRaw`SHOW STATUS LIKE 'Ssl_version';`;
+    
+
+        const cipherValue = sslCipherRows?.[0]?.Value;
+        const versionValue = sslVersionRows?.[0]?.Value;
+
+        const sslCipher = (cipherValue === '') ? 'N/A' : cipherValue;
+        const sslVersion = (versionValue === '') ? 'N/A' : versionValue;
 
         await interaction.editReply({
-            content: `Pong!\n📡 Discord latency: ${discordLatency}ms - time from command received to reply saved.\n🗄️ DB latency: ${dbLatency}ms - Prisma query time to the database.\n⏱️ Code+API time: ${codeLatency}ms - total command execution time.`
+            content: `Pong!\n📡 Discord latency: ${discordLatency}ms - time from command received to reply saved.\n🗄️ DB latency: ${dbLatency}ms - Prisma query time to the database.\n⏱️ Code+API time: ${codeLatency}ms - total command execution time.\n🔒 SSL Cypher: \`${sslCipher}\`\n🔑 SSL Version: \`${sslVersion}\``
         });
 
 

@@ -20,7 +20,7 @@
     "type": "git",
     "url": "git+https://github.com/Valorant-Draft-Circuit/vdc-bot"
   },
-  "author": "Rohan Gupta",
+  "contributors": ["Rohan Gupta", "Unieveth", "Treeko", "Kryo", "dlatngh"],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/Valorant-Draft-Circuit/vdc-bot/issues"
