@@ -1,8 +1,7 @@
-FROM node:lts-bullseye-slim
-RUN apt-get update && apt-get install -y openssl libssl-dev
+FROM node:lts-alpine
 WORKDIR /opt/bot
 
-ENV FORCE_COLOR 1
+ENV FORCE_COLOR=1
 
 ## Install Dep
 COPY package*.json ./
