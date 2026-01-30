@@ -18,6 +18,7 @@ export enum TransactionsNavigationOptions {
     RETIRE_COMFIRM              = 105,
     EXPIRE_COMFIRM              = 106,
     RESCHEDULE_CONFIRM          = 107,
+    SCHEDULE_PLAYOFF_CONFIRM    = 108,
 
     IR_SET_COMFIRM              = 200,
     IR_REMOVE_COMFIRM           = 201,

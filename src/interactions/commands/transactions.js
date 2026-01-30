@@ -1,5 +1,5 @@
 const { ChatInputCommandInteraction } = require("discord.js");
-const { cut, sign, renew, expire, updateTier, sub, unsub, ir, captain, retire, trade, reschedule } = require(`../subcommands/transactions`);
+const { cut, sign, renew, expire, updateTier, sub, unsub, ir, captain, retire, trade, reschedule, schedulePlayoff } = require(`../subcommands/transactions`);
 
 module.exports = {
 	name: `transactions`,
@@ -101,6 +101,17 @@ module.exports = {
 				const matchday = _hoistedOptions[1].value;
 				const rescheduleDate = _hoistedOptions[2].value;
 				return reschedule.reschedule(interaction, teamName, matchday, rescheduleDate);
+			}
+
+			case `schedule-playoff`: {
+				// Schedule a new playoff match
+				const homeTeam = _hoistedOptions[0].value;
+				const awayTeam = _hoistedOptions[1].value;
+				const tier = _hoistedOptions[2].value;
+				const matchType = _hoistedOptions[3].value;
+				const matchday = _hoistedOptions[4].value;
+				const date = _hoistedOptions[5].value;
+				return schedulePlayoff.schedulePlayoff(interaction, homeTeam, awayTeam, tier, matchType, matchday, date);
 			}
 
 			default:
