@@ -10,7 +10,8 @@ const { requestCaptain, confirmToggleCaptain } = require(`./captain`);
 const { requestRetire, confirmRetire } = require(`./retire`);
 const { requestTrade, resetTrade, confirmTrade, displayFranchiseTradeOptions, playerTradeRequest, draftPickTradeRequest } = require(`./trade`);
 const { requestReschedule, confirmReschedule } = require("./reschedule");
-const reschedule = require("./reschedule");
+const { schedulePlayoff, confirmSchedulePlayoff } = require("./schedule-playoff");
+//const reschedule = require("./reschedule");  // This was here before but seems unused now
 
 module.exports = {
 	sign: {
@@ -65,5 +66,9 @@ module.exports = {
 
 		playerTradeRequest: playerTradeRequest,
 		draftPickTradeRequest: draftPickTradeRequest,
+	},
+	schedulePlayoff: {
+		schedulePlayoff: schedulePlayoff,
+		confirmSchedulePlayoff: confirmSchedulePlayoff,
 	},
 };

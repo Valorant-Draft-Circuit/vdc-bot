@@ -219,6 +219,64 @@ module.exports = {
                     required: true,
                 }
             ]
+        },
+        {
+            name: `schedule-playoff`,
+            description: `Schedule a new playoff match`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `home-team`,
+                    description: `The home team for the playoff match`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    autocomplete: true
+                },
+                {
+                    name: `away-team`,
+                    description: `The away team for the playoff match`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    autocomplete: true
+                },
+                {
+                    name: `tier`,
+                    description: `Tier of the playoff match`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        { name: `RECRUIT`, value: `RECRUIT` },
+                        { name: `PROSPECT`, value: `PROSPECT` },
+                        { name: `APPRENTICE`, value: `APPRENTICE` },
+                        { name: `EXPERT`, value: `EXPERT` },
+                        { name: `MYTHIC`, value: `MYTHIC` },
+                        { name: `MIXED`, value: `MIXED` },
+                    ]
+                },
+                {
+                    name: `match-type`,
+                    description: `Match type for the playoff match`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    choices: [
+                        { name: `BO2`, value: `BO2` },
+                        { name: `BO3`, value: `BO3` },
+                        { name: `BO5`, value: `BO5` },
+                    ]
+                },
+                {
+                    name: `matchday`,
+                    description: `The matchday number for the playoff`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: true,
+                },
+                {
+                    name: `date`,
+                    description: `The date & time to schedule (Discord Timestamp: <t:TIMESTAMP:f>)`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                }
+            ]
         }
     ]
 }

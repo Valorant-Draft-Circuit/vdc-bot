@@ -1,5 +1,5 @@
 const { EmbedBuilder, ChatInputCommandInteraction, MessageFlags } = require(`discord.js`);
-const { cut, sign, renew, expire, updateTier, sub, unsub, ir, retire, trade, captain, reschedule } = require(`../subcommands/transactions`);
+const { cut, sign, renew, expire, updateTier, sub, unsub, ir, retire, trade, captain, reschedule, schedulePlayoff } = require(`../subcommands/transactions`);
 
 const { TransactionsNavigationOptions } = require(`../../../utils/enums`);
 
@@ -25,7 +25,8 @@ module.exports = {
 				return await retire.confirm(interaction);
 			case TransactionsNavigationOptions.RESCHEDULE_CONFIRM:
 				return await reschedule.confirm(interaction);
-
+			case TransactionsNavigationOptions.SCHEDULE_PLAYOFF_CONFIRM:
+				return await schedulePlayoff.confirmSchedulePlayoff(interaction);
 
 			//  SUB BUTTONS  #######################################
 			case TransactionsNavigationOptions.SUB_CONFIRM:
