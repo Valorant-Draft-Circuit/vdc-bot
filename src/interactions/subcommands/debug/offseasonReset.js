@@ -60,6 +60,7 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
         await interaction.editReply(progress.join('\n'));
         await removeCaptain(interaction, captain);
         progress.pop();
+        progress.pop();
         progress.push(`      - ✅ Removed captain from ${captain.name} (${captain.id}).`);
         await interaction.editReply(progress.join('\n'));
     }
@@ -70,6 +71,7 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
         progress.push(`      - Removing inactive reserve status from ${inactiveReserve.name} (${inactiveReserve.id})...`);
         await interaction.editReply(progress.join('\n'));
         await removeInactiveReserve(interaction, inactiveReserve);
+        progress.pop();
         progress.pop();
         progress.push(`      - ✅ Removed inactive reserve status from ${inactiveReserve.name} (${inactiveReserve.id}).`);
         await interaction.editReply(progress.join('\n'));
@@ -175,7 +177,6 @@ async function removeCaptain(interaction, captain) {
     const playerDiscordID = captain.Accounts.find(a => a.provider === `discord`).providerAccountId;
     const guildMember = await interaction.guild.members.fetch(playerDiscordID);
     const team = await Team.getBy({ id: captain.Captain.id });
-    console.log(team);
     // Remove the database role of captain
     await Player.modifyRoles({ userID: captain.id }, 'REMOVE', [Roles.LEAGUE_CAPTAIN]);
     // uncaptain the player & ensure that the player's Captain property is now null
@@ -205,7 +206,6 @@ async function removeInactiveReserve(interaction, inactiveReserve) {
     const playerDiscordID = inactiveReserve.Accounts.find(a => a.provider === `discord`).providerAccountId;
     const guildMember = await interaction.guild.members.fetch(playerDiscordID);
     const team = await Team.getBy({ id: inactiveReserve.team });
-    console.log(team);
     // Remove the database role of captain
     await Player.modifyRoles({ userID: inactiveReserve.id }, 'REMOVE', [Roles.LEAGUE_CAPTAIN]);
     // uncaptain the player & ensure that the player's Captain property is now null
