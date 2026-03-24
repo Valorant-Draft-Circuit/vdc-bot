@@ -1,6 +1,6 @@
 const { ContractStatus, LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
-const { Transaction, Player, Roles, Team, ControlPanel } = require("../../../../prisma");
+const { Transaction, Player, Roles, Team, ControlPanel, Flags } = require("../../../../prisma");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
 const { EmbedBuilder } = require("discord.js");
 
@@ -60,6 +60,7 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
         await interaction.editReply(progress.join('\n'));
         await removeCaptain(interaction, captain);
         progress.pop();
+        progress.pop();
         progress.push(`      - ✅ Removed captain from ${captain.name} (${captain.id}).`);
         await interaction.editReply(progress.join('\n'));
     }
@@ -71,12 +72,13 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
         await interaction.editReply(progress.join('\n'));
         await removeInactiveReserve(interaction, inactiveReserve);
         progress.pop();
+        progress.pop();
         progress.push(`      - ✅ Removed inactive reserve status from ${inactiveReserve.name} (${inactiveReserve.id}).`);
         await interaction.editReply(progress.join('\n'));
     }
     progress.splice((inactiveReserves.length + 1) * -1, 1, `  - ✅ Removed all ${inactiveReserves.length} inactive reserve players.`);
     await interaction.editReply(progress.join('\n'));
-    // 2. UPDATE CONTRACTS
+    // 2. UPDATE CONTRACTS 
     progress.push('2. Degrading all player contracts by a season...');
     await interaction.editReply(progress.join('\n'));
     const contractedPlayers = await prisma.user.findMany({
@@ -133,8 +135,25 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
         }
     })
     progress.push('  - ✅ Removed all user flags.');
+    progress.push('4. Adding activity flags to active players...');
+    await interaction.editReply(progress.join('\n'));
+    await prisma.user.updateMany({
+        where: {
+            Status: {
+                leagueStatus: {
+                    in: [LeagueStatus.SIGNED, LeagueStatus.FREE_AGENT, LeagueStatus.GENERAL_MANAGER],
+                }
+            }
+        },
+        data: {
+            flags: `0x${(Flags.ACTIVE_IN_PAST + Flags.ACTIVE_LAST_SEASON).toString(16)}`,
+        },
+    })
+    progress.pop();
+    progress.push('  - ✅ Added activity flags to all active players.');
     // 4. UPDATE EVERYONE'S STATUS TO UNREGISTERED
     progress.push('4. Updating all player statuses to UNREGISTERED...');
+    interaction.editReply(progress.join('\n'));
     await prisma.status.updateMany({
         where: {
             leagueStatus: {
@@ -158,7 +177,6 @@ async function removeCaptain(interaction, captain) {
     const playerDiscordID = captain.Accounts.find(a => a.provider === `discord`).providerAccountId;
     const guildMember = await interaction.guild.members.fetch(playerDiscordID);
     const team = await Team.getBy({ id: captain.Captain.id });
-    console.log(team);
     // Remove the database role of captain
     await Player.modifyRoles({ userID: captain.id }, 'REMOVE', [Roles.LEAGUE_CAPTAIN]);
     // uncaptain the player & ensure that the player's Captain property is now null
@@ -188,7 +206,6 @@ async function removeInactiveReserve(interaction, inactiveReserve) {
     const playerDiscordID = inactiveReserve.Accounts.find(a => a.provider === `discord`).providerAccountId;
     const guildMember = await interaction.guild.members.fetch(playerDiscordID);
     const team = await Team.getBy({ id: inactiveReserve.team });
-    console.log(team);
     // Remove the database role of captain
     await Player.modifyRoles({ userID: inactiveReserve.id }, 'REMOVE', [Roles.LEAGUE_CAPTAIN]);
     // uncaptain the player & ensure that the player's Captain property is now null
