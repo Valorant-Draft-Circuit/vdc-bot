@@ -1,6 +1,6 @@
 const { ContractStatus, LeagueStatus } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
-const { Transaction, Player, Roles, Team, ControlPanel } = require("../../../../prisma");
+const { Transaction, Player, Roles, Team, ControlPanel, Flags } = require("../../../../prisma");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
 const { EmbedBuilder } = require("discord.js");
 
@@ -146,7 +146,7 @@ async function offseasonReset(/** @type ChatInputCommandInteraction */ interacti
             }
         },
         data: {
-            flags: "0x3",
+            flags: `0x${(Flags.ACTIVE_IN_PAST + Flags.ACTIVE_LAST_SEASON).toString(16)}`,
         },
     })
     progress.pop();
