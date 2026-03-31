@@ -1,26 +1,33 @@
-const { MessageFlags, PermissionFlagsBits, EmbedBuilder } = require(`discord.js`);
+const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
 const { getRedisClient } = require(`../../../core/redis`);
-const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/config`);
-const { deleteMatchChannels } = require(`../../../core/matchChannels`);
+const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
+const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
+const {
+	TIERS_SET_KEY,
+	tierOpenKey,
+	tierQueueKey,
+	tierQueueKeys,
+	playerKey,
+	playerRecentKey,
+	matchKey,
+	matchKeyPattern,
+	queueIdFromMatchKey,
+} = require(`../../../helpers/queue/queueKeys`);
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
-	// Permission is enforced by Discord via command registration (ManageGuild or Administrator).
-	// Rely on Discord to hide this command for unauthorized users.
-
 	const actorLabel = `${interaction.user.tag} (${interaction.user.id})`;
 
 	switch (subcommand) {
-			case `status`: {
-				const embed = await buildQueueStatusEmbed(queueConfig, interaction);
-				return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
-			}
+		case `status`: {
+			const embed = await buildQueueStatusEmbed(queueConfig);
+			return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+		}
 
 		case `open`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const tiers = await resolveTiers(tierSelection);
-			// This should never happen since we validate at least one tier on input
 			if (tiers.length === 0) {
 				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
@@ -34,7 +41,6 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const tiers = await resolveTiers(tierSelection);
-			// This should never happen since we validate at least one tier on input
 			if (tiers.length === 0) {
 				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
@@ -105,15 +111,11 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 				return interaction.editReply({ content: `Invalid bucket type: ${bucket}` });
 			}
 
-			// Generate dummy IDs and push them to the queue list. Use a distinct prefix to avoid colliding
-			// with real user IDs. Each dummy will have a player hash similar to real players.
 			const created = [];
 			for (let i = 0; i < count; i++) {
-				// ensure reasonably unique id
 				const dummyId = `dummy_${Date.now().toString(36)}_${Math.floor(Math.random() * 100000)}_${i}`;
-				const playerKey = `vdc:player:${dummyId}`;
+				const dummyPlayerKey = playerKey(dummyId);
 				const nowMs = Date.now().toString();
-				// Set a simple player hash
 				const hashPayload = {
 					status: `queued`,
 					tier: tierSelection,
@@ -121,14 +123,12 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 					mmr: `1000`,
 					guildId: ``,
 				};
-				if (typeof games === 'number') hashPayload.gameCount = String(games);
-				await redis.hset(playerKey, hashPayload);
-				// set TTL so these expire after 5 minutes (short-lived test players)
-				await redis.pexpire(playerKey, 300000);
-				// Push to the selected queue list (primary or completed sibling depending on flag)
+				if (typeof games === `number`) hashPayload.gameCount = String(games);
+				await redis.hset(dummyPlayerKey, hashPayload);
+				await redis.pexpire(dummyPlayerKey, 300000);
 				const queueKey = completedFlag
-					? `vdc:tier:${tierSelection}:queue:${bucket}:completed`
-					: `vdc:tier:${tierSelection}:queue:${bucket}`;
+					? tierQueueKey(tierSelection, bucket, { completed: true })
+					: tierQueueKey(tierSelection, bucket);
 				await redis.rpush(queueKey, dummyId);
 				created.push({ id: dummyId, queueKey });
 			}
@@ -146,7 +146,7 @@ async function resolveTiers(selection) {
 			.filter((value) => typeof value === `string` && String(value).toUpperCase() !== `MIXED`)
 			.map((value) => value.toUpperCase()),
 	);
-	(await redis.smembers(`vdc:tiers`)).forEach((tier) => tier && knownTiers.add(tier.toUpperCase()));
+	(await redis.smembers(TIERS_SET_KEY)).forEach((tier) => tier && knownTiers.add(tier.toUpperCase()));
 
 	if (selection === `ALL`) return Array.from(knownTiers.values());
 	if (knownTiers.has(selection)) return [selection];
@@ -158,7 +158,7 @@ async function setTierState(tiers, isOpen) {
 	const pipeline = redis.pipeline();
 
 	for (const tier of tiers) {
-		pipeline.set(`vdc:tier:${tier}:open`, isOpen ? `1` : `0`);
+		pipeline.set(tierOpenKey(tier), isOpen ? `1` : `0`);
 	}
 
 	await pipeline.exec();
@@ -173,29 +173,7 @@ function buildTierStateMessage(tiers, isOpen) {
 	return `${prefix} ${tiers.length === 1 ? `tier` : `tiers`}: ${tiers.map((t) => `\`${t}\``).join(`, `)}`;
 }
 
-async function buildQueueStatusEmbed(queueConfig, interaction) {
-	let scoutRoleDisplay = `Not configured`;
-
-	if (queueConfig.scoutRoleId) {
-		const id = String(queueConfig.scoutRoleId);
-		// If interaction is provided and in a guild, try to resolve the role object
-		try {
-			const guild = interaction?.guild ?? null;
-			if (guild) {
-				const role = guild.roles.cache.get(id) ?? (await guild.roles.fetch(id).catch(() => null));
-				if (role) {
-					scoutRoleDisplay = `<@&${id}> ${role.name} (${id})`;
-				} else {
-					scoutRoleDisplay = `${id}`;
-				}
-			} else {
-				scoutRoleDisplay = `${id}`;
-			}
-		} catch (err) {
-			scoutRoleDisplay = `${id}`;
-		}
-	}
-
+async function buildQueueStatusEmbed(queueConfig) {
 	return new EmbedBuilder()
 		.setTitle(`Queue Status`)
 		.setDescription(`Live snapshot of the current queue configuration.`)
@@ -233,7 +211,8 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 				value: queueConfig.scoutRoleId ? `<@&${queueConfig.scoutRoleId}> (${queueConfig.scoutRoleId})` : `*Not configured*`,
 				inline: false,
 			},
-			{ name: `Active Map Pool`,
+			{
+				name: `Active Map Pool`,
 				value: (queueConfig.mapPool && queueConfig.mapPool.length > 0)
 					? queueConfig.mapPool.map(m => `\`${m}\``).join(`, `)
 					: `Not configured`,
@@ -248,7 +227,7 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 				name: `Returning Player Game Requirement`,
 				value: `${queueConfig.returningPlayerGameReq} games`,
 				inline: true,
-			}
+			},
 		)
 		.setColor(queueConfig.enabled ? 0x2ecc71 : 0xffa200)
 		.setFooter({ text: `Valorant Draft Circuit - Queue Manager` });
@@ -256,8 +235,8 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 
 async function killMatch(client, queueId, actorLabel) {
 	const redis = getRedisClient();
-	const matchKey = `vdc:match:${queueId}`;
-	const matchData = await redis.hgetall(matchKey);
+	const queueMatchKey = matchKey(queueId);
+	const matchData = await redis.hgetall(queueMatchKey);
 
 	if (!matchData || Object.keys(matchData).length === 0) {
 		return { message: `Match \`${queueId}\` was not found.` };
@@ -268,14 +247,14 @@ async function killMatch(client, queueId, actorLabel) {
 	const pipeline = redis.pipeline();
 
 	for (const playerId of players) {
-		const key = `vdc:player:${playerId}`;
+		const key = playerKey(playerId);
 		pipeline.hset(key, `status`, `idle`);
 		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(`vdc:player:${playerId}:recent`);
+		pipeline.del(playerRecentKey(playerId));
 		pipeline.pexpire(key, 43200000);
 	}
 
-	pipeline.del(matchKey, `${matchKey}:cancel_votes_yes`, `${matchKey}:cancel_votes_no`);
+	pipeline.del(queueMatchKey, `${queueMatchKey}:cancel_votes_yes`, `${queueMatchKey}:cancel_votes_no`);
 	await pipeline.exec();
 
 	logger.log(
@@ -291,24 +270,14 @@ async function killMatch(client, queueId, actorLabel) {
 
 async function resetQueues(client, actorLabel) {
 	const redis = getRedisClient();
-	const tiers = await redis.smembers(`vdc:tiers`);
+	const tiers = await redis.smembers(TIERS_SET_KEY);
 	const affectedUsers = new Set();
 	let queuesCleared = 0;
 
 	for (const tier of tiers) {
 		if (!tier) continue;
 
-			const listKeys = [
-				`vdc:tier:${tier}:queue:DE`,
-				`vdc:tier:${tier}:queue:FA`,
-				`vdc:tier:${tier}:queue:RFA`,
-				`vdc:tier:${tier}:queue:SIGNED`,
-				// include completed/low-priority sibling lists
-				`vdc:tier:${tier}:queue:DE:completed`,
-				`vdc:tier:${tier}:queue:FA:completed`,
-				`vdc:tier:${tier}:queue:RFA:completed`,
-				`vdc:tier:${tier}:queue:SIGNED:completed`,
-			];
+		const listKeys = tierQueueKeys(tier, { includeCompleted: true });
 
 		for (const key of listKeys) {
 			const members = await redis.lrange(key, 0, -1);
@@ -320,7 +289,7 @@ async function resetQueues(client, actorLabel) {
 		}
 	}
 
-	const matchKeys = await scanKeys(redis, `vdc:match:*`);
+	const matchKeys = await scanKeys(redis, matchKeyPattern());
 	let matchesCleared = 0;
 
 	for (const key of matchKeys) {
@@ -329,7 +298,7 @@ async function resetQueues(client, actorLabel) {
 			await redis.del(key);
 			continue;
 		}
-		const queueId = key.split(`vdc:match:`)[1];
+		const queueId = queueIdFromMatchKey(key);
 		const parsed = parseMatchRecord(matchData);
 
 		(parsed.teamA ?? []).forEach((id) => id && affectedUsers.add(id));
@@ -340,17 +309,17 @@ async function resetQueues(client, actorLabel) {
 		} catch (error) {
 			logger.log(`WARNING`, `Failed to cleanup channels for ${queueId}`, error);
 		}
-	await redis.del(key, `${key}:cancel_votes_yes`, `${key}:cancel_votes_no`);
+		await redis.del(key, `${key}:cancel_votes_yes`, `${key}:cancel_votes_no`);
 		matchesCleared += 1;
 	}
 
 	if (affectedUsers.size > 0) {
 		const pipeline = redis.pipeline();
 		for (const userId of affectedUsers) {
-			const key = `vdc:player:${userId}`;
+			const key = playerKey(userId);
 			pipeline.hset(key, `status`, `idle`);
 			pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-			pipeline.del(`vdc:player:${userId}:recent`);
+			pipeline.del(playerRecentKey(userId));
 			pipeline.pexpire(key, 43200000);
 		}
 		await pipeline.exec();
@@ -435,17 +404,7 @@ async function clearTierQueues(redis, tiers) {
 	const affectedUsers = new Set();
 
 	for (const tier of tiers) {
-				const listKeys = [
-					`vdc:tier:${tier}:queue:DE`,
-					`vdc:tier:${tier}:queue:FA`,
-					`vdc:tier:${tier}:queue:RFA`,
-					`vdc:tier:${tier}:queue:SIGNED`,
-					// completed/low-priority siblings
-					`vdc:tier:${tier}:queue:DE:completed`,
-					`vdc:tier:${tier}:queue:FA:completed`,
-					`vdc:tier:${tier}:queue:RFA:completed`,
-					`vdc:tier:${tier}:queue:SIGNED:completed`,
-				];
+		const listKeys = tierQueueKeys(tier, { includeCompleted: true });
 
 		for (const key of listKeys) {
 			const members = await redis.lrange(key, 0, -1);
@@ -459,10 +418,10 @@ async function clearTierQueues(redis, tiers) {
 	}
 
 	for (const userId of affectedUsers) {
-		const key = `vdc:player:${userId}`;
+		const key = playerKey(userId);
 		pipeline.hset(key, `status`, `idle`);
 		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(`vdc:player:${userId}:recent`);
+		pipeline.del(playerRecentKey(userId));
 	}
 
 	await pipeline.exec();
@@ -475,6 +434,4 @@ async function clearTierQueues(redis, tiers) {
 module.exports = {
 	handleAdminCommand,
 };
-
-// Export setTierState so other modules (e.g. startup jobs) can programmatically open/close tiers
 module.exports.setTierState = setTierState;

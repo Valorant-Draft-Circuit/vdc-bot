@@ -1,5 +1,5 @@
 const { ChannelType, PermissionFlagsBits } = require(`discord.js`);
-const { getQueueConfig } = require(`./config`);
+const { getQueueConfig } = require(`./queueconfig`);
 
 const MATCH_CHANNEL_NAMES = Object.freeze({
 	text: `match-chat`,
@@ -8,18 +8,6 @@ const MATCH_CHANNEL_NAMES = Object.freeze({
 	teamB: `Defenders`,
 });
 
-/**
- * Create the category, text channel, and voice channels for a match instance.
- * @param {import('discord.js').Guild} guild
- * @param {{
- *   queueId: string;
- *   tier: string;
- *   allowedUserIds?: string[];
- *   staffRoleIds?: string[];
- *   categoryName?: string;
- *   reason?: string;
- * }} options
- */
 async function createMatchChannels(guild, options) {
 	const {
 		queueId,
@@ -33,9 +21,6 @@ async function createMatchChannels(guild, options) {
 
 	const permissions = buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds);
 
-	// Attempt to read the configured scout role from the queue config (Redis / ControlPanel)
-	// and add a permission overwrite for it if present. This replaces the previous
-	// hardcoded scout role ID so non-prod servers don't break.
 	try {
 		const cfg = await getQueueConfig();
 		const scoutRoleId = cfg && cfg.scoutRoleId ? String(cfg.scoutRoleId) : null;
@@ -58,15 +43,15 @@ async function createMatchChannels(guild, options) {
 			});
 		}
 	} catch (error) {
-		// If config read fails, fall back to existing permission set without scout role.
+		// Ignore config read failures and proceed with baseline permissions.
 	}
 
 	const category = await guild.channels.create({
 		name: categoryName,
 		type: ChannelType.GuildCategory,
 		reason,
-			permissionOverwrites: permissions,
-		});
+		permissionOverwrites: permissions,
+	});
 
 	const textChannel = await guild.channels.create({
 		name: `${MATCH_CHANNEL_NAMES.text}${queueId ? `-${queueId}` : ``}`,
@@ -117,16 +102,6 @@ async function createMatchChannels(guild, options) {
 	};
 }
 
-/**
- * Delete match channels when a match completes or is cancelled.
- * @param {import('discord.js').Guild} guild
- * @param {{
- *   categoryId?: string;
- *   textChannelId?: string;
- *   voiceChannelIds?: { lobby?: string; teamA?: string; teamB?: string };
- *   reason?: string;
- * }} descriptor
- */
 async function deleteMatchChannels(guild, descriptor) {
 	const {
 		categoryId,
@@ -180,8 +155,6 @@ function buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds) {
 			});
 		}
 	}
-
-	// Scout role permission will be added at runtime from queue config (if configured).
 
 	for (const userId of allowedUserIds) {
 		if (!isValidSnowflake(userId)) continue;

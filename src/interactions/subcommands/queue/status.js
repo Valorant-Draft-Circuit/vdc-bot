@@ -1,12 +1,13 @@
 const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { getRedisClient } = require(`../../../core/redis`);
+const { TIERS_SET_KEY, tierQueueKeys, matchKeyPattern } = require(`../../../helpers/queue/queueKeys`);
 
 async function status(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const redis = getRedisClient();
     try {
-        const tiers = await redis.smembers(`vdc:tiers`);
+        const tiers = await redis.smembers(TIERS_SET_KEY);
         if (!Array.isArray(tiers) || tiers.length === 0) {
             return interaction.editReply({ content: `No tiers are currently registered.` });
         }
@@ -17,16 +18,7 @@ async function status(interaction) {
         for (const tier of tiers) {
             if (!tier) continue;
 
-            const listKeys = [
-                `vdc:tier:${tier}:queue:DE`,
-                `vdc:tier:${tier}:queue:FA`,
-                `vdc:tier:${tier}:queue:RFA`,
-                `vdc:tier:${tier}:queue:SIGNED`,
-                `vdc:tier:${tier}:queue:DE:completed`,
-                `vdc:tier:${tier}:queue:FA:completed`,
-                `vdc:tier:${tier}:queue:RFA:completed`,
-                `vdc:tier:${tier}:queue:SIGNED:completed`,
-            ];
+            const listKeys = tierQueueKeys(tier, { includeCompleted: true });
 
             // run LLEN for each list and sum
             const counts = await Promise.all(listKeys.map((k) => redis.llen(k).catch(() => 0)));
@@ -34,12 +26,12 @@ async function status(interaction) {
             rows.push({ tier, queued: sum, ongoingMatches: 0 });
         }
 
-        // Count ongoing matches per tier by scanning vdc:match:* keys and reading their 'tier' and 'status' fields.
+        // Count ongoing matches per tier by scanning match keys and reading their tier/status fields.
         try {
             let cursor = `0`;
             const matchKeys = [];
             do {
-                const [nextCursor, results] = await redis.scan(cursor, `MATCH`, `vdc:match:*`, `COUNT`, 250);
+                const [nextCursor, results] = await redis.scan(cursor, `MATCH`, matchKeyPattern(), `COUNT`, 250);
                 cursor = nextCursor;
                 if (Array.isArray(results) && results.length) matchKeys.push(...results);
             } while (cursor !== `0`);

@@ -1,11 +1,11 @@
-const { prisma } = require(`../../prisma/prismadb`);
+const { prisma } = require(`../../../prisma/prismadb`);
 const { Tier } = require(`@prisma/client`);
-const { getRedisClient, runLua } = require(`./redis`);
-const { getQueueConfig } = require(`./config`);
+const { getRedisClient, runLua } = require(`../redis`);
+const { LEAGUE_STATE_KEY, TIERS_SET_KEY } = require(`../../helpers/queue/queueKeys`);
 
 async function bootstrapRedisIfNeeded() {
 	const redis = getRedisClient();
-	const hasLeagueState = await redis.exists(`vdc:league_state`);
+	const hasLeagueState = await redis.exists(LEAGUE_STATE_KEY);
 	if (hasLeagueState) return false;
 
 	const leagueStateRow = await prisma.controlPanel.findFirst({
@@ -25,7 +25,7 @@ async function bootstrapRedisIfNeeded() {
 	}));
 
 	await runLua(`bootstrap`, {
-		keys: [`vdc:league_state`, `vdc:tiers`],
+		keys: [LEAGUE_STATE_KEY, TIERS_SET_KEY],
 		args: [String(leagueStateRow.value).toLowerCase(), JSON.stringify(tierPayload)],
 	});
 

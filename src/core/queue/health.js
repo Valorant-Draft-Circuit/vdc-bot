@@ -1,8 +1,7 @@
-const { prisma } = require(`../../prisma/prismadb`);
-const { getRedisClient } = require(`./redis`);
-const { getQueueConfig } = require(`./config`);
-
-const LEAGUE_STATE_KEY = `vdc:league_state`;
+const { prisma } = require(`../../../prisma/prismadb`);
+const { getRedisClient } = require(`../redis`);
+const { getQueueConfig } = require(`./queueconfig`);
+const { LEAGUE_STATE_KEY } = require(`../../helpers/queue/queueKeys`);
 const COMBINES_STATE = `combines`;
 const DEFAULT_INTERVAL_MS = 5000;
 

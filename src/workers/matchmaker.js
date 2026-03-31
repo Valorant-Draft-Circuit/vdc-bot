@@ -6,14 +6,21 @@ const {
 } = require(`discord.js`);
 
 const { runLua, getRedisClient } = require(`../core/redis`);
-const { getQueueConfig, DEFAULT_MAP_POOL } = require(`../core/config`);
-const { createMatchChannels } = require(`../core/matchChannels`);
-const { generateQueueId } = require(`../core/id`);
-const { COLORS } = require("../../utils/enums/colors");
+const { getQueueConfig, DEFAULT_MAP_POOL } = require(`../core/queue/queueconfig`);
+const { createMatchChannels } = require(`../core/queue/matchChannels`);
+const { generateQueueId } = require(`../helpers/queue/id`);
+const { COLORS } = require(`../../utils/enums/colors`);
+const {
+	QUEUE_BUCKETS,
+	LEAGUE_STATE_KEY,
+	TIERS_SET_KEY,
+	EVENTS_STREAM_KEY,
+	tierQueueKey,
+	matchKey,
+	scoutFollowersKey,
+} = require(`../helpers/queue/queueKeys`);
 
 const LUA_SCRIPT = `build_match`;
-const EVENTS_KEY = `vdc:events`;
-
 let intervalHandle;
 const inFlightTiers = new Set();
 let cachedMapPool = null;
@@ -49,7 +56,7 @@ async function processAllTiers(client) {
 	if (!config.enabled) return;
 
 	const redis = getRedisClient();
-	const tierSet = new Set(await redis.smembers(`vdc:tiers`));
+	const tierSet = new Set(await redis.smembers(TIERS_SET_KEY));
 
 	if (tierSet.size === 0) {
 		const fallback = deriveTiersFromCache();
@@ -67,19 +74,13 @@ async function attemptMatchForTier(client, tier, config) {
 	inFlightTiers.add(tier);
 
 	try {
-	const queueId = await generateQueueId(getRedisClient());
+		const queueId = await generateQueueId(getRedisClient());
 		const keys = [
-			`vdc:league_state`,
-			`vdc:tier:${tier}:queue:DE`,
-			`vdc:tier:${tier}:queue:FA`,
-			`vdc:tier:${tier}:queue:RFA`,
-			`vdc:tier:${tier}:queue:SIGNED`,
-			`vdc:match:${queueId}`,
-			EVENTS_KEY,
-			`vdc:tier:${tier}:queue:DE:completed`,
-			`vdc:tier:${tier}:queue:FA:completed`,
-			`vdc:tier:${tier}:queue:RFA:completed`,
-			`vdc:tier:${tier}:queue:SIGNED:completed`,
+			LEAGUE_STATE_KEY,
+			...QUEUE_BUCKETS.map((bucket) => tierQueueKey(tier, bucket)),
+			matchKey(queueId),
+			EVENTS_STREAM_KEY,
+			...QUEUE_BUCKETS.map((bucket) => tierQueueKey(tier, bucket, { completed: true })),
 		];
 
 		const args = [
@@ -133,7 +134,6 @@ async function runMatchmakerOnce(client, tier) {
 }
 
 async function dispatchMatch(client, payload, config) {
-	let fallbackChannel = null;
 	let guild = null;
 
 	const candidateGuildId =
@@ -159,7 +159,7 @@ async function dispatchMatch(client, payload, config) {
 	try {
 		for (const p of payload.players) {
 			try {
-				const followers = await redis.smembers(`vdc:scouts:followers:${p.id}`);
+				const followers = await redis.smembers(scoutFollowersKey(p.id));
 				if (Array.isArray(followers)) {
 					for (const s of followers) scoutsSet.add(s);
 				}
@@ -173,7 +173,7 @@ async function dispatchMatch(client, payload, config) {
 
 	let channelDescriptor = {
 		categoryId: null,
-		textChannelId: fallbackChannel?.id ?? null,
+		textChannelId: null,
 		voiceChannelIds: {},
 	};
 
@@ -193,18 +193,6 @@ async function dispatchMatch(client, payload, config) {
 		logger.log(`ERROR`, `Failed to create match channels`, error);
 	}
 
-	if (!channelDescriptor.textChannelId && fallbackChannelId) {
-		if (!fallbackChannel) {
-			fallbackChannel = await client.channels.fetch(fallbackChannelId).catch(() => null);
-		}
-
-		if (fallbackChannel && fallbackChannel.guildId === guild.id) {
-			channelDescriptor.textChannelId = fallbackChannel.id;
-		} else {
-			fallbackChannel = null;
-		}
-	}
-
 	if (!channelDescriptor.textChannelId) {
 		logger.log(`WARNING`, `Match ${payload.queueId} has no text channel target`);
 		return;
@@ -220,8 +208,7 @@ async function dispatchMatch(client, payload, config) {
 
 	let textChannel =
 		(channelDescriptor.textChannelId &&
-			(await guild.channels.fetch(channelDescriptor.textChannelId).catch(() => null))) ||
-		fallbackChannel;
+			(await guild.channels.fetch(channelDescriptor.textChannelId).catch(() => null)));
 
 	if (!textChannel) {
 		logger.log(`ERROR`, `No text channel available to post match ${payload.queueId}`);
@@ -271,8 +258,8 @@ async function dispatchMatch(client, payload, config) {
 function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
 	const teamA = payload.teamA.map((id) => `<@${id}>`).join(`\n`);
 	const teamB = payload.teamB.map((id) => `<@${id}>`).join(`\n`);
- const teamMmr = payload.teamMmr || {};
- const hasMmr =
+	const teamMmr = payload.teamMmr || {};
+	const hasMmr =
  	showMmrTotals &&
  	typeof teamMmr.teamA === `number` &&
  	typeof teamMmr.teamB === `number`;
@@ -387,7 +374,7 @@ function buildMatchComponents(queueId) {
 	];
 }
 
-async function notifyPlayersDirectly(client, payload, embedData, textChannelId, guild, extraScoutIds = []) {
+async function notifyPlayersDirectly(client, payload, embedData, textChannelId, guild, scoutIds = []) {
 	const channelLink = `https://discord.com/channels/${guild.id}/${textChannelId}`;
 	const playerContent = `Match Found, Agent!  Good luck out there.  Match chat: ${channelLink}`;
 
@@ -399,23 +386,6 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 			await user.send({ content: playerContent, embeds: [embedData] });
 		} catch (error) {
 			logger.log(`WARNING`, `Failed to DM player ${playerId} about match ${payload.queueId}`);
-		}
-	}
-
-	// Notify scouts — use provided extraScoutIds if available; otherwise read from Redis
-	let scoutIds = Array.isArray(extraScoutIds) && extraScoutIds.length ? extraScoutIds.slice() : null;
-	const redis = getRedisClient();
-	if (!scoutIds) {
-		try {
-			const scoutSet = new Set();
-			for (const player of payload.players) {
-				const followers = await redis.smembers(`vdc:scouts:followers:${player.id}`).catch(() => []);
-				for (const f of followers || []) scoutSet.add(f);
-			}
-			scoutIds = Array.from(scoutSet);
-		} catch (error) {
-			logger.log(`WARNING`, `Failed to read scout followers from redis for match ${payload.queueId}`, error);
-			scoutIds = [];
 		}
 	}
 
@@ -435,8 +405,9 @@ async function notifyPlayersDirectly(client, payload, embedData, textChannelId, 
 
 async function updateMatchChannelsInRedis(queueId, descriptor) {
 	const redis = getRedisClient();
-	await redis.hset(`vdc:match:${queueId}`, `channelIdsJSON`, JSON.stringify(descriptor));
-	await redis.hset(`vdc:match:${queueId}`, `status`, `active`);
+	const key = matchKey(queueId);
+	await redis.hset(key, `channelIdsJSON`, JSON.stringify(descriptor));
+	await redis.hset(key, `status`, `active`);
 }
 
 function deriveTiersFromCache() {

@@ -1,4 +1,5 @@
 const crypto = require(`node:crypto`);
+const { matchKey } = require(`./queueKeys`);
 
 const QUEUE_ID_MIN = 1000000;
 const QUEUE_ID_MAX = 99999999;
@@ -9,7 +10,7 @@ function generateQueueId(redis) {
 
 function generateOkayId(redis, attempts = 5) {
 	const id = String(randomInt(QUEUE_ID_MIN, QUEUE_ID_MAX + 1));
-	const key = `vdc:match:${id}`;
+	const key = matchKey(id);
 
 	if (!redis) return id;
 
@@ -23,7 +24,7 @@ function generateOkayId(redis, attempts = 5) {
 function randomInt(min, max) {
 	const range = max - min;
 	if (range <= 0) return min;
-	const bytes = crypto.randomBytes(6); // 48-bit
+	const bytes = crypto.randomBytes(6);
 	const randomValue = bytes.readUIntBE(0, 6);
 	return min + (randomValue % range);
 }

@@ -1,5 +1,6 @@
 const { MessageFlags } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
+const { QUEUE_CONFIG_CACHE_KEY, scoutFollowersKey, scoutFollowingKey } = require(`../../helpers/queue/queueKeys`);
 
 /**
  * /scout follow <player>
@@ -33,7 +34,7 @@ module.exports = {
 async function resolveScoutRoleId() {
     const redis = getRedisClient();
     try {
-        const payload = await redis.get(`vdc:config:queue`);
+        const payload = await redis.get(QUEUE_CONFIG_CACHE_KEY);
         if (!payload) return null;
         const parsed = JSON.parse(payload);
         if (parsed && parsed.scoutRoleId) return String(parsed.scoutRoleId).trim();
@@ -63,11 +64,11 @@ async function ensureHasScoutRole(interaction) {
 }
 
 function buildKeysForPlayerFollowers(playerId) {
-    return `vdc:scouts:followers:${playerId}`;
+    return scoutFollowersKey(playerId);
 }
 
 function buildKeysForScoutFollowing(scoutId) {
-    return `vdc:scouts:following:${scoutId}`;
+    return scoutFollowingKey(scoutId);
 }
 
 async function follow(interaction) {

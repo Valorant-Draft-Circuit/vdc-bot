@@ -1,5 +1,11 @@
-const { MessageFlags, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
+const { DEFAULT_QUEUE_CONFIG, getQueueConfig } = require(`../../core/queue/queueconfig`);
+const {
+    getQueueMatchContext,
+    isUserBoundToQueueMatch,
+    cancelQueueMatch,
+} = require(`../../core/queue/matchLifecycle`);
 
 module.exports = {
     id: `matchCancelManager`,
@@ -18,28 +24,23 @@ module.exports = {
         }
 
         const redis = getRedisClient();
-        const matchKey = `vdc:match:${queueId}`;
-        const matchData = await redis.hgetall(matchKey);
-        if (!matchData || Object.keys(matchData).length === 0) {
+        const queueContext = await getQueueMatchContext(queueId);
+        if (!queueContext) {
             return interaction.reply({ content: `Match ${queueId} not found.`, flags: MessageFlags.Ephemeral });
         }
-
-        const teamA = (() => { try { return JSON.parse(matchData.teamAJSON || `[]`); } catch { return []; } })();
-        const teamB = (() => { try { return JSON.parse(matchData.teamBJSON || `[]`); } catch { return []; } })();
-        const players = Array.from(new Set([...(teamA || []), ...(teamB || [])]));
+        const { queueMatchKey, matchData, players } = queueContext;
 
         // verify caller is participant and in_match
-        const playerKey = `vdc:player:${interaction.user.id}`;
-        const [status, currentQueueId] = await redis.hmget(playerKey, `status`, `currentQueueId`);
-        if (String(status) !== `in_match` || String(currentQueueId) !== String(queueId)) {
+        const inMatch = await isUserBoundToQueueMatch(interaction.user.id, queueId);
+        if (!inMatch) {
             return interaction.reply({ content: `Only players in the match may vote.`, flags: MessageFlags.Ephemeral });
         }
         if (!players.includes(interaction.user.id)) {
             return interaction.reply({ content: `Only players in the match may vote.`, flags: MessageFlags.Ephemeral });
         }
 
-    const yesKey = `${matchKey}:cancel_votes_yes`;
-    const noKey = `${matchKey}:cancel_votes_no`;
+    const yesKey = `${queueMatchKey}:cancel_votes_yes`;
+    const noKey = `${queueMatchKey}:cancel_votes_no`;
 
         if (command === `yes`) {
             await redis.sadd(yesKey, interaction.user.id);
@@ -55,20 +56,19 @@ module.exports = {
         const yesCount = await redis.scard(yesKey);
         const noCount = await redis.scard(noKey);
         const total = players.length;
-        const config = require(`../../core/config`).DEFAULT_QUEUE_CONFIG;
-        const cancelThreshold = Number((await require(`../../core/config`).getQueueConfig()).cancelThreshold ?? config.cancelThreshold);
+        const cancelThreshold = Number((await getQueueConfig()).cancelThreshold ?? DEFAULT_QUEUE_CONFIG.cancelThreshold);
         const percent = total ? Math.round((yesCount / total) * 100) : 0;
 
         // set 5 minute TTLs on vote keys & cancel keys
             try {
                 await redis.expire(yesKey, 300);
                 await redis.expire(noKey, 300);
-                await redis.expire(`${matchKey}:cancel_active`, 300);
-                await redis.expire(`${matchKey}:cancel_message_id`, 300);
+                await redis.expire(`${queueMatchKey}:cancel_active`, 300);
+                await redis.expire(`${queueMatchKey}:cancel_message_id`, 300);
             } catch (err) {}
 
         // update vote message if present
-        const cancelMsgId = await redis.get(`${matchKey}:cancel_message_id`);
+        const cancelMsgId = await redis.get(`${queueMatchKey}:cancel_message_id`);
         const descriptor = (() => { try { return JSON.parse(matchData.channelIdsJSON || `{}`); } catch { return {}; } })();
         const textChannelId = descriptor.textChannelId ?? null;
         if (cancelMsgId && textChannelId) {
@@ -104,40 +104,14 @@ module.exports = {
             } catch (err) {
                 yesVoters = [];
             }
-            // cancel match: reset players and delete keys
-            const pipeline = redis.pipeline();
-            const affected = new Set(players.filter(Boolean));
-            for (const playerId of affected) {
-                const key = `vdc:player:${playerId}`;
-                pipeline.hset(key, `status`, `idle`);
-                pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-                pipeline.del(`${key}:recent`);
-                pipeline.pexpire(key, 43200000);
-            }
-
-            pipeline.del(matchKey, yesKey, noKey, `${matchKey}:cancel_active`, `${matchKey}:cancel_message_id`);
-            await pipeline.exec();
-
-            // emit a central event so external systems (dashboard/etc) can record the cancellation
-            try {
-                const now = Date.now();
-                const tier = matchData.tier ?? ``;
-                const eventFields = [
-                    `type`, `match_canceled`,
-                    `queueId`, queueId,
-                    `tier`, tier,
-                    `timestamp`, String(now),
-                    `initiatedBy`, interaction.user.id,
-                    `yesCount`, String(yesCount),
-                    `noCount`, String(noCount),
-                    `players`, JSON.stringify(players),
-                    `yesVoters`, JSON.stringify(yesVoters || []),
-                ];
-
-                await redis.xadd(`vdc:events`, `*`, ...eventFields).catch(() => null);
-            } catch (err) {
-                // don't block cancel flow for event emission failures
-            }
+            await cancelQueueMatch({
+				guild: interaction.guild,
+				queueContext,
+				initiatedBy: interaction.user.id,
+				yesCount,
+				noCount,
+				yesVoters,
+			});
 
             // edit vote message to indicate cancellation
             if (cancelMsgId && textChannelId) {
@@ -155,16 +129,7 @@ module.exports = {
 
             logger.log(`ALERT`, `Match ${queueId} cancelled by vote (votes: ${yesCount}/${total})`);
             interaction.reply({ content: `Vote passed (${yesCount}/${total}, ${percent}%). Match has been cancelled.`, flags: MessageFlags.Ephemeral });
-
-            // attempt to cleanup channels
-            try {
-                const { deleteMatchChannels } = require(`../../core/matchChannels`);
-                const guild = interaction.guild;
-                const descriptor = JSON.parse(matchData.channelIdsJSON || `{}`);
-                await deleteMatchChannels(guild, descriptor);
-            } catch (err) {
-                logger.log(`WARNING`, `Failed to cleanup channels for cancelled match ${queueId}`, err);
-            }
+			return;
         }
 
         return interaction.reply({ content: `Your vote has been recorded. Current: ${yesCount} yes / ${noCount} no (${percent}% yes).`, flags: MessageFlags.Ephemeral });

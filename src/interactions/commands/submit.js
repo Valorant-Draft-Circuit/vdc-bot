@@ -1,6 +1,10 @@
-const { GameType } = require("@prisma/client");
+const { GameType } = require(`@prisma/client`);
 const { Games, ControlPanel } = require(`../../../prisma`);
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder } = require(`discord.js`);
+const {
+   resolveQueueSubmissionContext,
+   finalizeQueueCombineSubmission,
+} = require(`../../core/queue/matchLifecycle`);
 
 const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
 const iconURL = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/vdc-logos/champwall.png`;
@@ -14,7 +18,7 @@ module.exports = {
       await interaction.deferReply();
       const { _hoistedOptions } = interaction.options;
 
-      const tier = _hoistedOptions[0].value;
+      const submittedTier = _hoistedOptions[0].value;
       const url = _hoistedOptions[1].value;
 
       // check URL integrity - if it doesn't look like a valid URL, send an error message
@@ -38,8 +42,24 @@ module.exports = {
       else if (state === `PLAYOFFS`) type = GameType.PLAYOFF;
       else return await interaction.editReply({ content: `The league state enum in the control panel is set incorrectly. Please open a tech ticket.` });
 
+      const queueContext = type === GameType.COMBINE
+         ? await resolveQueueSubmissionContext(interaction.user.id)
+         : null;
+      const tier = queueContext?.tier ?? submittedTier;
+
       // save the match to the database
-      Games.saveMatch({ id: gameID, tier: tier, type: type });
+      await Games.saveMatch({ id: gameID, tier: tier, type: type });
+
+      let combineFinalized = false;
+      if (type === GameType.COMBINE && queueContext) {
+         combineFinalized = await finalizeQueueCombineSubmission({
+			guild: interaction.guild,
+			userId: interaction.user.id,
+         queueContext,
+         gameID,
+         url,
+         });
+      }
 
       // build and then send the embed confirmation
       const embed = new EmbedBuilder({
@@ -50,12 +70,12 @@ module.exports = {
          fields: [
             {
                name: `\u200B`,
-               value: `Tier:\nType:\nMatch ID:`,
+               value: `Tier:\nType:\nMatch ID:${combineFinalized ? `\nQueue:` : ``}`,
                inline: true
             },
             {
                name: `\u200B`,
-               value: `${tier}\n${type}\n[\`${gameID}\`](${url})`,
+               value: `${tier}\n${type}\n[\`${gameID}\`](${url})${combineFinalized ? `\nMarked for deletion + players unlocked` : ``}`,
                inline: true
             }
          ],
