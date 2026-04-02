@@ -9,7 +9,7 @@ const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 
 // const activeSubTime = 10; // conversion to milliseconds
-const activeSubTime = 8 /* Hours a sub is active for the team */ * 60 * 60 * 1000; // conversion to milliseconds
+const activeSubTime = 12 /* Hours a sub is active for the team */ * 60 * 60 * 1000; // conversion to milliseconds
 
 async function requestSub(
 	/** @type ChatInputCommandInteraction */ interaction,
