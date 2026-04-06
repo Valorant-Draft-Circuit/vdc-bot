@@ -37,6 +37,6 @@
   "devDependencies": {
     "nodemon": "^2.0.20",
     "prisma": "^6.15.0",
-    "typescript": "^5.2.2"
+    "typescript": "^6.0.2"
   }
 }
