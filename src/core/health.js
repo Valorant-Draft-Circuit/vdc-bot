@@ -38,9 +38,9 @@ async function pingDatabase(timeoutMs) {
 		return true;
 	} catch (error) {
 		if (error.message === `DB_PING_TIMEOUT`) {
-			logger.log(`WARNING`, `Database ping timed out after ${timeoutMs}ms`);
+			logger.log(`ALERT`, `Database ping timed out after ${timeoutMs}ms`);
 		} else {
-			logger.log(`WARNING`, `Database ping failed`, error);
+			logger.log(`ALERT`, `Database ping failed`, error);
 		}
 
 		return false;
