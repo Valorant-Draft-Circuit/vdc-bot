@@ -1,6 +1,7 @@
 const { MessageFlags } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
-const { QUEUE_CONFIG_CACHE_KEY, scoutFollowersKey, scoutFollowingKey } = require(`../../helpers/queue/queueKeys`);
+const { scoutFollowersKey, scoutFollowingKey } = require(`../../helpers/queue/queueKeys`);
+const { ROLES } = require(`../../../utils/enums/roles`);
 
 /**
  * /scout follow <player>
@@ -31,24 +32,15 @@ module.exports = {
     },
 };
 
-async function resolveScoutRoleId() {
-    const redis = getRedisClient();
-    try {
-        const payload = await redis.get(QUEUE_CONFIG_CACHE_KEY);
-        if (!payload) return null;
-        const parsed = JSON.parse(payload);
-        if (parsed && parsed.scoutRoleId) return String(parsed.scoutRoleId).trim();
-        return null;
-    } catch (err) {
-        logger.log(`WARNING`, `Failed to read scout role id from Redis`, err);
-        return null;
-    }
+function resolveScoutRoleId() {
+    const roleId = ROLES?.LEAGUE?.SCOUT || null;
+    return roleId ? String(roleId).trim() : null;
 }
 
 async function ensureHasScoutRole(interaction) {
-    const scoutRoleId = await resolveScoutRoleId();
+    const scoutRoleId = resolveScoutRoleId();
     if (!scoutRoleId) {
-        await interaction.reply({ content: `Scout role is not configured in Control Panel.`, flags: MessageFlags.Ephemeral });
+        await interaction.reply({ content: `Scout role is not configured in enums.`, flags: MessageFlags.Ephemeral });
         return false;
     }
     const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);

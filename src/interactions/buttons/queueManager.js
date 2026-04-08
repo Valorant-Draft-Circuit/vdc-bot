@@ -3,7 +3,6 @@ const { getRedisClient } = require(`../../core/redis`);
 const { matchKey } = require(`../../helpers/queue/queueKeys`);
 
 const BUTTON_LABELS = {
-	joinLobby: `Join Lobby VC`,
 	joinAttackers: `Join Attackers VC`,
 	joinDefenders: `Join Defenders VC`,
 	submit: `Submit Match Link`,
@@ -93,8 +92,6 @@ function selectChannelId(command, descriptor) {
 	const voice = descriptor.voiceChannelIds ?? {};
 
 	switch (command) {
-		case `joinLobby`:
-			return voice.lobby;
 		case `joinAttackers`:
 			return voice.teamA;
 		case `joinDefenders`:

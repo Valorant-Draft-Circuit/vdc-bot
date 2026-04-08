@@ -18,6 +18,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             INACTIVE_RESERVE: "1181457461895495732",
             CAPTAIN: "1082176642329346110",
             FORMER_PLAYER: "1062105226225660005",
+            SCOUT: "1428882903806513222",
         },
         TIER: {
             // Regular tier roles
@@ -57,6 +58,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             INACTIVE_RESERVE: "976541355625025536",
             CAPTAIN: "963863666464268328",
             FORMER_PLAYER: "966901052626595860",
+            SCOUT: "1052008749851742258",
         },
         TIER: {
             // Regular tier roles

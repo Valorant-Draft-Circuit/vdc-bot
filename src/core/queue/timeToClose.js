@@ -1,6 +1,7 @@
 const { getRedisClient } = require(`../redis`);
 const { setTierState } = require(`../../interactions/subcommands/queue/admin`);
 const { TIERS_SET_KEY } = require(`../../helpers/queue/queueKeys`);
+const { getQueueConfig } = require(`./queueconfig`);
 
 const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const AUTO_CLOSE_HOUR_UTC = 8;
@@ -20,6 +21,9 @@ function msUntilNextHourUtc(targetHour) {
 
 async function closeAllTiersJob() {
 	try {
+		const cfg = await getQueueConfig().catch(() => null);
+		if (!cfg?.enabled) return;
+
 		const redis = getRedisClient();
 		const tiers = await redis.smembers(TIERS_SET_KEY);
 		if (!Array.isArray(tiers) || tiers.length === 0) return;

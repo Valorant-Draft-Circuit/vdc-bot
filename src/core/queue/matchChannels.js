@@ -1,12 +1,48 @@
 const { ChannelType, PermissionFlagsBits } = require(`discord.js`);
-const { getQueueConfig } = require(`./queueconfig`);
+const { CHANNELS } = require(`../../../utils/enums/channels`);
+const { ROLES } = require(`../../../utils/enums/roles`);
 
 const MATCH_CHANNEL_NAMES = Object.freeze({
 	text: `match-chat`,
-	lobby: `Lobby`,
 	teamA: `Attackers`,
 	teamB: `Defenders`,
 });
+
+/**
+ * Resolve the category ID for a match based on tier.
+ * Returns the tier-specific category, or falls back to overflow.
+ * Returns null if neither is available.
+ *
+ * @param {string} tier - The queue tier (MYTHIC, EXPERT, etc.)
+ * @param {Guild} guild - Discord guild instance
+ * @returns {Promise<string|null>} The category snowflake ID, or null if unavailable
+ */
+async function resolveCategoryIdForTier(tier, guild) {
+	if (!tier || !CHANNELS.VC.COMBINES.COMBINE_CATEGORY[tier]) {
+		// Fall back to overflow for unknown tiers
+		return CHANNELS.VC.COMBINES.COMBINE_OVERFLOW || null;
+	}
+
+	const tierCategoryId = CHANNELS.VC.COMBINES.COMBINE_CATEGORY[tier];
+
+	// Check if tier category exists and has room for more channels
+	const tierCategory = guild.channels.cache.get(tierCategoryId);
+	if (!tierCategory) {
+		// Tier category not found; fall back to overflow
+		return CHANNELS.VC.COMBINES.COMBINE_OVERFLOW || null;
+	}
+
+	// Discord allows up to 50 channels per category
+	// If tier category is full or near capacity, fall back to overflow
+	const MAX_CHANNELS_PER_CATEGORY = 50;
+	const catChildCount = tierCategory.children?.cache?.size || 0;
+	if (catChildCount >= MAX_CHANNELS_PER_CATEGORY - 1) {
+		// Category is full; use overflow
+		return CHANNELS.VC.COMBINES.COMBINE_OVERFLOW || null;
+	}
+
+	return tierCategoryId;
+}
 
 async function createMatchChannels(guild, options) {
 	const {
@@ -14,44 +50,47 @@ async function createMatchChannels(guild, options) {
 		tier,
 		allowedUserIds = [],
 		staffRoleIds = [],
-		categoryName = buildCategoryName(tier, queueId),
 		reason = `Queue match ${queueId}`,
 		enableVoice = true,
 	} = options;
 
 	const permissions = buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds);
 
-	try {
-		const cfg = await getQueueConfig();
-		const scoutRoleId = cfg && cfg.scoutRoleId ? String(cfg.scoutRoleId) : null;
-		if (scoutRoleId && !permissions.some((o) => String(o.id) === scoutRoleId)) {
-			permissions.push({
-				id: scoutRoleId,
-				allow: [
-					PermissionFlagsBits.ViewChannel,
-					PermissionFlagsBits.Connect,
-					PermissionFlagsBits.Speak,
-					PermissionFlagsBits.UseVAD,
-					PermissionFlagsBits.SendMessages,
-					PermissionFlagsBits.EmbedLinks,
-					PermissionFlagsBits.AttachFiles,
-					PermissionFlagsBits.AddReactions,
-					PermissionFlagsBits.UseExternalEmojis,
-					PermissionFlagsBits.UseExternalStickers,
-					PermissionFlagsBits.ReadMessageHistory,
-				],
-			});
-		}
-	} catch (error) {
-		// Ignore config read failures and proceed with baseline permissions.
+	const scoutRoleId = String(ROLES?.LEAGUE?.SCOUT || ``);
+	if (
+		isValidSnowflake(scoutRoleId) &&
+		guild.roles.cache.has(scoutRoleId) &&
+		!permissions.some((o) => String(o.id) === scoutRoleId)
+	) {
+		permissions.push({
+			id: scoutRoleId,
+			allow: [
+				PermissionFlagsBits.ViewChannel,
+				PermissionFlagsBits.Connect,
+				PermissionFlagsBits.Speak,
+				PermissionFlagsBits.UseVAD,
+				PermissionFlagsBits.SendMessages,
+				PermissionFlagsBits.EmbedLinks,
+				PermissionFlagsBits.AttachFiles,
+				PermissionFlagsBits.AddReactions,
+				PermissionFlagsBits.UseExternalEmojis,
+				PermissionFlagsBits.UseExternalStickers,
+				PermissionFlagsBits.ReadMessageHistory,
+			],
+		});
 	}
 
-	const category = await guild.channels.create({
-		name: categoryName,
-		type: ChannelType.GuildCategory,
-		reason,
-		permissionOverwrites: permissions,
-	});
+	// Resolve the category ID (tier-based or overflow)
+	const categoryId = await resolveCategoryIdForTier(tier, guild);
+	if (!categoryId) {
+		throw new Error(`Cannot resolve category for tier ${tier}; no tier category or overflow available`);
+	}
+
+	// Fetch the existing category (don't create a new one)
+	const category = guild.channels.cache.get(categoryId);
+	if (!category || category.type !== ChannelType.GuildCategory) {
+		throw new Error(`Category ${categoryId} not found or is not a category`);
+	}
 
 	const textChannel = await guild.channels.create({
 		name: `${MATCH_CHANNEL_NAMES.text}${queueId ? `-${queueId}` : ``}`,
@@ -61,19 +100,11 @@ async function createMatchChannels(guild, options) {
 		permissionOverwrites: permissions,
 	});
 
-	let lobbyChannel;
 	let teamAChannel;
 	let teamBChannel;
 
 	if (enableVoice) {
-		[lobbyChannel, teamAChannel, teamBChannel] = await Promise.all([
-			guild.channels.create({
-				name: `${MATCH_CHANNEL_NAMES.lobby}${queueId ? ` - ${queueId}` : ``}`,
-				type: ChannelType.GuildVoice,
-				parent: category.id,
-				reason,
-				permissionOverwrites: permissions,
-			}),
+		[teamAChannel, teamBChannel] = await Promise.all([
 			guild.channels.create({
 				name: `${MATCH_CHANNEL_NAMES.teamA}${queueId ? ` - ${queueId}` : ``}`,
 				type: ChannelType.GuildVoice,
@@ -95,7 +126,6 @@ async function createMatchChannels(guild, options) {
 		categoryId: category.id,
 		textChannelId: textChannel.id,
 		voiceChannelIds: {
-			lobby: lobbyChannel ? lobbyChannel.id : null,
 			teamA: teamAChannel ? teamAChannel.id : null,
 			teamB: teamBChannel ? teamBChannel.id : null,
 		},
@@ -104,7 +134,6 @@ async function createMatchChannels(guild, options) {
 
 async function deleteMatchChannels(guild, descriptor) {
 	const {
-		categoryId,
 		textChannelId,
 		voiceChannelIds = {},
 		reason = `Removing queue match channels`,
@@ -121,11 +150,6 @@ async function deleteMatchChannels(guild, descriptor) {
 		if (!channelId) continue;
 		const channel = guild.channels.cache.get(channelId);
 		if (channel) tasks.push(channel.delete(reason).catch(() => null));
-	}
-
-	if (categoryId) {
-		const category = guild.channels.cache.get(categoryId);
-		if (category) tasks.push(category.delete(reason).catch(() => null));
 	}
 
 	await Promise.all(tasks);
@@ -179,11 +203,6 @@ function buildPermissionOverwrites(guild, allowedUserIds, staffRoleIds) {
 	return overwrites;
 }
 
-function buildCategoryName(tier, queueId) {
-	const tierLabel = tier ? tier.toUpperCase() : `COMBINES`;
-	return `Match ${tierLabel} — ${queueId}`;
-}
-
 function isValidSnowflake(id) {
 	return typeof id === `string` && /^\d{15,20}$/.test(id);
 }
@@ -192,4 +211,5 @@ module.exports = {
 	MATCH_CHANNEL_NAMES,
 	createMatchChannels,
 	deleteMatchChannels,
+	resolveCategoryIdForTier,
 };

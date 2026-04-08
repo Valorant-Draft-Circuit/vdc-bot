@@ -91,6 +91,34 @@ module.exports = {
             ],
         },
         {
+            name: `start-matchmaker`,
+            description: `Start the queue matchmaker process.`,
+            type: ApplicationCommandOptionType.Subcommand,
+        },
+        {
+            name: `stop-matchmaker`,
+            description: `Stop the queue matchmaker process.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `reason`,
+                    description: `Optional reason for stopping the matchmaker.`,
+                    type: ApplicationCommandOptionType.String,
+                    required: false,
+                },
+            ],
+        },
+        {
+            name: `restart-matchmaker`,
+            description: `Restart the queue matchmaker process.`,
+            type: ApplicationCommandOptionType.Subcommand,
+        },
+        {
+            name: `end-warmup`,
+            description: `End the matchmaker warmup window immediately.`,
+            type: ApplicationCommandOptionType.Subcommand,
+        },
+        {
             name: `create-dummies`,
             description: `Create dummy players and add them to a queue for testing.`,
             type: ApplicationCommandOptionType.Subcommand,

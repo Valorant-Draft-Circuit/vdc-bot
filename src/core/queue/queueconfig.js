@@ -1,27 +1,15 @@
+//TODO: Cleanup this entire file
+
 const { prisma } = require(`../../../prisma/prismadb`);
 const { getRedisClient } = require(`../redis`);
 const { QUEUE_CONFIG_CACHE_KEY } = require(`../../helpers/queue/queueKeys`);
+const {
+	CONTROL_PANEL_MAP_POOL_KEY,
+	CONTROL_PANEL_DISPLAY_KEY,
+	DEFAULT_QUEUE_CONFIG,
+} = require(`./constants`);
 
 const QUEUE_CONFIG_CACHE_TTL_SECONDS = 30 * 60;
-const CONTROL_PANEL_MAP_POOL_KEY = `MAP_POOL`;
-const CONTROL_PANEL_DISPLAY_KEY = `display_mmr`;
-
-const DEFAULT_QUEUE_CONFIG = Object.freeze({
-	enabled: false,
-	health: {
-		checkIntervalMs: 5000,
-		dbTimeoutMs: 1000,
-	},
-	mapPool: [],
-	perTierFlags: {},
-	relaxSeconds: 180,
-	recentSetTtlSeconds: 180,
-	cancelThreshold: 80,
-	vcCreate: true,
-	matchSize: 5,
-	maxScanPerBucket: 400,
-	displayMmr: false,
-});
 
 let inMemoryQueueConfig = null;
 let inMemoryQueueConfigExpiresAt = 0;
@@ -36,8 +24,10 @@ function cloneDefaultQueueConfig() {
 		relaxSeconds: DEFAULT_QUEUE_CONFIG.relaxSeconds,
 		recentSetTtlSeconds: DEFAULT_QUEUE_CONFIG.recentSetTtlSeconds,
 		cancelThreshold: DEFAULT_QUEUE_CONFIG.cancelThreshold,
-		vcCreate: DEFAULT_QUEUE_CONFIG.vcCreate,
-		matchSize: DEFAULT_QUEUE_CONFIG.matchSize,
+		channelStopThreshold: DEFAULT_QUEUE_CONFIG.channelStopThreshold,
+		matchmakerWarmupSeconds: DEFAULT_QUEUE_CONFIG.matchmakerWarmupSeconds,
+		matchmakerWarmupMaxPopsPerTick: DEFAULT_QUEUE_CONFIG.matchmakerWarmupMaxPopsPerTick,
+		matchmakerWarmupMinSecondsBetweenPops: DEFAULT_QUEUE_CONFIG.matchmakerWarmupMinSecondsBetweenPops,
 		maxScanPerBucket: DEFAULT_QUEUE_CONFIG.maxScanPerBucket,
 	};
 }
@@ -89,42 +79,17 @@ function hydrateConfigFromRows(rows) {
 			case `queue_health_db_timeout_ms`:
 				if (typeof value === `number`) config.health.dbTimeoutMs = value;
 				break;
-			case `queue_relax_seconds`:
-				if (typeof value === `number`) config.relaxSeconds = value;
-				break;
-			case `queue_recent_ttl_seconds`:
-				if (typeof value === `number`) config.recentSetTtlSeconds = value;
-				break;
-			case `queue_cancel_threshold`:
-				if (typeof value === `number`) config.cancelThreshold = value;
-				break;
-			case `queue_display_mmr`:
-				if (typeof value === `boolean`) config.displayMmr = value;
-				break;
-			case `queue_vc_create`:
-				if (typeof value === `boolean`) config.vcCreate = value;
-				break;
-			case `queue_match_size`:
-				if (typeof value === `number`) config.matchSize = value;
+			case `queue_channel_stop_threshold`:
+				if (typeof value === `number`) config.channelStopThreshold = value;
 				break;
 			case `queue_max_scan_per_bucket`:
 				if (typeof value === `number`) config.maxScanPerBucket = value;
-				break;
-			case `queue_map_pool`:
-				if (Array.isArray(value)) config.mapPool = value;
-				else if (typeof value === `string` && value.length) config.mapPool = [value];
-				break;
-			case `queue_scout_role_id`:
-				if (value != null) config.scoutRoleId = String(value);
 				break;
 			case `queue_new_player_game_req`:
 				if (typeof value === `number`) config.newPlayerGameReq = value;
 				break;
 			case `queue_returning_game_req`:
 				if (typeof value === `number`) config.returningPlayerGameReq = value;
-				break;
-			case `queue_scout_channel_id`:
-				if (value != null) config.scoutChannelId = String(value);
 				break;
 			default:
 				if (key.startsWith(`queue_open_`)) {
@@ -140,10 +105,7 @@ function hydrateConfigFromRows(rows) {
 
 async function fetchQueueConfigFromControlPanel() {
 	const rows = await prisma.controlPanel.findMany({
-		where: { OR: [
-			{ name: { startsWith: `queue_` } },
-			{ name: `display_mmr` },
-		] },
+		where: { name: { startsWith: `queue_` } },
 	});
 
 	return hydrateConfigFromRows(rows);
@@ -172,14 +134,15 @@ function sanitizeQueueConfigForRedis(config) {
 		relaxSeconds: Number(config.relaxSeconds ?? DEFAULT_QUEUE_CONFIG.relaxSeconds),
 		recentSetTtlSeconds: Number(config.recentSetTtlSeconds ?? DEFAULT_QUEUE_CONFIG.recentSetTtlSeconds),
 		cancelThreshold: Number(config.cancelThreshold ?? DEFAULT_QUEUE_CONFIG.cancelThreshold),
-		vcCreate: config.vcCreate === false ? false : true,
-		matchSize: Number(config.matchSize ?? DEFAULT_QUEUE_CONFIG.matchSize),
+		channelStopThreshold: Number(config.channelStopThreshold ?? DEFAULT_QUEUE_CONFIG.channelStopThreshold),
+		matchmakerWarmupSeconds: Number(config.matchmakerWarmupSeconds ?? DEFAULT_QUEUE_CONFIG.matchmakerWarmupSeconds),
+		matchmakerWarmupMaxPopsPerTick: Number(config.matchmakerWarmupMaxPopsPerTick ?? DEFAULT_QUEUE_CONFIG.matchmakerWarmupMaxPopsPerTick),
+		matchmakerWarmupMinSecondsBetweenPops: Number(config.matchmakerWarmupMinSecondsBetweenPops ?? DEFAULT_QUEUE_CONFIG.matchmakerWarmupMinSecondsBetweenPops),
 		maxScanPerBucket: Number(config.maxScanPerBucket ?? DEFAULT_QUEUE_CONFIG.maxScanPerBucket),
-		displayMmr: Boolean(config.displayMmr),
-		scoutRoleId: typeof config.scoutRoleId === `string` && config.scoutRoleId.length ? config.scoutRoleId : undefined,
+		displayMmr: typeof config.displayMmr === `boolean` ? config.displayMmr : false,
+		mapPool: Array.isArray(config.mapPool) ? config.mapPool.slice() : DEFAULT_QUEUE_CONFIG.mapPool.slice(),
 		newPlayerGameReq: Number.isInteger(config.newPlayerGameReq) ? config.newPlayerGameReq : undefined,
 		returningPlayerGameReq: Number.isInteger(config.returningPlayerGameReq) ? config.returningPlayerGameReq : undefined,
-		scoutChannelId: typeof config.scoutChannelId === `string` && config.scoutChannelId.length ? config.scoutChannelId : undefined,
 	};
 
 	return out;
@@ -254,13 +217,14 @@ async function invalidateQueueConfigCache() {
 
 async function hydrateGlobalFallbacks(config) {
 	const copy = { ...config };
+	// MAP_POOL and display_mmr are global ControlPanel keys (not queue_* keys).
 	const mapPool = await fetchGlobalMapPool();
 	if (!Array.isArray(mapPool) || mapPool.length === 0) {
 		throw new Error(`ControlPanel map pool (MAP_POOL) is empty or missing`);
 	}
 	copy.mapPool = mapPool;
 
-	copy.displayMmr = await fetchDisplayMmrFallback(copy.displayMmr);
+	copy.displayMmr = await fetchDisplayMmrGlobal();
 	return copy;
 }
 
@@ -288,9 +252,7 @@ async function fetchGlobalMapPool() {
 	}
 }
 
-async function fetchDisplayMmrFallback(current) {
-	if (typeof current === `boolean`) return current;
-
+async function fetchDisplayMmrGlobal() {
 	try {
 		const row = await prisma.controlPanel.findFirst({
 			where: { name: CONTROL_PANEL_DISPLAY_KEY },

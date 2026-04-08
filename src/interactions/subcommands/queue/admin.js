@@ -1,5 +1,6 @@
 const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
+const { ROLES } = require(`../../../../utils/enums/roles`);
 const { getRedisClient } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
@@ -20,7 +21,8 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 
 	switch (subcommand) {
 		case `status`: {
-			const embed = await buildQueueStatusEmbed(queueConfig);
+			const { getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			const embed = await buildQueueStatusEmbed(queueConfig, getMatchmakerStatus());
 			return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 		}
 
@@ -53,18 +55,30 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 		case `reload-config`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			logger.log(`INFO`, `Queue admin config reload executed by ${actorLabel}`);
+			const { syncLeagueStateFromControlPanel } = require(`../../../core/queue/bootstrap`);
 			await invalidateQueueConfigCache();
 			await getQueueConfig({ forceRefresh: true });
+			await syncLeagueStateFromControlPanel();
 			return interaction.editReply({
-				content: `Queue configuration cache reloaded. \n If you want to refresh game count cache please use /debug refresh-cache.`,
+				content: `Queue configuration cache reloaded. If you want to refresh game count cache please use /debug refresh-cache.`,
 			});
 		}
 
 		case `build`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!queueConfig.enabled) {
+				return interaction.editReply({
+					content: `Queue system is disabled in ControlPanel (queue_enabled=false). Enable it before running build.`,
+				});
+			}
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const { runMatchmakerOnce } = require(`../../../workers/matchmaker`);
-			await runMatchmakerOnce(interaction.client, tierSelection);
+			const ran = await runMatchmakerOnce(interaction.client, tierSelection);
+			if (!ran) {
+				return interaction.editReply({
+					content: `Build skipped because queue is disabled in ControlPanel (queue_enabled=false).`,
+				});
+			}
 			logger.log(`INFO`, `Queue admin build triggered by ${actorLabel} for ${tierSelection}`);
 			return interaction.editReply({
 				content:
@@ -72,6 +86,97 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 						? `Triggered the matchmaker for all tiers.`
 						: `Triggered the matchmaker for ${tierSelection}.`,
 			});
+		}
+
+		case `start-matchmaker`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+				return interaction.editReply({
+					content: `Queue system is disabled by environment configuration (QUEUE_SYSTEM_ENABLED).`,
+				});
+			}
+			if (!queueConfig.enabled) {
+				return interaction.editReply({
+					content: `Queue system is disabled in ControlPanel (queue_enabled=false). Enable it before starting matchmaker.`,
+				});
+			}
+
+			const { startMatchmaker, getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			const before = getMatchmakerStatus();
+			await startMatchmaker(interaction.client);
+			const after = getMatchmakerStatus();
+
+			logger.log(`INFO`, `Queue admin start-matchmaker executed by ${actorLabel}`);
+			return interaction.editReply({
+				content: before.running
+					? `Matchmaker is already running.`
+					: `Matchmaker started successfully (interval ${after.intervalMs ?? `unknown`}ms).`,
+			});
+		}
+
+		case `stop-matchmaker`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const reason = interaction.options.getString(`reason`) || `Stopped manually by queue admin`;
+			const { stopMatchmaker, getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			const before = getMatchmakerStatus();
+			stopMatchmaker({ reason, source: `queueadmin` });
+
+			logger.log(`INFO`, `Queue admin stop-matchmaker executed by ${actorLabel}: ${reason}`);
+			return interaction.editReply({
+				content: before.running
+					? `Matchmaker stopped. Reason: ${reason}`
+					: `Matchmaker was already stopped.`,
+			});
+		}
+
+		case `restart-matchmaker`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+				return interaction.editReply({
+					content: `Queue system is disabled by environment configuration (QUEUE_SYSTEM_ENABLED).`,
+				});
+			}
+			if (!queueConfig.enabled) {
+				return interaction.editReply({
+					content: `Queue system is disabled in ControlPanel (queue_enabled=false). Enable it before restarting matchmaker.`,
+				});
+			}
+
+			const { stopMatchmaker, startMatchmaker, getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			stopMatchmaker({ reason: `Restarted manually by queue admin`, source: `queueadmin` });
+			await startMatchmaker(interaction.client);
+			const after = getMatchmakerStatus();
+
+			logger.log(`INFO`, `Queue admin restart-matchmaker executed by ${actorLabel}`);
+			return interaction.editReply({
+				content: `Matchmaker restarted successfully (interval ${after.intervalMs ?? `unknown`}ms).`,
+			});
+		}
+
+		case `end-warmup`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+				return interaction.editReply({
+					content: `Queue system is disabled by environment configuration (QUEUE_SYSTEM_ENABLED).`,
+				});
+			}
+
+			const { getMatchmakerStatus, endWarmupNow } = require(`../../../workers/matchmaker`);
+			const status = getMatchmakerStatus();
+			if (!status.running) {
+				return interaction.editReply({
+					content: `Matchmaker is not running, so there is no active warmup to end.`,
+				});
+			}
+
+			const result = endWarmupNow({ source: `queueadmin` });
+			logger.log(`INFO`, `Queue admin end-warmup executed by ${actorLabel}`);
+
+			if (!result.activeBefore) {
+				return interaction.editReply({ content: `Warmup is already inactive.` });
+			}
+
+			return interaction.editReply({ content: `Warmup ended early. Matchmaker now runs at normal cadence.` });
 		}
 
 		case `kill`: {
@@ -173,7 +278,14 @@ function buildTierStateMessage(tiers, isOpen) {
 	return `${prefix} ${tiers.length === 1 ? `tier` : `tiers`}: ${tiers.map((t) => `\`${t}\``).join(`, `)}`;
 }
 
-async function buildQueueStatusEmbed(queueConfig) {
+async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
+	const status = matchmakerStatus ?? { running: false };
+	const startedAt = status.startedAt ? `<t:${Math.floor(status.startedAt / 1000)}:R>` : `N/A`;
+	const stoppedAt = status.stoppedAt ? `<t:${Math.floor(status.stoppedAt / 1000)}:R>` : `N/A`;
+	const stopReason = status.stopReason ? String(status.stopReason) : `N/A`;
+	const warmupEndsAt = status.warmupEndsAt ? `<t:${Math.floor(status.warmupEndsAt / 1000)}:R>` : `N/A`;
+	const scoutRoleId = String(ROLES?.LEAGUE?.SCOUT || ``);
+
 	return new EmbedBuilder()
 		.setTitle(`Queue Status`)
 		.setDescription(`Live snapshot of the current queue configuration.`)
@@ -185,11 +297,6 @@ async function buildQueueStatusEmbed(queueConfig) {
 				inline: true,
 			},
 			{ name: "", value: ``, inline: false },
-			{
-				name: `Channel Management Active`,
-				value: `${queueConfig.vcCreate ? `Yes` : `No`}`,
-				inline: true,
-			},
 			{
 				name: `Queue Cancel Threshold`,
 				value: `${queueConfig.cancelThreshold}%`,
@@ -208,7 +315,7 @@ async function buildQueueStatusEmbed(queueConfig) {
 			},
 			{
 				name: `Scout Role`,
-				value: queueConfig.scoutRoleId ? `<@&${queueConfig.scoutRoleId}> (${queueConfig.scoutRoleId})` : `*Not configured*`,
+				value: scoutRoleId ? `<@&${scoutRoleId}> (${scoutRoleId})` : `*Not configured*`,
 				inline: false,
 			},
 			{
@@ -227,6 +334,57 @@ async function buildQueueStatusEmbed(queueConfig) {
 				name: `Returning Player Game Requirement`,
 				value: `${queueConfig.returningPlayerGameReq} games`,
 				inline: true,
+			},
+			{ name: ``, value: ``, inline: false },
+			{
+				name: `Matchmaker Running`,
+				value: status.running ? `Yes` : `No`,
+				inline: true,
+			},
+			{
+				name: `Matchmaker Interval`,
+				value: status.intervalMs ? `${status.intervalMs}ms` : `N/A`,
+				inline: true,
+			},
+			{
+				name: `In-Flight Tiers`,
+				value: `${status.inFlightTiers ?? 0}`,
+				inline: true,
+			},
+			{
+				name: `Warmup Active`,
+				value: status.warmupActive ? `Yes` : `No`,
+				inline: true,
+			},
+			{
+				name: `Warmup Remaining`,
+				value: status.warmupActive ? `${status.warmupRemainingSeconds ?? 0}s` : `N/A`,
+				inline: true,
+			},
+			{
+				name: `Warmup Ends`,
+				value: warmupEndsAt,
+				inline: true,
+			},
+			{
+				name: `Last Pop`,
+				value: status.lastPopAt ? `<t:${Math.floor(status.lastPopAt / 1000)}:R>` : `N/A`,
+				inline: true,
+			},
+			{
+				name: `Started`,
+				value: startedAt,
+				inline: true,
+			},
+			{
+				name: `Stopped`,
+				value: stoppedAt,
+				inline: true,
+			},
+			{
+				name: `Stop Reason`,
+				value: stopReason,
+				inline: false,
 			},
 		)
 		.setColor(queueConfig.enabled ? 0x2ecc71 : 0xffa200)
