@@ -43,7 +43,8 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             // in dev, the GM/AGM IDs are just the VDC GM/STAFF role
             GM: `1189024973017321572`,
             AGM: `1189024973017321572`,
-            SCOUT: `1238499712303235273`
+            SCOUT: `1238499712303235273`,
+            TRANSACTIONS: `1057160814836056114`,
         }
     } :
     /** @production */
@@ -82,6 +83,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             // GM/AGM IDs
             GM: `963862762881175572`,
             AGM: `963863601716793384`,
-            SCOUT: `1052008749851742258`
+            SCOUT: `1052008749851742258`,
+            TRANSACTIONS: `966910433070030858`,
         }
     };
