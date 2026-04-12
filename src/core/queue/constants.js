@@ -9,7 +9,7 @@ const DEFAULT_QUEUE_CONFIG = Object.freeze({
 	},
 	mapPool: [],
 	perTierFlags: {},
-	relaxSeconds: 180,
+	relaxSeconds: 30,
 	recentSetTtlSeconds: 180,
 	cancelThreshold: 80,
 	channelStopThreshold: 480,

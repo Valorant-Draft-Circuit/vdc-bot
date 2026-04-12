@@ -4,7 +4,7 @@ const { TIERS_SET_KEY } = require(`../../helpers/queue/queueKeys`);
 const { getQueueConfig } = require(`./queueconfig`);
 
 const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const AUTO_CLOSE_HOUR_UTC = 8;
+const AUTO_CLOSE_HOUR_UTC = 12; // 4am PDT, 6am CDT, 7am EDT
 
 let startupTimeoutHandle;
 let recurringIntervalHandle;
@@ -28,7 +28,7 @@ async function closeAllTiersJob() {
 		const tiers = await redis.smembers(TIERS_SET_KEY);
 		if (!Array.isArray(tiers) || tiers.length === 0) return;
 		await setTierState(tiers, false);
-		logger.log(`INFO`, `Auto-closed all queues at 08:00 UTC`);
+		logger.log(`INFO`, `Auto-closed all queues at ${AUTO_CLOSE_HOUR_UTC}:00 UTC`);
 	} catch (error) {
 		logger.log(`ERROR`, `Failed to auto-close queues`, error);
 	}
