@@ -286,6 +286,18 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 	const warmupEndsAt = status.warmupEndsAt ? `<t:${Math.floor(status.warmupEndsAt / 1000)}:R>` : `N/A`;
 	const scoutRoleId = String(ROLES?.LEAGUE?.SCOUT || ``);
 
+	const redis = getRedisClient();
+	const allTiers = await redis.smembers(TIERS_SET_KEY);
+	const openTiers = [];
+	for (const tier of allTiers) {
+		if (!tier) continue;
+		const val = await redis.get(tierOpenKey(tier));
+		if (val === `1`) openTiers.push(tier);
+	}
+	const openQueuesValue = openTiers.length > 0
+		? openTiers.map((t) => `\`${t}\``).join(`, `)
+		: `No queues are currently open.`;
+
 	return new EmbedBuilder()
 		.setTitle(`Queue Status`)
 		.setDescription(`Live snapshot of the current queue configuration.`)
@@ -296,7 +308,7 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 				value: `${queueConfig.displayMmr}`,
 				inline: true,
 			},
-			{ name: "", value: ``, inline: false },
+			{ name: `Currently Open Queues`, value: openQueuesValue, inline: false },
 			{
 				name: `Queue Cancel Threshold`,
 				value: `${queueConfig.cancelThreshold}%`,
