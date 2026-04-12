@@ -11,6 +11,7 @@ const {
 	playerKey,
 } = require(`../../../helpers/queue/queueKeys`);
 
+//TODO: Move these roles to enums
 const INACTIVE_ROLE_ID = `1060750208746668132`;
 const MUTED_ROLE_ID = `979222361708589096`;
 const PRIORITY_BUCKETS = new Set([`DE`, `FA`, `RFA`, `SIGNED`]);
@@ -141,7 +142,7 @@ function mapContextErrorToMessage(error) {
 		case `TIER_NOT_RESOLVED`:
 			return `We couldn't determine your tier. Please create a ticket.`;
 		case `INELIGIBLE_STATUS`:
-			return `Your current league status doesn't allow queueing for Combines.`;
+			return `Your current league status doesn't allow queueing for Combines.  Please create a ticket if you believe this is an error.`;
 		default:
 			return `Unable to resolve your queue profile (${code}). Please try again later.`;
 	}
