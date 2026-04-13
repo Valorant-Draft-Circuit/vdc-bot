@@ -223,6 +223,11 @@ module.exports = {
                     required: true
                 }
             ]
+        },
+        {
+            name: `active-subs`,
+            description: `List all active substitutes across every tier.`,
+            type: ApplicationCommandOptionType.Subcommand
         }
     ]
 }

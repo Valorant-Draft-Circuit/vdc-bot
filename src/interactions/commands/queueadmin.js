@@ -1,5 +1,5 @@
 const { MessageFlags } = require(`discord.js`);
-const { getQueueConfig } = require(`../../core/config`);
+const { getQueueConfig } = require(`../../core/queue/queueconfig`);
 const { handleAdminCommand } = require(`../subcommands/queue/admin`);
 
 module.exports = {
@@ -12,6 +12,13 @@ module.exports = {
         if (!interaction.inGuild()) {
             return interaction.reply({
                 content: `Queue admin commands must be run from the server.`,
+                flags: MessageFlags.Ephemeral,
+            });
+        }
+
+        if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+            return interaction.reply({
+                content: `The queue system is currently disabled by environment configuration.`,
                 flags: MessageFlags.Ephemeral,
             });
         }

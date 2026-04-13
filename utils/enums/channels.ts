@@ -13,6 +13,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
             PROSPECT: `1059244366671118487`,
             RECRUIT: `1059244366671118487`,
         },
+        SCOUT_ALERT_CHANNEL: `1433209767723012176`,
         ANNOUNCEMENTS: {
             FM: `1234719001616056370`
         },
@@ -28,16 +29,17 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     EXPERT: `1360365247843532841`,
                     APPRENTICE: `1360365176347557898`,
                     PROSPECT: `1360365121154842774`,
-                    RECRUIT: `1360365121154842774`,
+                    RECRUIT: `1490143954535186582`,
                 },
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
                     MYTHIC: `1360365496276353105`,
                     EXPERT: `1360365547581079582`,
                     APPRENTICE: `1360365624743821352`,
-                    PROSPECT: `1360365712828535085`,
-                    RECRUIT: `1360365712828535085`,
-                }
+                    PROSPECT: `1491252912402337934`,
+                    RECRUIT: `1490143900789243975`,
+                },
+                COMBINE_OVERFLOW: `1490144088048140438`,
             },
         },
         CATEGORIES: {
@@ -58,6 +60,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
             PROSPECT: `1173394893297696788`,
             RECRUIT: `1417210319826063490`,
         },
+        SCOUT_ALERT_CHANNEL: `1432812845879263393`,
         ANNOUNCEMENTS: {
             FM: `966212909703237662`
         },
@@ -82,7 +85,8 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                     APPRENTICE: `1052001489964515459`,
                     PROSPECT: `1052001442979905586`,
                     RECRUIT: `1417228058900824164`,
-                }
+                },
+                COMBINE_OVERFLOW: `1489043846838091796`,
             },
         },
         CATEGORIES: {

@@ -1,8 +1,8 @@
-const { MessageFlags, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder } = require(`discord.js`);
+const { MessageFlags } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
+const { matchKey } = require(`../../helpers/queue/queueKeys`);
 
 const BUTTON_LABELS = {
-	joinLobby: `Join Lobby VC`,
 	joinAttackers: `Join Attackers VC`,
 	joinDefenders: `Join Defenders VC`,
 	submit: `Submit Match Link`,
@@ -29,29 +29,10 @@ module.exports = {
 		}
 
 		if (command === `submit`) {
-				// show a modal to collect the tracker.gg URL
-				try {
-					const modal = new ModalBuilder()
-						.setTitle(`Submit Match Link`)
-						.setCustomId(`queueManager_submitModal-${queueId}`);
-
-					const input = new TextInputBuilder()
-						.setCustomId(`tracker_url`)
-						.setStyle(TextInputStyle.Short)
-						.setPlaceholder(`https://tracker.gg/valorant/match/...`)
-						.setRequired(true);
-
-					const label = new LabelBuilder()
-						.setLabel(`Tracker.gg match URL`)
-						.setTextInputComponent(input);
-
-					modal.addLabelComponents(label);
-
-					return await interaction.showModal(modal);
-				} catch (error) {
-					logger.log(`ERROR`, `Failed to show submit modal`, error);
-					return interaction.reply({ content: `Unable to open submission modal right now.`, flags: MessageFlags.Ephemeral });
-				}
+			return interaction.reply({
+				content: `Use /submit to submit your Tracker link. Combine queue matches are auto-completed from that command.`,
+				flags: MessageFlags.Ephemeral,
+			});
 		}
 
 		try {
@@ -79,7 +60,7 @@ module.exports = {
 
 async function createVoiceInvite(interaction, queueId, command) {
 	const redis = getRedisClient();
-	const descriptorRaw = await redis.hget(`vdc:match:${queueId}`, `channelIdsJSON`);
+	const descriptorRaw = await redis.hget(matchKey(queueId), `channelIdsJSON`);
 	if (!descriptorRaw) return null;
 
 	let descriptor;
@@ -111,8 +92,6 @@ function selectChannelId(command, descriptor) {
 	const voice = descriptor.voiceChannelIds ?? {};
 
 	switch (command) {
-		case `joinLobby`:
-			return voice.lobby;
 		case `joinAttackers`:
 			return voice.teamA;
 		case `joinDefenders`:

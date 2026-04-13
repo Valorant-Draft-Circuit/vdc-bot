@@ -1,26 +1,35 @@
-const { MessageFlags, PermissionFlagsBits, EmbedBuilder } = require(`discord.js`);
+const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
+const { ROLES } = require(`../../../../utils/enums/roles`);
 const { getRedisClient } = require(`../../../core/redis`);
-const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/config`);
-const { deleteMatchChannels } = require(`../../../core/matchChannels`);
+const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
+const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
+const {
+	TIERS_SET_KEY,
+	tierOpenKey,
+	tierQueueKey,
+	tierQueueKeys,
+	playerKey,
+	playerRecentKey,
+	matchKey,
+	matchKeyPattern,
+	queueIdFromMatchKey,
+} = require(`../../../helpers/queue/queueKeys`);
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
-	// Permission is enforced by Discord via command registration (ManageGuild or Administrator).
-	// Rely on Discord to hide this command for unauthorized users.
-
 	const actorLabel = `${interaction.user.tag} (${interaction.user.id})`;
 
 	switch (subcommand) {
-			case `status`: {
-				const embed = await buildQueueStatusEmbed(queueConfig, interaction);
-				return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
-			}
+		case `status`: {
+			const { getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			const embed = await buildQueueStatusEmbed(queueConfig, getMatchmakerStatus());
+			return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+		}
 
 		case `open`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const tiers = await resolveTiers(tierSelection);
-			// This should never happen since we validate at least one tier on input
 			if (tiers.length === 0) {
 				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
@@ -34,7 +43,6 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const tiers = await resolveTiers(tierSelection);
-			// This should never happen since we validate at least one tier on input
 			if (tiers.length === 0) {
 				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
@@ -47,18 +55,30 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 		case `reload-config`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			logger.log(`INFO`, `Queue admin config reload executed by ${actorLabel}`);
+			const { syncLeagueStateFromControlPanel } = require(`../../../core/queue/bootstrap`);
 			await invalidateQueueConfigCache();
 			await getQueueConfig({ forceRefresh: true });
+			await syncLeagueStateFromControlPanel();
 			return interaction.editReply({
-				content: `Queue configuration cache reloaded. \n If you want to refresh game count cache please use /debug refresh-cache.`,
+				content: `Queue configuration cache reloaded. If you want to refresh game count cache please use /debug refresh-cache.`,
 			});
 		}
 
 		case `build`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!queueConfig.enabled) {
+				return interaction.editReply({
+					content: `Queue system is disabled in ControlPanel (queue_enabled=false). Enable it before running build.`,
+				});
+			}
 			const tierSelection = interaction.options.getString(`tier`, true).toUpperCase();
 			const { runMatchmakerOnce } = require(`../../../workers/matchmaker`);
-			await runMatchmakerOnce(interaction.client, tierSelection);
+			const ran = await runMatchmakerOnce(interaction.client, tierSelection);
+			if (!ran) {
+				return interaction.editReply({
+					content: `Build skipped because queue is disabled in ControlPanel (queue_enabled=false).`,
+				});
+			}
 			logger.log(`INFO`, `Queue admin build triggered by ${actorLabel} for ${tierSelection}`);
 			return interaction.editReply({
 				content:
@@ -66,6 +86,97 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 						? `Triggered the matchmaker for all tiers.`
 						: `Triggered the matchmaker for ${tierSelection}.`,
 			});
+		}
+
+		case `start-matchmaker`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+				return interaction.editReply({
+					content: `Queue system is disabled by environment configuration (QUEUE_SYSTEM_ENABLED).`,
+				});
+			}
+			if (!queueConfig.enabled) {
+				return interaction.editReply({
+					content: `Queue system is disabled in ControlPanel (queue_enabled=false). Enable it before starting matchmaker.`,
+				});
+			}
+
+			const { startMatchmaker, getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			const before = getMatchmakerStatus();
+			await startMatchmaker(interaction.client);
+			const after = getMatchmakerStatus();
+
+			logger.log(`INFO`, `Queue admin start-matchmaker executed by ${actorLabel}`);
+			return interaction.editReply({
+				content: before.running
+					? `Matchmaker is already running.`
+					: `Matchmaker started successfully (interval ${after.intervalMs ?? `unknown`}ms).`,
+			});
+		}
+
+		case `stop-matchmaker`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const reason = interaction.options.getString(`reason`) || `Stopped manually by queue admin`;
+			const { stopMatchmaker, getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			const before = getMatchmakerStatus();
+			stopMatchmaker({ reason, source: `queueadmin` });
+
+			logger.log(`INFO`, `Queue admin stop-matchmaker executed by ${actorLabel}: ${reason}`);
+			return interaction.editReply({
+				content: before.running
+					? `Matchmaker stopped. Reason: ${reason}`
+					: `Matchmaker was already stopped.`,
+			});
+		}
+
+		case `restart-matchmaker`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+				return interaction.editReply({
+					content: `Queue system is disabled by environment configuration (QUEUE_SYSTEM_ENABLED).`,
+				});
+			}
+			if (!queueConfig.enabled) {
+				return interaction.editReply({
+					content: `Queue system is disabled in ControlPanel (queue_enabled=false). Enable it before restarting matchmaker.`,
+				});
+			}
+
+			const { stopMatchmaker, startMatchmaker, getMatchmakerStatus } = require(`../../../workers/matchmaker`);
+			stopMatchmaker({ reason: `Restarted manually by queue admin`, source: `queueadmin` });
+			await startMatchmaker(interaction.client);
+			const after = getMatchmakerStatus();
+
+			logger.log(`INFO`, `Queue admin restart-matchmaker executed by ${actorLabel}`);
+			return interaction.editReply({
+				content: `Matchmaker restarted successfully (interval ${after.intervalMs ?? `unknown`}ms).`,
+			});
+		}
+
+		case `end-warmup`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+				return interaction.editReply({
+					content: `Queue system is disabled by environment configuration (QUEUE_SYSTEM_ENABLED).`,
+				});
+			}
+
+			const { getMatchmakerStatus, endWarmupNow } = require(`../../../workers/matchmaker`);
+			const status = getMatchmakerStatus();
+			if (!status.running) {
+				return interaction.editReply({
+					content: `Matchmaker is not running, so there is no active warmup to end.`,
+				});
+			}
+
+			const result = endWarmupNow({ source: `queueadmin` });
+			logger.log(`INFO`, `Queue admin end-warmup executed by ${actorLabel}`);
+
+			if (!result.activeBefore) {
+				return interaction.editReply({ content: `Warmup is already inactive.` });
+			}
+
+			return interaction.editReply({ content: `Warmup ended early. Matchmaker now runs at normal cadence.` });
 		}
 
 		case `kill`: {
@@ -105,15 +216,11 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 				return interaction.editReply({ content: `Invalid bucket type: ${bucket}` });
 			}
 
-			// Generate dummy IDs and push them to the queue list. Use a distinct prefix to avoid colliding
-			// with real user IDs. Each dummy will have a player hash similar to real players.
 			const created = [];
 			for (let i = 0; i < count; i++) {
-				// ensure reasonably unique id
 				const dummyId = `dummy_${Date.now().toString(36)}_${Math.floor(Math.random() * 100000)}_${i}`;
-				const playerKey = `vdc:player:${dummyId}`;
+				const dummyPlayerKey = playerKey(dummyId);
 				const nowMs = Date.now().toString();
-				// Set a simple player hash
 				const hashPayload = {
 					status: `queued`,
 					tier: tierSelection,
@@ -121,14 +228,12 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 					mmr: `1000`,
 					guildId: ``,
 				};
-				if (typeof games === 'number') hashPayload.gameCount = String(games);
-				await redis.hset(playerKey, hashPayload);
-				// set TTL so these expire after 5 minutes (short-lived test players)
-				await redis.pexpire(playerKey, 300000);
-				// Push to the selected queue list (primary or completed sibling depending on flag)
+				if (typeof games === `number`) hashPayload.gameCount = String(games);
+				await redis.hset(dummyPlayerKey, hashPayload);
+				await redis.pexpire(dummyPlayerKey, 300000);
 				const queueKey = completedFlag
-					? `vdc:tier:${tierSelection}:queue:${bucket}:completed`
-					: `vdc:tier:${tierSelection}:queue:${bucket}`;
+					? tierQueueKey(tierSelection, bucket, { completed: true })
+					: tierQueueKey(tierSelection, bucket);
 				await redis.rpush(queueKey, dummyId);
 				created.push({ id: dummyId, queueKey });
 			}
@@ -146,7 +251,7 @@ async function resolveTiers(selection) {
 			.filter((value) => typeof value === `string` && String(value).toUpperCase() !== `MIXED`)
 			.map((value) => value.toUpperCase()),
 	);
-	(await redis.smembers(`vdc:tiers`)).forEach((tier) => tier && knownTiers.add(tier.toUpperCase()));
+	(await redis.smembers(TIERS_SET_KEY)).forEach((tier) => tier && knownTiers.add(tier.toUpperCase()));
 
 	if (selection === `ALL`) return Array.from(knownTiers.values());
 	if (knownTiers.has(selection)) return [selection];
@@ -158,7 +263,7 @@ async function setTierState(tiers, isOpen) {
 	const pipeline = redis.pipeline();
 
 	for (const tier of tiers) {
-		pipeline.set(`vdc:tier:${tier}:open`, isOpen ? `1` : `0`);
+		pipeline.set(tierOpenKey(tier), isOpen ? `1` : `0`);
 	}
 
 	await pipeline.exec();
@@ -173,28 +278,25 @@ function buildTierStateMessage(tiers, isOpen) {
 	return `${prefix} ${tiers.length === 1 ? `tier` : `tiers`}: ${tiers.map((t) => `\`${t}\``).join(`, `)}`;
 }
 
-async function buildQueueStatusEmbed(queueConfig, interaction) {
-	let scoutRoleDisplay = `Not configured`;
+async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
+	const status = matchmakerStatus ?? { running: false };
+	const startedAt = status.startedAt ? `<t:${Math.floor(status.startedAt / 1000)}:R>` : `N/A`;
+	const stoppedAt = status.stoppedAt ? `<t:${Math.floor(status.stoppedAt / 1000)}:R>` : `N/A`;
+	const stopReason = status.stopReason ? String(status.stopReason) : `N/A`;
+	const warmupEndsAt = status.warmupEndsAt ? `<t:${Math.floor(status.warmupEndsAt / 1000)}:R>` : `N/A`;
+	const scoutRoleId = String(ROLES?.LEAGUE?.SCOUT || ``);
 
-	if (queueConfig.scoutRoleId) {
-		const id = String(queueConfig.scoutRoleId);
-		// If interaction is provided and in a guild, try to resolve the role object
-		try {
-			const guild = interaction?.guild ?? null;
-			if (guild) {
-				const role = guild.roles.cache.get(id) ?? (await guild.roles.fetch(id).catch(() => null));
-				if (role) {
-					scoutRoleDisplay = `<@&${id}> ${role.name} (${id})`;
-				} else {
-					scoutRoleDisplay = `${id}`;
-				}
-			} else {
-				scoutRoleDisplay = `${id}`;
-			}
-		} catch (err) {
-			scoutRoleDisplay = `${id}`;
-		}
+	const redis = getRedisClient();
+	const allTiers = await redis.smembers(TIERS_SET_KEY);
+	const openTiers = [];
+	for (const tier of allTiers) {
+		if (!tier) continue;
+		const val = await redis.get(tierOpenKey(tier));
+		if (val === `1`) openTiers.push(tier);
 	}
+	const openQueuesValue = openTiers.length > 0
+		? openTiers.map((t) => `\`${t}\``).join(`, `)
+		: `No queues are currently open.`;
 
 	return new EmbedBuilder()
 		.setTitle(`Queue Status`)
@@ -206,12 +308,7 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 				value: `${queueConfig.displayMmr}`,
 				inline: true,
 			},
-			{ name: "", value: ``, inline: false },
-			{
-				name: `Channel Management Active`,
-				value: `${queueConfig.vcCreate ? `Yes` : `No`}`,
-				inline: true,
-			},
+			{ name: `Currently Open Queues`, value: openQueuesValue, inline: false },
 			{
 				name: `Queue Cancel Threshold`,
 				value: `${queueConfig.cancelThreshold}%`,
@@ -230,10 +327,11 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 			},
 			{
 				name: `Scout Role`,
-				value: queueConfig.scoutRoleId ? `<@&${queueConfig.scoutRoleId}> (${queueConfig.scoutRoleId})` : `*Not configured*`,
+				value: scoutRoleId ? `<@&${scoutRoleId}> (${scoutRoleId})` : `*Not configured*`,
 				inline: false,
 			},
-			{ name: `Active Map Pool`,
+			{
+				name: `Active Map Pool`,
 				value: (queueConfig.mapPool && queueConfig.mapPool.length > 0)
 					? queueConfig.mapPool.map(m => `\`${m}\``).join(`, `)
 					: `Not configured`,
@@ -248,7 +346,58 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 				name: `Returning Player Game Requirement`,
 				value: `${queueConfig.returningPlayerGameReq} games`,
 				inline: true,
-			}
+			},
+			{ name: ``, value: ``, inline: false },
+			{
+				name: `Matchmaker Running`,
+				value: status.running ? `Yes` : `No`,
+				inline: true,
+			},
+			{
+				name: `Matchmaker Interval`,
+				value: status.intervalMs ? `${status.intervalMs}ms` : `N/A`,
+				inline: true,
+			},
+			{
+				name: `In-Flight Tiers`,
+				value: `${status.inFlightTiers ?? 0}`,
+				inline: true,
+			},
+			{
+				name: `Warmup Active`,
+				value: status.warmupActive ? `Yes` : `No`,
+				inline: true,
+			},
+			{
+				name: `Warmup Remaining`,
+				value: status.warmupActive ? `${status.warmupRemainingSeconds ?? 0}s` : `N/A`,
+				inline: true,
+			},
+			{
+				name: `Warmup Ends`,
+				value: warmupEndsAt,
+				inline: true,
+			},
+			{
+				name: `Last Pop`,
+				value: status.lastPopAt ? `<t:${Math.floor(status.lastPopAt / 1000)}:R>` : `N/A`,
+				inline: true,
+			},
+			{
+				name: `Started`,
+				value: startedAt,
+				inline: true,
+			},
+			{
+				name: `Stopped`,
+				value: stoppedAt,
+				inline: true,
+			},
+			{
+				name: `Stop Reason`,
+				value: stopReason,
+				inline: false,
+			},
 		)
 		.setColor(queueConfig.enabled ? 0x2ecc71 : 0xffa200)
 		.setFooter({ text: `Valorant Draft Circuit - Queue Manager` });
@@ -256,8 +405,8 @@ async function buildQueueStatusEmbed(queueConfig, interaction) {
 
 async function killMatch(client, queueId, actorLabel) {
 	const redis = getRedisClient();
-	const matchKey = `vdc:match:${queueId}`;
-	const matchData = await redis.hgetall(matchKey);
+	const queueMatchKey = matchKey(queueId);
+	const matchData = await redis.hgetall(queueMatchKey);
 
 	if (!matchData || Object.keys(matchData).length === 0) {
 		return { message: `Match \`${queueId}\` was not found.` };
@@ -268,14 +417,14 @@ async function killMatch(client, queueId, actorLabel) {
 	const pipeline = redis.pipeline();
 
 	for (const playerId of players) {
-		const key = `vdc:player:${playerId}`;
+		const key = playerKey(playerId);
 		pipeline.hset(key, `status`, `idle`);
 		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(`vdc:player:${playerId}:recent`);
+		pipeline.del(playerRecentKey(playerId));
 		pipeline.pexpire(key, 43200000);
 	}
 
-	pipeline.del(matchKey, `${matchKey}:cancel_votes_yes`, `${matchKey}:cancel_votes_no`);
+	pipeline.del(queueMatchKey, `${queueMatchKey}:cancel_votes_yes`, `${queueMatchKey}:cancel_votes_no`);
 	await pipeline.exec();
 
 	logger.log(
@@ -291,24 +440,14 @@ async function killMatch(client, queueId, actorLabel) {
 
 async function resetQueues(client, actorLabel) {
 	const redis = getRedisClient();
-	const tiers = await redis.smembers(`vdc:tiers`);
+	const tiers = await redis.smembers(TIERS_SET_KEY);
 	const affectedUsers = new Set();
 	let queuesCleared = 0;
 
 	for (const tier of tiers) {
 		if (!tier) continue;
 
-			const listKeys = [
-				`vdc:tier:${tier}:queue:DE`,
-				`vdc:tier:${tier}:queue:FA`,
-				`vdc:tier:${tier}:queue:RFA`,
-				`vdc:tier:${tier}:queue:SIGNED`,
-				// include completed/low-priority sibling lists
-				`vdc:tier:${tier}:queue:DE:completed`,
-				`vdc:tier:${tier}:queue:FA:completed`,
-				`vdc:tier:${tier}:queue:RFA:completed`,
-				`vdc:tier:${tier}:queue:SIGNED:completed`,
-			];
+		const listKeys = tierQueueKeys(tier, { includeCompleted: true });
 
 		for (const key of listKeys) {
 			const members = await redis.lrange(key, 0, -1);
@@ -320,7 +459,7 @@ async function resetQueues(client, actorLabel) {
 		}
 	}
 
-	const matchKeys = await scanKeys(redis, `vdc:match:*`);
+	const matchKeys = await scanKeys(redis, matchKeyPattern());
 	let matchesCleared = 0;
 
 	for (const key of matchKeys) {
@@ -329,7 +468,7 @@ async function resetQueues(client, actorLabel) {
 			await redis.del(key);
 			continue;
 		}
-		const queueId = key.split(`vdc:match:`)[1];
+		const queueId = queueIdFromMatchKey(key);
 		const parsed = parseMatchRecord(matchData);
 
 		(parsed.teamA ?? []).forEach((id) => id && affectedUsers.add(id));
@@ -340,17 +479,17 @@ async function resetQueues(client, actorLabel) {
 		} catch (error) {
 			logger.log(`WARNING`, `Failed to cleanup channels for ${queueId}`, error);
 		}
-	await redis.del(key, `${key}:cancel_votes_yes`, `${key}:cancel_votes_no`);
+		await redis.del(key, `${key}:cancel_votes_yes`, `${key}:cancel_votes_no`);
 		matchesCleared += 1;
 	}
 
 	if (affectedUsers.size > 0) {
 		const pipeline = redis.pipeline();
 		for (const userId of affectedUsers) {
-			const key = `vdc:player:${userId}`;
+			const key = playerKey(userId);
 			pipeline.hset(key, `status`, `idle`);
 			pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-			pipeline.del(`vdc:player:${userId}:recent`);
+			pipeline.del(playerRecentKey(userId));
 			pipeline.pexpire(key, 43200000);
 		}
 		await pipeline.exec();
@@ -435,17 +574,7 @@ async function clearTierQueues(redis, tiers) {
 	const affectedUsers = new Set();
 
 	for (const tier of tiers) {
-				const listKeys = [
-					`vdc:tier:${tier}:queue:DE`,
-					`vdc:tier:${tier}:queue:FA`,
-					`vdc:tier:${tier}:queue:RFA`,
-					`vdc:tier:${tier}:queue:SIGNED`,
-					// completed/low-priority siblings
-					`vdc:tier:${tier}:queue:DE:completed`,
-					`vdc:tier:${tier}:queue:FA:completed`,
-					`vdc:tier:${tier}:queue:RFA:completed`,
-					`vdc:tier:${tier}:queue:SIGNED:completed`,
-				];
+		const listKeys = tierQueueKeys(tier, { includeCompleted: true });
 
 		for (const key of listKeys) {
 			const members = await redis.lrange(key, 0, -1);
@@ -459,10 +588,10 @@ async function clearTierQueues(redis, tiers) {
 	}
 
 	for (const userId of affectedUsers) {
-		const key = `vdc:player:${userId}`;
+		const key = playerKey(userId);
 		pipeline.hset(key, `status`, `idle`);
 		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(`vdc:player:${userId}:recent`);
+		pipeline.del(playerRecentKey(userId));
 	}
 
 	await pipeline.exec();
@@ -475,6 +604,4 @@ async function clearTierQueues(redis, tiers) {
 module.exports = {
 	handleAdminCommand,
 };
-
-// Export setTierState so other modules (e.g. startup jobs) can programmatically open/close tiers
 module.exports.setTierState = setTierState;

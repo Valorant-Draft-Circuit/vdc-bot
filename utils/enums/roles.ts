@@ -18,6 +18,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             INACTIVE_RESERVE: "1181457461895495732",
             CAPTAIN: "1082176642329346110",
             FORMER_PLAYER: "1062105226225660005",
+            SCOUT: "1428882903806513222",
         },
         TIER: {
             // Regular tier roles
@@ -42,7 +43,8 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             // in dev, the GM/AGM IDs are just the VDC GM/STAFF role
             GM: `1189024973017321572`,
             AGM: `1189024973017321572`,
-            SCOUT: `1238499712303235273`
+            SCOUT: `1238499712303235273`,
+            TRANSACTIONS: `1057160814836056114`,
         }
     } :
     /** @production */
@@ -57,6 +59,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             INACTIVE_RESERVE: "976541355625025536",
             CAPTAIN: "963863666464268328",
             FORMER_PLAYER: "966901052626595860",
+            SCOUT: "1052008749851742258",
         },
         TIER: {
             // Regular tier roles
@@ -80,6 +83,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             // GM/AGM IDs
             GM: `963862762881175572`,
             AGM: `963863601716793384`,
-            SCOUT: `1052008749851742258`
+            SCOUT: `1052008749851742258`,
+            TRANSACTIONS: `966910433070030858`,
         }
     };

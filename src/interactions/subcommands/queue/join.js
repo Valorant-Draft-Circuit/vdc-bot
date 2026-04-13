@@ -1,14 +1,25 @@
 const { MessageFlags } = require(`discord.js`);
-const { resolvePlayerQueueContext, resolvePriorityBucket } = require(`../../../core/queueState`);
+const { resolvePlayerQueueContext, resolvePriorityBucket } = require(`../../../helpers/queue/queueState`);
 const { getRedisClient, runLua } = require(`../../../core/redis`);
+const {
+	LEAGUE_STATE_KEY,
+	TIERS_SET_KEY,
+	EVENTS_STREAM_KEY,
+	tierOpenKey,
+	tierQueueKey,
+	tierQueueKeys,
+	playerKey,
+} = require(`../../../helpers/queue/queueKeys`);
 
-const EVENTS_KEY = `vdc:events`;
+//TODO: Move these roles to enums
+const INACTIVE_ROLE_ID = `1060750208746668132`;
+const MUTED_ROLE_ID = `979222361708589096`;
+const PRIORITY_BUCKETS = new Set([`DE`, `FA`, `RFA`, `SIGNED`]);
 
 async function joinQueue(interaction, queueConfig) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	// check if user has the Inactive or Muted role and deny if so
-	if (interaction.member.roles.cache.has(`1060750208746668132`) || interaction.member.roles.cache.has('979222361708589096')) {
+	if (interaction.member.roles.cache.has(INACTIVE_ROLE_ID) || interaction.member.roles.cache.has(MUTED_ROLE_ID)) {
 		return interaction.editReply({ content: `You are not allowed to join the queue.` });
 	}
 
@@ -21,7 +32,11 @@ async function joinQueue(interaction, queueConfig) {
 	try {
 		context = await resolvePlayerQueueContext(interaction.user.id);
 	} catch (error) {
-		logger.log(`WARNING`, `Queue join failed while resolving player context`, `${interaction.user.tag} (${interaction.user.id}) :: ${error?.message || error}`);
+		logger.log(
+			`WARNING`,
+			`Queue join failed while resolving player context`,
+			`${interaction.user.tag} (${interaction.user.id}) :: ${error?.message || error}`,
+		);
 		return interaction.editReply({
 			content: mapContextErrorToMessage(error),
 		});
@@ -47,14 +62,12 @@ async function joinQueue(interaction, queueConfig) {
 
 	const redis = getRedisClient();
 
-	// determine whether player has completed required combines and should be placed in lower-priority 'completed' sibling
 	const queueConfigForUser = queueConfig;
 	const gamesPlayed = Number(context.gameCount ?? 0);
 	const isReturning = context.leagueStatus && String(context.leagueStatus).toUpperCase() !== `DRAFT_ELIGIBLE`;
 	const required = isReturning ? queueConfigForUser.returningPlayerGameReq : queueConfigForUser.newPlayerGameReq;
 	const completedSibling = gamesPlayed >= (Number(required) || 0);
 
-	// build keys and append the selected target queue key as an extra KEYS arg (KEYS[8]) so the Lua script can LPUSH into it
 	const keys = buildJoinKeys(context.tier, interaction.user.id, completedSibling, priorityBucket);
 	const args = [
 		interaction.user.id,
@@ -64,8 +77,7 @@ async function joinQueue(interaction, queueConfig) {
 		String(Date.now()),
 		String(context.mmr ?? 0),
 		interaction.guildId ?? ``,
-		// pass gameCount explicitly (may be undefined/null/0) so the Lua script can set it
-		context.gameCount != null ? String(context.gameCount) : "",
+		context.gameCount != null ? String(context.gameCount) : ``,
 	];
 
 	try {
@@ -78,41 +90,27 @@ async function joinQueue(interaction, queueConfig) {
 			});
 		}
 
-		await redis.sadd(`vdc:tiers`, context.tier);
+		await redis.sadd(TIERS_SET_KEY, context.tier);
 
-		// Compute total number of queued players across the entire tier (all buckets + completed siblings)
 		let tierQueueCount = `unknown`;
 		try {
-			const listKeys = [
-				`vdc:tier:${context.tier}:queue:DE`,
-				`vdc:tier:${context.tier}:queue:FA`,
-				`vdc:tier:${context.tier}:queue:RFA`,
-				`vdc:tier:${context.tier}:queue:SIGNED`,
-				`vdc:tier:${context.tier}:queue:DE:completed`,
-				`vdc:tier:${context.tier}:queue:FA:completed`,
-				`vdc:tier:${context.tier}:queue:RFA:completed`,
-				`vdc:tier:${context.tier}:queue:SIGNED:completed`,
-			];
+			const listKeys = tierQueueKeys(context.tier, { includeCompleted: true });
 
-			// Use LLEN to avoid transferring list contents
 			const counts = await Promise.all(
 				listKeys.map((k) => redis.llen(k).catch(() => 0)),
 			);
 			const sum = counts.reduce((acc, v) => acc + (Number(v) || 0), 0);
 			tierQueueCount = sum;
 		} catch (err) {
-			// if anything fails, leave as `unknown` and log a warning
 			logger.log && logger.log(`WARNING`, `Failed to compute tier queue count for ${context.tier}`, err);
 		}
 
-		// const queueDepth = payload.queueDepth ?? `unknown`; 
 		const lines = [];
 		if (completedSibling) {
 			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}).  As you've completed your required combines, you've been placed in the completed players queue.`);
 		} else {
 			lines.push(`You're in! Added to **${context.tier}** queue (${priorityBucket}).`);
 		}
-		// Show tier-wide queued players instead of per-bucket queue depth
 		lines.push(`• Players in tier queue: ${tierQueueCount}`);
 		lines.push(`• League status: ${context.leagueStatus}`);
 
@@ -144,7 +142,7 @@ function mapContextErrorToMessage(error) {
 		case `TIER_NOT_RESOLVED`:
 			return `We couldn't determine your tier. Please create a ticket.`;
 		case `INELIGIBLE_STATUS`:
-			return `Your current league status doesn't allow queueing for Combines.`;
+			return `Your current league status doesn't allow queueing for Combines.  Please create a ticket if you believe this is an error.`;
 		default:
 			return `Unable to resolve your queue profile (${code}). Please try again later.`;
 	}
@@ -174,37 +172,22 @@ function mapJoinErrorToMessage(payload, tier) {
 
 function buildJoinKeys(tier, userId, completedSibling, priorityBucket) {
 	const keys = [
-		`vdc:league_state`,
-		`vdc:tier:${tier}:open`,
-		`vdc:tier:${tier}:queue:DE`,
-		`vdc:tier:${tier}:queue:FA`,
-		`vdc:tier:${tier}:queue:RFA`,
-		`vdc:tier:${tier}:queue:SIGNED`,
-		`vdc:player:${userId}`,
-		EVENTS_KEY,
+		LEAGUE_STATE_KEY,
+		tierOpenKey(tier),
+		tierQueueKey(tier, `DE`),
+		tierQueueKey(tier, `FA`),
+		tierQueueKey(tier, `RFA`),
+		tierQueueKey(tier, `SIGNED`),
+		playerKey(userId),
+		EVENTS_STREAM_KEY,
 	];
 
 	if (completedSibling) {
-		// choose completed sibling key based on the priority bucket
-		let completedKey;
-		switch (String(priorityBucket)) {
-			case `DE`:
-				completedKey = `vdc:tier:${tier}:queue:DE:completed`;
-				break;
-			case `FA`:
-				completedKey = `vdc:tier:${tier}:queue:FA:completed`;
-				break;
-			case `RFA`:
-				completedKey = `vdc:tier:${tier}:queue:RFA:completed`;
-				break;
-			case `SIGNED`:
-				completedKey = `vdc:tier:${tier}:queue:SIGNED:completed`;
-				break;
-			default:
-				completedKey = `vdc:tier:${tier}:queue:DE:completed`;
-		}
+		const bucket = PRIORITY_BUCKETS.has(String(priorityBucket))
+			? String(priorityBucket)
+			: `DE`;
+		const completedKey = tierQueueKey(tier, bucket, { completed: true });
 
-		// append the explicit target queue key (KEYS[8]) which the Lua script will prefer if present
 		keys.push(completedKey);
 	}
 

@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: vdc_mysql
+    restart: unless-stopped
+    environment: 
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: vdcuser
+      MYSQL_PASSWORD: vdcpass
+      MYSQL_DATABASE: vdc-dev
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      
+  valkey:
+    image: valkey/valkey:9
+    container_name: vdc_valkey
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
+
+  # redisinsight:
+  #   image: redislabs/redisinsight:latest
+  #   container_name: vdc_redisinsight
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5540:5540"
+  #   volumes:
+  #     - redisinsight_data:/db
+
+  # redis_exporter:
+  #   image: oliver006/redis_exporter:latest
+  #   container_name: vdc_redis_exporter
+
+  #   environment:
+  #     - REDIS_ADDR=redis://valkey:6379
+  #     - REDIS_EXPORTER_CHECK_SINGLE_KEYS=vdc:tier:RECRUIT:queue:DE,vdc:tier:RECRUIT:queue:FA_RFA,vdc:tier:RECRUIT:queue:SIGNED,vdc:tier:RECRUIT:queue:DE:completed,vdc:tier:RECRUIT:queue:FA_RFA:completed,vdc:tier:RECRUIT:queue:SIGNED:completed,vdc:tier:PROSPECT:queue:DE,vdc:tier:PROSPECT:queue:FA_RFA,vdc:tier:PROSPECT:queue:SIGNED,vdc:tier:PROSPECT:queue:DE:completed,vdc:tier:PROSPECT:queue:FA_RFA:completed,vdc:tier:PROSPECT:queue:SIGNED:completed,vdc:tier:APPRENTICE:queue:DE,vdc:tier:APPRENTICE:queue:FA_RFA,vdc:tier:APPRENTICE:queue:SIGNED,vdc:tier:APPRENTICE:queue:DE:completed,vdc:tier:APPRENTICE:queue:FA_RFA:completed,vdc:tier:APPRENTICE:queue:SIGNED:completed,vdc:tier:EXPERT:queue:DE,vdc:tier:EXPERT:queue:FA_RFA,vdc:tier:EXPERT:queue:SIGNED,vdc:tier:EXPERT:queue:DE:completed,vdc:tier:EXPERT:queue:FA_RFA:completed,vdc:tier:EXPERT:queue:SIGNED:completed,vdc:tier:MYTHIC:queue:DE,vdc:tier:MYTHIC:queue:FA_RFA,vdc:tier:MYTHIC:queue:SIGNED,vdc:tier:MYTHIC:queue:DE:completed,vdc:tier:MYTHIC:queue:FA_RFA:completed,vdc:tier:MYTHIC:queue:SIGNED:completed
+  #   restart: unless-stopped
+
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: vdc_prometheus
+  #   volumes:
+  #     - /home/unieveth/vdc/prometheus.yml:/etc/prometheus/prometheus.yml
+  #   ports:
+  #     - "9090:9090"
+  #   restart: unless-stopped
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: vdc_grafana
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=admin
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   restart: unless-stopped
+
+volumes:
+  mysql_data:
+  valkey_data:
+  redisinsight_data:
+  grafana-data:

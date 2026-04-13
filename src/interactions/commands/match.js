@@ -1,6 +1,12 @@
 const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
-const { getQueueConfig } = require(`../../core/config`);
+const { getQueueConfig } = require(`../../core/queue/queueconfig`);
+const {
+	resolveCurrentQueueId,
+	getQueueMatchContext,
+	isUserBoundToQueueMatch,
+	cancelQueueMatch,
+} = require(`../../core/queue/matchLifecycle`);
 
 module.exports = {
 	name: `match`,
@@ -16,6 +22,13 @@ module.exports = {
 			});
 		}
 
+		if (!(/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
+			return interaction.reply({
+				content: `The queue system is currently disabled by environment configuration.`,
+				flags: MessageFlags.Ephemeral,
+			});
+		}
+
 		const subcommand = interaction.options.getSubcommand(true);
 
 		switch (subcommand) {
@@ -23,59 +36,42 @@ module.exports = {
 				return handleCancel(interaction);
 			default:
 				return interaction.reply({
-					content: `That match action is not available. Use the separate /submit command or the match embed Submit button.`,
+						content: `That match action is not available. Use /submit for match submissions.`,
 					flags: MessageFlags.Ephemeral,
 				});
 		}
 	},
 };
 
-async function resolveQueueIdFromContext(interaction) {
-	// Resolve queue id from Redis player hash only (currentQueueId)
-	try {
-		const redis = getRedisClient();
-		const playerKey = `vdc:player:${interaction.user.id}`;
-		const currentQueueId = await redis.hget(playerKey, `currentQueueId`);
-		if (currentQueueId) return currentQueueId;
-	} catch (err) {
-		logger.log(`WARNING`, `Failed to resolve queue id from player hash for ${interaction.user.id}`, err);
-	}
-
-	return null;
-}
-
 async function handleCancel(interaction) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 	const redis = getRedisClient();
 
-	const queueId = await resolveQueueIdFromContext(interaction);
+	const queueId = await resolveCurrentQueueId(interaction.user.id).catch((err) => {
+		logger.log(`WARNING`, `Failed to resolve queue id from player hash for ${interaction.user.id}`, err);
+		return null;
+	});
 	if (!queueId) {
 		return interaction.editReply({ content: `Unable to determine match context. Please run this command from the match text channel or provide the match ID.` });
 	}
 
-	const matchKey = `vdc:match:${queueId}`;
-	const matchData = await redis.hgetall(matchKey);
-	if (!matchData || Object.keys(matchData).length === 0) {
+	const queueContext = await getQueueMatchContext(queueId);
+	if (!queueContext) {
 		return interaction.editReply({ content: `Match ${queueId} was not found.` });
 	}
+	const { queueMatchKey, matchData, players } = queueContext;
 
-	const teamA = (() => { try { return JSON.parse(matchData.teamAJSON || `[]`); } catch { return []; } })();
-	const teamB = (() => { try { return JSON.parse(matchData.teamBJSON || `[]`); } catch { return []; } })();
-	const players = Array.from(new Set([...(teamA || []), ...(teamB || [])]));
-
-	// Verify user is in_match and belongs to this match
-	const playerKey = `vdc:player:${interaction.user.id}`;
-	const [status, currentQueueId] = await redis.hmget(playerKey, `status`, `currentQueueId`);
-	if (String(status) !== `in_match` || String(currentQueueId) !== String(queueId)) {
+	const inMatch = await isUserBoundToQueueMatch(interaction.user.id, queueId);
+	if (!inMatch) {
 		return interaction.editReply({ content: `You are not currently marked as in a match for ${queueId}. Only players in the match may call this command.` });
 	}
 	if (!players.includes(interaction.user.id)) {
 		return interaction.editReply({ content: `You are not a participant in match ${queueId}. Only players in the match may call this command.` });
 	}
 
-	const yesKey = `${matchKey}:cancel_votes_yes`;
-	const noKey = `${matchKey}:cancel_votes_no`;
+	const yesKey = `${queueMatchKey}:cancel_votes_yes`;
+	const noKey = `${queueMatchKey}:cancel_votes_no`;
 	await redis.sadd(yesKey, interaction.user.id);
 	await redis.srem(noKey, interaction.user.id);
 	const votes = await redis.scard(yesKey);
@@ -85,36 +81,21 @@ async function handleCancel(interaction) {
 	const percent = players.length ? Math.round((votes / players.length) * 100) : 0;
 
 	if (percent >= thresholdPercent) {
-		// cancel the match: reset players and delete keys
-		const pipeline = redis.pipeline();
-		const affected = new Set(players.filter(Boolean));
-		for (const playerId of affected) {
-			const key = `vdc:player:${playerId}`;
-			pipeline.hset(key, `status`, `idle`);
-			pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-			pipeline.del(`${key}:recent`);
-			pipeline.pexpire(key, 43200000);
-		}
-
-		pipeline.del(matchKey);
-		await pipeline.exec();
-
-		// attempt to cleanup channels
-		try {
-			const { deleteMatchChannels } = require(`../../core/matchChannels`);
-			const descriptor = JSON.parse(matchData.channelIdsJSON || `{}`);
-			const guild = interaction.guild;
-			await deleteMatchChannels(guild, descriptor);
-		} catch (err) {
-			logger.log(`WARNING`, `Failed to cleanup channels for cancelled match ${queueId}`, err);
-		}
+		await cancelQueueMatch({
+			guild: interaction.guild,
+			queueContext,
+			initiatedBy: interaction.user.id,
+			yesCount: votes,
+			noCount: await redis.scard(`${queueMatchKey}:cancel_votes_no`).catch(() => 0),
+			yesVoters: await redis.smembers(`${queueMatchKey}:cancel_votes_yes`).catch(() => []),
+		});
 
 		logger.log(`ALERT`, `Match ${queueId} cancelled by vote (votes: ${votes}/${players.length})`);
 		return interaction.editReply({ content: `Match ${queueId} has been cancelled (votes: ${votes}/${players.length}). Players have been unlocked and channels removed.` });
 	}
 
 	// If we reach here, no auto-cancel yet. Start a formal vote message if one isn't active.
-	const cancelActive = await redis.get(`${matchKey}:cancel_active`);
+	const cancelActive = await redis.get(`${queueMatchKey}:cancel_active`);
 	const descriptor = (() => { try { return JSON.parse(matchData.channelIdsJSON || `{}`); } catch { return {}; } })();
 	const textChannelId = descriptor.textChannelId ?? null;
 
@@ -143,21 +124,21 @@ async function handleCancel(interaction) {
 
 		const message = await channel.send({ embeds: [embed], components: [new ActionRowBuilder().addComponents(yesButton, noButton)] });
 		await message.pin().catch(() => null);
-		await redis.set(`${matchKey}:cancel_active`, `1`);
-		await redis.set(`${matchKey}:cancel_message_id`, message.id);
+		await redis.set(`${queueMatchKey}:cancel_active`, `1`);
+		await redis.set(`${queueMatchKey}:cancel_message_id`, message.id);
 		// set 5 minute TTLs
-		await redis.expire(`${matchKey}:cancel_active`, 300);
-		await redis.expire(`${matchKey}:cancel_message_id`, 300);
-		await redis.expire(`${matchKey}:cancel_votes_no`, 300).catch(() => {});
-		await redis.expire(`${matchKey}:cancel_votes_yes`, 300).catch(() => {});
+		await redis.expire(`${queueMatchKey}:cancel_active`, 300);
+		await redis.expire(`${queueMatchKey}:cancel_message_id`, 300);
+		await redis.expire(`${queueMatchKey}:cancel_votes_no`, 300).catch(() => {});
+		await redis.expire(`${queueMatchKey}:cancel_votes_yes`, 300).catch(() => {});
 
 		return interaction.editReply({ content: `Started a cancel vote in the match chat. Players may vote using the buttons.` });
 	}
 
 	// If a vote is already active, just show the current counts
-	const cancelMsgId = await redis.get(`${matchKey}:cancel_message_id`);
-	const yesCount = await redis.scard(`${matchKey}:cancel_votes_yes`);
-	const noCount = await redis.scard(`${matchKey}:cancel_votes_no`);
+	const cancelMsgId = await redis.get(`${queueMatchKey}:cancel_message_id`);
+	const yesCount = await redis.scard(`${queueMatchKey}:cancel_votes_yes`);
+	const noCount = await redis.scard(`${queueMatchKey}:cancel_votes_no`);
 	return interaction.editReply({ content: `A cancel vote is already active in the match chat (${yesCount} yes / ${noCount} no).` });
 }
 
