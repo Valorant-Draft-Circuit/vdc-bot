@@ -82,8 +82,8 @@ client.loadSelectMenus(`src/interactions/selectMenus`);
 logger.log(`VERBOSE`, `Loading autocomplete queries...`);
 client.loadAutocomplete(`src/interactions/autocomplete`);
 
-logger.log(`VERBOSE`, `Loading modal handlers...`);
-client.loadModals(`src/interactions/modals`);
+// logger.log(`VERBOSE`, `Loading modal handlers...`);
+// client.loadModals(`src/interactions/modals`);
 
 logger.log(`VERBOSE`, `Loading events...`);
 client.loadEvents(`src/events`);
