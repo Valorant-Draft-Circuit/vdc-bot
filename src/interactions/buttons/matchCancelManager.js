@@ -127,7 +127,7 @@ module.exports = {
                 } catch (err) {}
             }
 
-            logger.log(`ALERT`, `Match ${queueId} cancelled by vote (votes: ${yesCount}/${total})`);
+            logger.log(`WARNING`, `Match ${queueId} cancelled by vote (votes: ${yesCount}/${total})`);
             interaction.reply({ content: `Vote passed (${yesCount}/${total}, ${percent}%). Match has been cancelled.`, flags: MessageFlags.Ephemeral });
 			return;
         }
