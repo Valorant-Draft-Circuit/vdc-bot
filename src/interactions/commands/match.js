@@ -90,7 +90,7 @@ async function handleCancel(interaction) {
 			yesVoters: await redis.smembers(`${queueMatchKey}:cancel_votes_yes`).catch(() => []),
 		});
 
-		logger.log(`ALERT`, `Match ${queueId} cancelled by vote (votes: ${votes}/${players.length})`);
+		logger.log(`WARNING`, `Match ${queueId} cancelled by vote (votes: ${votes}/${players.length})`);
 		return interaction.editReply({ content: `Match ${queueId} has been cancelled (votes: ${votes}/${players.length}). Players have been unlocked and channels removed.` });
 	}
 

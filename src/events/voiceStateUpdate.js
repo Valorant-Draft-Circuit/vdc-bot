@@ -130,7 +130,7 @@ module.exports = {
 		// if they join any combines channels without completing the activity check, disconnect them regardless of GM status
 		if ((joinedCombinesLobbyBool || isInCombinesCategory) && userRoles.includes(ROLES.LEAGUE.INACTIVE)) {
 			sendDM(m, `You have not completed the activity check and cannot partipate in combines until you do so- please complete it by using the \`/active\` command in <#${botCommandsChannelID}> channel!`);
-			logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined a combines channel without first having completed the activity check & have been disconnected`);
+			logger.log(`WARNING`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined a combines channel without first having completed the activity check & have been disconnected`);
 			return await m.voice.disconnect();
 		}
 
@@ -149,7 +149,7 @@ module.exports = {
 				return await m.voice.setChannel(channel);
 			} else {											// not a valid MMR or valid status
 				sendDM(m, `There is a problem with your account (invalid MMR, or status) and you cannot join <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> currently. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-				logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined <#${sortChannel}> with an invalid MMR (\`${mmr}\`) or invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
+				logger.log(`WARNING`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined <#${sortChannel}> with an invalid MMR (\`${mmr}\`) or invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
 				return await m.voice.disconnect();
 			}
 		}
@@ -170,15 +170,15 @@ module.exports = {
 
 				if (!playerTier) {								// invalid MMR
 					sendDM(m, `You have joined a combines channel, but you do not have a valid MMR. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid MMR (\`${mmr}\`) & have been disconnected`);
+					logger.log(`WARNING`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid MMR (\`${mmr}\`) & have been disconnected`);
 					return await m.voice.disconnect();
 				} else if (!isValidStatus) {					// invalid status
 					sendDM(m, `You have joined a combines channel, but you do not have a valid status. If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
+					logger.log(`WARNING`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined ${newState.channel} (\`${newState.channel.name}\`) with an invalid status (\`${playerLeagueStatus}\`) & have been disconnected`);
 					return await m.voice.disconnect();
 				} else if (!isInCorrectTier) {					// invalid tier
 					sendDM(m, `You have joined a combines channel, but are not in the correct tier- I expected to see you in a \`${playerTier}\` lobby! I've moved you to <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> to be sorted to the right tier, but in the future, please join that channel at the beginning of each combines night! If you believe this is an error, please open an admin ticket: <#966924427709276160>`);
-					logger.log(`ALERT`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined ${newState.channel} (\`${newState.channel.name}\`)- expected to see them in a \`${playerTier}\` lobby. They have been moved to <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> to be sorted correctly`);
+					logger.log(`WARNING`, `User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined ${newState.channel} (\`${newState.channel.name}\`)- expected to see them in a \`${playerTier}\` lobby. They have been moved to <#${CHANNELS.VC.COMBINES.SORT_CHANNEL}> to be sorted correctly`);
 					return await m.voice.setChannel(CHANNELS.VC.COMBINES.SORT_CHANNEL);
 				} else {										// valid MMR, tier and status
 					return console.log(`User ${m.user} (\`${m.user.username}\`, \`${m.id}\`) joined ${m.voice.channel} (${m.voice.channel.name}) with an MMR of \`${mmr}\`, leagueStatus of \`${playerLeagueStatus}\` & tier of \`${playerTier}\``);
