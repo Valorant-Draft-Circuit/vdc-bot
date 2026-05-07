@@ -1,6 +1,6 @@
 const channelNames = [
 	// pistols
-	`Classic`, `Shorty`, `Frenzy`, `Ghost`, `Sheriff`,
+	`Classic`, `Shorty`, `Frenzy`, `Ghost`, `Bandit`, `Sheriff`,
 
 	// smgs
 	`Stinger`, `Spectre`,
