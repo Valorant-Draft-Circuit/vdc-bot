@@ -20,7 +20,7 @@ module.exports = {
         // let season = await ControlPanel.getSeason();
         let season = 0;
         if (args?.includes(`--season`)) {
-            if (args.split(`--season-`)[1] == undefined || !args.split(`--season-`)[1].match(/^\d$/)) {
+            if (args.split(`--season-`)[1] == undefined || !args.split(`--season-`)[1].match(/^\d+$/)) {
                 return { text: `Error: The --season argument given was invalid. Expected a number, got "${args.replace(/--season/g, ``)}"` };
             } else {
                 season = Number(args.split(`--season-`)[1])
