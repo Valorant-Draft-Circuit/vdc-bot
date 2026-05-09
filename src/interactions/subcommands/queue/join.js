@@ -42,6 +42,17 @@ async function joinQueue(interaction, queueConfig) {
 		});
 	}
 
+	if (!context.mmr || context.mmr === 0) {
+		logger.log(
+			`ALERT`,
+			`Queue join failed due to invalid MMR`,
+			`${interaction.user.tag} (${interaction.user.id}) :: MMR: ${context.mmr}`,
+		);
+		return interaction.editReply({
+			content: `Your MMR appears to be invalid. Please create a ticket to resolve this issue.`,
+		});
+	}
+
 	if (queueConfig.perTierFlags) {
 		const configured = queueConfig.perTierFlags[context.tier];
 		if (configured === false) {
@@ -75,7 +86,7 @@ async function joinQueue(interaction, queueConfig) {
 		priorityBucket,
 		context.leagueStatus,
 		String(Date.now()),
-		String(context.mmr ?? 0),
+		String(context.mmr),
 		interaction.guildId ?? ``,
 		context.gameCount != null ? String(context.gameCount) : ``,
 	];

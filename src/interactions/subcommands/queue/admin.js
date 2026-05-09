@@ -1,6 +1,7 @@
 const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
 const { ROLES } = require(`../../../../utils/enums/roles`);
+const { CHANNELS } = require(`../../../../utils/enums/channels`);
 const { getRedisClient } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
@@ -34,7 +35,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
 
-			await setTierState(tiers, true);
+			await setTierState(tiers, true, interaction.client);
 			logger.log(`INFO`, `Queue admin open executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, true) });
 		}
@@ -47,7 +48,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 				return interaction.editReply({ content: `No tiers matched \"${tierSelection}\".` });
 			}
 
-			await setTierState(tiers, false);
+			await setTierState(tiers, false, interaction.client);
 			logger.log(`INFO`, `Queue admin close executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, false) });
 		}
@@ -258,7 +259,7 @@ async function resolveTiers(selection) {
 	return [];
 }
 
-async function setTierState(tiers, isOpen) {
+async function setTierState(tiers, isOpen, client = null) {
 	const redis = getRedisClient();
 	const pipeline = redis.pipeline();
 
@@ -267,6 +268,7 @@ async function setTierState(tiers, isOpen) {
 	}
 
 	await pipeline.exec();
+	await manageWaitingRoomChannels(client, tiers, isOpen);
 
 	if (!isOpen) {
 		await clearTierQueues(redis, tiers);
@@ -599,6 +601,40 @@ async function clearTierQueues(redis, tiers) {
 		`INFO`,
 		`Queue admin close removed ${affectedUsers.size} queued player(s) after closing tiers [${tiers.join(`, `)}]`,
 	);
+}
+
+async function manageWaitingRoomChannels(client, tiers, isOpen) {
+	if (!client || !Array.isArray(tiers) || tiers.length === 0) return;
+
+	const waitingRooms = CHANNELS?.VC?.COMBINES?.WAITING_ROOM ?? {};
+	const leagueRoleId = ROLES?.LEAGUE?.LEAGUE ? String(ROLES.LEAGUE.LEAGUE) : null;
+	if (!leagueRoleId) {
+		logger.log(`WARNING`, `Queue admin could not update waiting rooms because league role is not configured`);
+		return;
+	}
+
+	for (const tier of tiers) {
+		const tierKey = String(tier || ``).toUpperCase();
+		const channelId = waitingRooms[tierKey] ? String(waitingRooms[tierKey]) : null;
+		if (!channelId) continue;
+
+		const channel =
+			client.channels.cache.get(channelId) ??
+			(await client.channels.fetch(channelId).catch(() => null));
+
+		if (!channel || !channel.guild || !channel.permissionOverwrites) {
+			logger.log(`WARNING`, `Queue admin could not resolve waiting room channel for ${tierKey} (${channelId})`);
+			continue;
+		}
+
+		try {
+			await channel.permissionOverwrites.edit(leagueRoleId, { ViewChannel: isOpen });
+			// Too much noise in logs for this.  Kept for debugging.
+			// logger.log(`INFO`, `Queue admin ${isOpen ? `opened` : `closed`} waiting room ${tierKey} (${channelId})`);
+		} catch (error) {
+			logger.log(`WARNING`, `Queue admin failed to update waiting room ${tierKey} (${channelId})`, error);
+		}
+	}
 }
 
 module.exports = {
