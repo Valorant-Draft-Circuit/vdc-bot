@@ -6,14 +6,21 @@ const { EmbedBuilder, ChatInputCommandInteraction, } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ROLES } = require(`../../../../utils/enums`)
 
-// 2.5 pts - First Place
-const first = [`Decaf`, `Calamity`, `Surge`, `Latte`];
+// 3.5 pts - First Place
+const first = [`Crescent`, `Snake Eyes`, `Yahtzee`, `Echoes`, `Anarchy`];
 
-// 2 pts - Second Place
-const second = [`Mayhem`, `Astral Annihilators`, `Espresso`, `Anarchy`];
+// 3 pts - Second Place
+const second = [`Witness`, `Decaf`, `Aventis`, `Purple Iris`, `Latte`];
 
-// 1 pts - Third/Fourth Place
-const thirdfourth = [`Phantoms`, `Snake Eyes`, `Crest`, `Hydrus`, `Draco`, `Purple Iris`, `Dons`, `Meteor Marauders`];
+// 2 pts - Round 2 Exit
+const round2Exit = [`Ravagers`, `High Rollers`, `Ember`, `Packfire`, `Wraiths`, `Artillery`, `Espresso`, `Blackjacks`, `Misfire`, `Royal Flush`];
+
+// 1 pt - Round 1 Exit
+const round1Exit = [`Havoc`, `Green Clover`, `Projectile`, `Pink Azalea`, `Mafiosos`, `Gibbous`, `Blaze`, `Justicar`, `Capos`, `Red Rose`, `Lunch Takers`, `Execution`, `Consiglieri`, `Entropy`, `Dons`, `Solstice`];
+ 
+
+// new franchises get better odds than new teams
+const newFranchises = [`Catpocalypse`, `808 Angels`, `Natural 20`, `Grizzlies`];
 
 
 async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
@@ -62,15 +69,19 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
     for (let i = 0; i < first.length; i++) {
         const team = allTeams.find(t => t.name == first[i]);
-        postPoints.push({ id: team.id, name: team.name, postPoints: 2.5 });
+        postPoints.push({ id: team.id, name: team.name, postPoints: 3.5 });
     }
     for (let j = 0; j < second.length; j++) {
         const team = allTeams.find(t => t.name == second[j]);
+        postPoints.push({ id: team.id, name: team.name, postPoints: 3 });
+    }
+    for (let k = 0; k < round2Exit.length; k++) {
+        const team = allTeams.find(t => t.name == round2Exit[k]);
         postPoints.push({ id: team.id, name: team.name, postPoints: 2 });
     }
-    for (let k = 0; k < thirdfourth.length; k++) {
-        const team = allTeams.find(t => t.name == thirdfourth[k]);
-        postPoints.push({ id: team.id, name: team.name, postPoints: 1 });
+    for (let m = 0; m < round1Exit.length; m++) {
+        const team = allTeams.find(t => t.name == round1Exit[m]);
+        postPoints.push({id: team.id, name: team.name, postPoints: 1});
     }
     for (let l = 0; l < allTeams.length; l++) {
         if (!postPoints.find(ppt => ppt.id === allTeams[l].id)) postPoints.push({ id: allTeams[l].id, name: allTeams[l].name, postPoints: 0 });
@@ -173,20 +184,28 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         }
     });
 
-    // console.log(`HIGHEST`, highest)
     // console.log(`TWP`, teamWinPercent)
 
     let teamCheck = [];
 
     teamScore.forEach((team) => {
         const newTeamCheck = newTeam.filter((t) => t.id === team.id);
-        if (newTeamCheck[0]?.id === team.id) {
-            const score = highest + 0.02 * (teamWinPercent.length / 12);
+        const newFranchiseCheck = newFranchises.includes(team.Franchise.name);
+        // console.log(newFranchiseCheck)
+        if (newFranchiseCheck) {
+            // const score = highest + 0.02 * (teamWinPercent.length / 6);
 
-            // console.log(`score`, score, team.name);
+            // // console.log(`score`, score, team.name);
 
-            teamCheck.push({ ...team, score: score });
-            lotteryScore += score;
+            // teamCheck.push({ ...team, score: score });
+            // lotteryScore += score;
+        } else if (newTeamCheck[0]?.id === team.id) {
+            // const score = highest + 0.02 * (teamWinPercent.length / 12);
+
+            // // console.log(`score`, score, team.name);
+
+            // teamCheck.push({ ...team, score: score });
+            // lotteryScore += score;
         } else {
             const score = team.score;
 
@@ -206,6 +225,33 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
         teamdraftScore.push({ ...team, weight: draftScore });
     });
 
+    // NOW WE CALCULATE NEW FRANCHISE ODDS
+    let highestWeight = 0;
+    teamdraftScore.forEach((team) => {
+        if (team.weight > highestWeight) {
+            highestWeight = team.weight;
+        }
+    });
+
+    teamScore.forEach((team) => {
+        const newFranchiseCheck = newFranchises.includes(team.Franchise.name);
+        const newTeamCheck = newTeam.filter((t) => t.id === team.id);
+        if (newFranchiseCheck) {
+            let draftScore = highestWeight + 0.02 * (teamWinPercent.length / 6)
+            teamdraftScore.push({ ...team, weight: draftScore});
+        } else if (newTeamCheck[0]?.id === team.id) {
+            let draftScore = highestWeight + 0.02 * (teamWinPercent.length / 12)
+            teamdraftScore.push({ ...team, weight: draftScore});
+        }
+    });
+
+    // then rebalance weights
+    const totalWeight = teamdraftScore.reduce((weight, team) => team.weight + weight, 0);
+    teamdraftScore = teamdraftScore.map((team) => {
+        team.weight = team.weight / totalWeight;
+        return team;
+    });
+
     const rounds = amountOfPlayers / teamdraftScore.length;
     const remainingPicks = amountOfPlayers % teamdraftScore.length;
 
@@ -213,6 +259,7 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
     //generating lottery weight
     let teamLottery = [];
+    // console.log(totalWeight);
 
     teamdraftScore.forEach((team) => {
         const teamWeight = team.weight * 10000;
