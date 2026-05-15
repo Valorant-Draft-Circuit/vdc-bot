@@ -115,7 +115,7 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     if (!player) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> is not in our database.`);
     if (draftedPlayerIDs.includes(player.id)) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> (\`${player.name}\`, \`${riotAccount.riotIGN}\`) has already been picked up by another franchise (\`${draftedPlayers.find(dp => dp.userID == player.id).Franchise.name}\`) and cannot be drafted by \`${pick.Franchise.name}\`.`);
     if (player.primaryRiotAccountID == null) return await interaction.editReply(`This player does not have a primary Riot account set and cannot be drafted.`);
-    if (riotAccount.mmr == null) return await interaction.editReply(`This player does not have an MMR entry and cannot be drafted.`);
+    if (riotAccount?.MMR == null) return await interaction.editReply(`This player does not have an MMR entry and cannot be drafted.`);
     if (riotAccount.MMR.mmrEffective == null) return await interaction.editReply(`This player does not have an \`mmrEffective\` value and cannot be drafted.`);
     if (mmrEffective < tierBounds.min || mmrEffective > tierBounds.max) return await interaction.editReply(`This player's mmr (\`${mmrEffective}\`) does not fall within the tier bounds for \`${tier}\` (\`${tierBounds.min}\` - \`${tierBounds.max}\`) and cannot be drafted in this tier!`);
     if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> (\`${player.name}\`, \`${riotAccount?.riotIGN}\`) is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
