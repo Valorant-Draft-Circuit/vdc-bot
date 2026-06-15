@@ -9,6 +9,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
+const { cancelUnsubTimer } = require("../../../helpers/transactions/activeSubTimers");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -117,6 +118,9 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 	// cut the player & ensure that the player's team property is now null
 	const player = await Transaction.cut(playerID);
 	if (player.User.team !== null) return await interaction.editReply(`There was an error while attempting to cut the player. The database was not updated.`);
+
+	// the player is now cut, so cancel any pending auto-unsub from a prior sub
+	cancelUnsubTimer(playerData.id);
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);

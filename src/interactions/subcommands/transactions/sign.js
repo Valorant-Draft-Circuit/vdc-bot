@@ -9,6 +9,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
+const { cancelUnsubTimer } = require("../../../helpers/transactions/activeSubTimers");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -105,6 +106,9 @@ async function confirmSign(interaction) {
 	const isGM = playerData.Status.leagueStatus === LeagueStatus.GENERAL_MANAGER;
 	const player = await Transaction.sign({ userID: playerData.id, teamID: team.id, isGM: isGM, contractLength: contractLength });
 	if (player.team !== team.id) return await interaction.editReply({ content: `There was an error while attempting to sign the player. The database was not updated.` });
+
+	// the player is now officially signed, so cancel any pending auto-unsub from a prior sub
+	cancelUnsubTimer(playerData.id);
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
