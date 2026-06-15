@@ -5,6 +5,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
+const { registerUnsubTimer, clearUnsubTimer } = require(`../../../helpers/transactions/activeSubTimers`);
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 
@@ -141,7 +142,19 @@ async function confirmSub(interaction) {
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 	await transactionsChannel.send({ embeds: [announcement] });
 
-	setTimeout(async () => {
+	const unsubTimerHandle = setTimeout(async () => {
+		clearUnsubTimer(player.id);
+
+		// The player may have been officially signed or cut during the active sub
+		// window, which clears their ACTIVE_SUB status. Re-fetch and only auto-unsub
+		// if they're still an active sub on the same team, otherwise this stale timer
+		// would wrongly drop a now-signed player from their roster.
+		const currentPlayer = await Player.getBy({ userID: player.id });
+		const isStillActiveSubForTeam =
+			currentPlayer?.Status.contractStatus === ContractStatus.ACTIVE_SUB &&
+			currentPlayer.team === team.id;
+		if (!isStillActiveSubForTeam) return;
+
 		// unsub the player & ensure that the player's team property is now null
 		const updatedPlayer = await Transaction.unsub(player.id);
 		if (updatedPlayer.team !== null) return await interaction.channel.send(`There was an error while attempting to unsub ${guildMember} (${playerTag}). The database was not updated.`);
@@ -160,6 +173,8 @@ async function confirmSub(interaction) {
 
 		return await transactionsChannel.send({ embeds: [announcement] });
 	}, activeSubTime);
+
+	registerUnsubTimer(player.id, unsubTimerHandle);
 }
 module.exports = {
 	requestSub: requestSub,
