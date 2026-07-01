@@ -4,12 +4,14 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { LeagueStatus } = require("@prisma/client");
+const { LeagueStatus, TransactionType } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { cancelUnsubTimer } = require("../../../helpers/transactions/activeSubTimers");
+const { tierLabel } = require("../../../helpers/transactions/formatTeam");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -110,6 +112,15 @@ async function confirmSign(interaction) {
 	// the player is now officially signed, so cancel any pending auto-unsub from a prior sub
 	cancelUnsubTimer(playerData.id);
 
+	await logTransaction({
+		type: TransactionType.SIGN,
+		userID: playerData.id,
+		teamID: team.id,
+		franchiseID: franchise.id,
+		tier: team.tier,
+		details: { contractLength: contractLength, isGM: isGM },
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -131,6 +142,11 @@ async function confirmSign(interaction) {
 			{
 				name: `Team`,
 				value: team.name,
+				inline: true,
+			},
+			{
+				name: `Tier`,
+				value: tierLabel(team.tier),
 				inline: true,
 			},
 		],

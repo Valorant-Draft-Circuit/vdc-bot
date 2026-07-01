@@ -4,6 +4,9 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction, Roles } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+const { formatTeamWithTier } = require(`../../../helpers/transactions/formatTeam`);
+const { logTransaction } = require(`../../../helpers/transactions/logTransaction`);
+const { TransactionType } = require(`@prisma/client`);
 const { ContractStatus } = require("@prisma/client");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
@@ -103,6 +106,15 @@ async function confirmToggleCaptain(interaction, mode) {
 	if (updatedTeam.captain === null && mode == `SET`) return await interaction.editReply(`There was an error while attempting to set the player as a captain. The database was not updated.`);
 	if (updatedTeam.captain !== null && mode == `REMOVE`) return await interaction.editReply(`There was an error while attempting to remove the player as a captain. The database was not updated.`);
 
+	await logTransaction({
+		type: TransactionType.CAPTAIN,
+		userID: playerData.id,
+		teamID: team.id,
+		franchiseID: team.Franchise.id,
+		tier: team.tier,
+		details: { mode: mode },
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -120,8 +132,8 @@ async function confirmToggleCaptain(interaction, mode) {
 		timestamp: Date.now(),
 	});
 
-	if (mode === `SET`) announcement.setDescription(`${guildMember} (${playerTag}) is now the captain for ${updatedTeam.name}`)
-	else announcement.setDescription(`${guildMember} (${playerTag}) is no longer the captain for ${updatedTeam.name}`)
+	if (mode === `SET`) announcement.setDescription(`${guildMember} (${playerTag}) is now the captain for ${formatTeamWithTier(team)}`)
+	else announcement.setDescription(`${guildMember} (${playerTag}) is no longer the captain for ${formatTeamWithTier(team)}`)
 
 	await interaction.deleteReply();
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);

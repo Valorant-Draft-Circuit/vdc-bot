@@ -4,12 +4,14 @@ const { ChatInputCommandInteraction, GuildMember, ButtonInteraction } = require(
 
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { Tier } = require("@prisma/client");
+const { Tier, TransactionType } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { cancelUnsubTimer } = require("../../../helpers/transactions/activeSubTimers");
+const { tierLabel } = require("../../../helpers/transactions/formatTeam");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -122,6 +124,14 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 	// the player is now cut, so cancel any pending auto-unsub from a prior sub
 	cancelUnsubTimer(playerData.id);
 
+	await logTransaction({
+		type: TransactionType.CUT,
+		userID: playerData.id,
+		teamID: team.id,
+		franchiseID: franchise.id,
+		tier: team.tier,
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -145,6 +155,11 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 			{
 				name: `Team`,
 				value: team.name,
+				inline: true,
+			},
+			{
+				name: `Tier`,
+				value: tierLabel(team.tier),
 				inline: true,
 			},
 		],

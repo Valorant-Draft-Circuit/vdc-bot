@@ -4,8 +4,10 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { ContractStatus } = require("@prisma/client");
+const { ContractStatus, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
+const { tierLabel } = require("../../../helpers/transactions/formatTeam");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -102,6 +104,15 @@ async function confirmToggleIR(interaction, mode) {
 	if (player.Status.contractStatus !== ContractStatus.INACTIVE_RESERVE && mode == `SET`) return await interaction.editReply(`There was an error while attempting to place the player on Inactive Reserve. The database was not updated.`);
 	if (player.Status.contractStatus === ContractStatus.INACTIVE_RESERVE && mode == `REMOVE`) return await interaction.editReply(`There was an error while attempting to remove the player from Inactive Reserve. The database was not updated.`);
 
+	await logTransaction({
+		type: TransactionType.IR,
+		userID: playerData.id,
+		teamID: team.id,
+		franchiseID: team.Franchise.id,
+		tier: team.tier,
+		details: { mode: mode },
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -115,6 +126,23 @@ async function confirmToggleIR(interaction, mode) {
 			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${team.Franchise.Brand.logo}`,
 		},
 		color: 0xe92929,
+		fields: [
+			{
+				name: `Franchise`,
+				value: `<${team.Franchise.Brand.discordEmote}> ${team.Franchise.name}`,
+				inline: true,
+			},
+			{
+				name: `Team`,
+				value: team.name,
+				inline: true,
+			},
+			{
+				name: `Tier`,
+				value: tierLabel(team.tier),
+				inline: true,
+			},
+		],
 		footer: { text: `Transactions — Inactive Reserve` },
 		timestamp: Date.now(),
 	});

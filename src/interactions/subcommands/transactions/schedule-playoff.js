@@ -4,7 +4,8 @@ const { ChatInputCommandInteraction } = require(`discord.js`);
 const { Team, ControlPanel } = require(`../../../../prisma`);
 const { CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { prisma } = require("../../../../prisma/prismadb");
-const { Tier, MatchType } = require("@prisma/client");
+const { Tier, MatchType, TransactionType } = require("@prisma/client");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 const timestampValidator = /(?<=<t:)\d+(?=:\S>)/;
 
@@ -129,6 +130,18 @@ async function confirmSchedulePlayoff(interaction) {
 					} 
 				} 
 			}
+		});
+
+		await logTransaction({
+			type: TransactionType.SCHEDULE_PLAYOFF,
+			tier: tier,
+			details: {
+				matchID: newMatch.matchID,
+				matchType: matchType,
+				home: newMatch.Home.name,
+				away: newMatch.Away.name,
+				scheduledFor: dateTime.toISOString(),
+			},
 		});
 
 		const embedEdits = new EmbedBuilder(embedData);

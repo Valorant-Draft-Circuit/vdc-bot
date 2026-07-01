@@ -4,6 +4,9 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Player, Team, Transaction, Franchise } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
+const { tierLabel } = require(`../../../helpers/transactions/formatTeam`);
+const { logTransaction } = require(`../../../helpers/transactions/logTransaction`);
+const { TransactionType } = require(`@prisma/client`);
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -79,6 +82,15 @@ async function confirmRenew(interaction) {
 	const status = await Transaction.renew(playerData.id);
 	if (status.contractRemaining !== 1) return await interaction.editReply(`There was an error while attempting to renew the player's contract. The database was not updated.`);
 
+	await logTransaction({
+		type: TransactionType.RENEW,
+		userID: playerData.id,
+		teamID: team.id,
+		franchiseID: franchise.id,
+		tier: team.tier,
+		details: { contractRemaining: 1 },
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -102,6 +114,11 @@ async function confirmRenew(interaction) {
 			{
 				name: `Team`,
 				value: team.name,
+				inline: true,
+			},
+			{
+				name: `Tier`,
+				value: tierLabel(team.tier),
 				inline: true,
 			},
 		],

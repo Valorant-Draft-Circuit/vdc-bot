@@ -5,8 +5,9 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Player, Transaction } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { prisma } = require("../../../../prisma/prismadb");
-const { LeagueStatus } = require("@prisma/client");
+const { LeagueStatus, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -85,6 +86,11 @@ async function confirmRetire(interaction) {
 
 	const retiredPlayer = await Transaction.retire(playerID);
 	if (retiredPlayer.User.Status.leagueStatus !== LeagueStatus.RETIRED) return await interaction.editReply(`There was an error while attempting to retire the player. The database was not updated.`);
+
+	await logTransaction({
+		type: TransactionType.RETIRE,
+		userID: playerData.id,
+	});
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);

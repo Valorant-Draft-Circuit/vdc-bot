@@ -5,7 +5,8 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Player, Team, Transaction, Franchise, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { prisma } = require("../../../../prisma/prismadb");
-const { MatchType } = require("@prisma/client");
+const { MatchType, TransactionType } = require("@prisma/client");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -91,11 +92,18 @@ async function confirmReschedule(interaction) {
         .replaceAll(`\``, ``).split(`\n`);
 
     const teams = params[1].split(` vs. `);
+    const tier = params[2];
     const timestamp = params[3];
     const matchID = Number(params[5]);
     const datetime = new Date(params[4]);
 
     await Transaction.reschedule(matchID, datetime);
+
+    await logTransaction({
+        type: TransactionType.RESCHEDULE,
+        tier: tier,
+        details: { matchID: matchID, teams: teams, newDate: datetime.toISOString() },
+    });
 
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);

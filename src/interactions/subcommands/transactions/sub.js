@@ -4,8 +4,10 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { LeagueStatus, ContractStatus } = require("@prisma/client");
+const { LeagueStatus, ContractStatus, TransactionType } = require("@prisma/client");
 const { registerUnsubTimer, clearUnsubTimer } = require(`../../../helpers/transactions/activeSubTimers`);
+const { tierLabel, formatTeamWithTier } = require(`../../../helpers/transactions/formatTeam`);
+const { logTransaction } = require(`../../../helpers/transactions/logTransaction`);
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 
@@ -20,9 +22,10 @@ async function requestSub(
 	const subInData = await Player.getBy({ discordID: subIn.id });
 	const subOutData = await Player.getBy({ discordID: subOut.id });
 
-	if (subInData === undefined) return await interaction.editReply(`The player you're trying to sub in doesn't exist in the database!`);
-	if (subOutData === undefined) return await interaction.editReply(`The player you're trying to sub out doesn't exist in the database!`);
+	if (subInData == null) return await interaction.editReply(`The player you're trying to sub in doesn't exist in the database!`);
+	if (subOutData == null) return await interaction.editReply(`The player you're trying to sub out doesn't exist in the database!`);
 	if (subOutData.team == null) return await interaction.editReply(`The player you're trying to sub out isn't on a team!`);
+	if (subInData.PrimaryRiotAccount == null) return await interaction.editReply(`The player you're trying to sub in doesn't have a linked Riot account & cannot be subbed in!`);
 
 
 	const team = await Team.getBy({ id: subOutData.team });
@@ -108,6 +111,14 @@ async function confirmSub(interaction) {
 	const updatedPlayer = await Transaction.sub({ userID: player.id, teamID: team.id, tier: team.tier });
 	if (updatedPlayer.team !== team.id) return await interaction.editReply(`There was an error while attempting to sub the player. The database was not updated.`);
 
+	await logTransaction({
+		type: TransactionType.SUB,
+		userID: player.id,
+		teamID: team.id,
+		franchiseID: franchise.id,
+		tier: team.tier,
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -131,6 +142,11 @@ async function confirmSub(interaction) {
 			{
 				name: `Team`,
 				value: team.name,
+				inline: true,
+			},
+			{
+				name: `Tier`,
+				value: tierLabel(team.tier),
 				inline: true,
 			}
 		],
@@ -159,10 +175,19 @@ async function confirmSub(interaction) {
 		const updatedPlayer = await Transaction.unsub(player.id);
 		if (updatedPlayer.team !== null) return await interaction.channel.send(`There was an error while attempting to unsub ${guildMember} (${playerTag}). The database was not updated.`);
 
+		await logTransaction({
+			type: TransactionType.UNSUB,
+			userID: player.id,
+			teamID: team.id,
+			franchiseID: franchise.id,
+			tier: team.tier,
+			details: { trigger: `auto` },
+		});
+
 		// create the base embed
 		const announcement = new EmbedBuilder({
 			author: { name: `VDC Transactions Manager` },
-			description: `${guildMember} (${playerTag})'s temporary contract with ${team.name} has ended!`,
+			description: `${guildMember} (${playerTag})'s temporary contract with ${formatTeamWithTier(team)} has ended!`,
 			thumbnail: {
 				url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchise.Brand.logo}`,
 			},
