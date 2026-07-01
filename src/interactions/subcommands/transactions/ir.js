@@ -105,12 +105,11 @@ async function confirmToggleIR(interaction, mode) {
 	if (player.Status.contractStatus === ContractStatus.INACTIVE_RESERVE && mode == `REMOVE`) return await interaction.editReply(`There was an error while attempting to remove the player from Inactive Reserve. The database was not updated.`);
 
 	await logTransaction({
-		type: TransactionType.IR,
+		type: mode === `SET` ? TransactionType.IR : TransactionType.ACTIVATE,
 		userID: playerData.id,
 		teamID: team.id,
 		franchiseID: team.Franchise.id,
 		tier: team.tier,
-		details: { mode: mode },
 	});
 
 	const embed = interaction.message.embeds[0];
