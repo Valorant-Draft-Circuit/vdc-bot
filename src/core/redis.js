@@ -2,7 +2,7 @@ const fs = require(`fs`);
 const path = require(`path`);
 const Redis = require(`ioredis`);
 
-const LUA_DIRECTORY = path.resolve(__dirname, `../../utils/lua`);
+const LUA_DIRECTORY = path.resolve(process.cwd(), `utils/lua`);
 const LUA_SCRIPTS = new Map();
 
 let redisClient;

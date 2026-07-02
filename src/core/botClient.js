@@ -76,7 +76,7 @@ module.exports = class BotClient extends Client {
     loadEvents(directory) {
 
         // get event files & filter by .js files
-        const eventFiles = fs.readdirSync(directory);
+        const eventFiles = fs.readdirSync(path.resolve(__dirname, `../../${directory}`));
         let success = 0;
         let failure = 0;
 
@@ -106,7 +106,7 @@ module.exports = class BotClient extends Client {
      */
     registerSlashCommands(readyClient, directory) {
         // register slash commands (rewrite deploy.js)
-        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
+        const slashCommandFiles = fs.readdirSync(path.resolve(__dirname, `../../${directory}`)).filter(f => f.endsWith(`.js`));
         const commandStructures = [];
         let success = 0;
 
@@ -141,7 +141,7 @@ module.exports = class BotClient extends Client {
      */
     loadSlashCommands(directory) {
         // register all slash commands
-        const slashCommandFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
+        const slashCommandFiles = fs.readdirSync(path.resolve(__dirname, `../../${directory}`)).filter(f => f.endsWith(`.js`));
         let success = 0;
 
         slashCommandFiles.forEach(slashCommandFile => {
@@ -159,7 +159,7 @@ module.exports = class BotClient extends Client {
      * @param {String} directory
      */
     loadButtons(directory) {
-        const buttonFiles = fs.readdirSync(directory);
+        const buttonFiles = fs.readdirSync(path.resolve(__dirname, `../../${directory}`));
         let success = 0;
 
         buttonFiles.forEach(buttonFile => {
@@ -177,7 +177,7 @@ module.exports = class BotClient extends Client {
      * @param {String} directory
      */
     loadSelectMenus(directory) {
-        const selectMenuFiles = fs.readdirSync(directory);
+        const selectMenuFiles = fs.readdirSync(path.resolve(__dirname, `../../${directory}`));
         let success = 0;
 
         selectMenuFiles.forEach(selectMenuFile => {
@@ -196,7 +196,7 @@ module.exports = class BotClient extends Client {
      * @param {String} directory
      */
     loadAutocomplete(directory) {
-        const autocompleteFiles = fs.readdirSync(directory).filter(f => f.endsWith(`.js`));
+        const autocompleteFiles = fs.readdirSync(path.resolve(__dirname, `../../${directory}`)).filter(f => f.endsWith(`.js`));
         let success = 0;
 
         autocompleteFiles.forEach(autocompleteFile => {

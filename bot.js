@@ -35,36 +35,21 @@ process.on(`warning`, (warning) => {
 
 
 // START HOTRELOAD FILES --------------------------------------------------------------------------
-// create hotreloading for cache
-const mmrCachePath = `./cache/mmrCache.json`;
-const mmrTierLinesCache = `./cache/mmrTierLinesCache.json`;
-const combineCountCache = `./cache/combineCountCache.json`;
+const { readCacheJson, cacheFilePath } = require(`./utils/readCacheJson.js`);
 
-// initial requires
-global.mmrCache = require(mmrCachePath);
-global.mmrTierLinesCache = require(mmrTierLinesCache);
-global.combineCountCache = require(combineCountCache);
+const hotReloadedCaches = [
+    { fileName: `mmrCache.json`, assign: (data) => (global.mmrCache = data) },
+    { fileName: `mmrTierLinesCache.json`, assign: (data) => (global.mmrTierLinesCache = data) },
+    { fileName: `combineCountCache.json`, assign: (data) => (global.combineCountCache = data) },
+];
 
-// create watch files for hot-reloading
-fs.watchFile(mmrCachePath, () => {
-    delete require.cache[require.resolve(mmrCachePath)];
-    global.mmrCache = require(mmrCachePath);
+hotReloadedCaches.forEach(({ fileName, assign }) => {
+    assign(readCacheJson(fileName));
 
-    return logger.log(`INFO`, `Reloaded file: \`${mmrCachePath}\``);
-});
-
-fs.watchFile(mmrTierLinesCache, () => {
-    delete require.cache[require.resolve(mmrTierLinesCache)];
-    global.mmrTierLinesCache = require(mmrTierLinesCache);
-
-    return logger.log(`INFO`, `Reloaded file: \`${mmrTierLinesCache}\``);
-});
-
-fs.watchFile(combineCountCache, () => {
-    delete require.cache[require.resolve(combineCountCache)];
-    global.combineCountCache = require(combineCountCache);
-
-    return logger.log(`INFO`, `Reloaded file: \`${combineCountCache}\``);
+    fs.watchFile(cacheFilePath(fileName), () => {
+        assign(readCacheJson(fileName));
+        return logger.log(`INFO`, `Reloaded file: \`cache/${fileName}\``);
+    });
 });
 // ################################################################################################
 

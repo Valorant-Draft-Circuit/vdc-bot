@@ -1,5 +1,6 @@
 const { Tier } = require(`@prisma/client`);
 const { ApplicationCommandOptionType, InteractionContextType, PermissionFlagsBits } = require(`discord.js`);
+const { readCacheJson } = require(`../readCacheJson.js`);
 
 /** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
 module.exports = {
@@ -114,7 +115,7 @@ module.exports = {
 }
 
 function franchiseChoices() {
-    const franchiseData = require(`../../cache/franchises.json`);
+    const franchiseData = readCacheJson(`franchises.json`);
     const franchiseOptions = [];
 
     franchiseData.forEach(franchise => {

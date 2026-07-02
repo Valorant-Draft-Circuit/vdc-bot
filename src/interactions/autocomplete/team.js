@@ -1,4 +1,5 @@
 const { AutocompleteInteraction } = require(`discord.js`);
+const { readCacheJson } = require(`../../../utils/readCacheJson.js`);
 
 module.exports = {
 
@@ -17,7 +18,7 @@ module.exports = {
 
 
 function teamChoices() {
-    const teamCache = require(`../../../cache/teams.json`);
+    const teamCache = readCacheJson(`teams.json`);
     const teamOptions = [];
 
     teamCache.forEach(team => {
