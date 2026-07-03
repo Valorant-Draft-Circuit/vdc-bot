@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
-const franchises = require(`../../../cache/franchises.json`);
+const { readCacheJson } = require(`../../../utils/readCacheJson.js`);
+const franchises = readCacheJson(`franchises.json`);
 const { Franchise } = require("../../../prisma");
 const { info, updateDescription } = require("../subcommands/franchise");
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;

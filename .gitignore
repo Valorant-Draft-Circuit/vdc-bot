@@ -4,8 +4,6 @@
 ################################################################
 
 # Ignore all compiled & generated files. #######################
-utils/enums/*.js
-prisma/*.js
 cache/*.json
 # These will be compiled/generated locally & on deployment #####
 ################################################################
@@ -14,6 +12,7 @@ cache/*.json
 node_modules
 bin
 project
+dist
 interactions/commands/stash
 utils/commandsStructure/stash
 ################################################################

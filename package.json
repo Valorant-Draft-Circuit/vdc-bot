@@ -4,13 +4,13 @@
   "description": "Valorant Draft Circuit's Discord Bot",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js",
+    "start": "node dist/bot.js",
     "deploy": "npm run cache && npm run start",
 
     "compile": "tsc -p tsconfig.json",
-    "cache": "node ./cache/cache.js",
-    "dev:start": "nodemon --no-warnings --ignore ./cache/ --ignore ./bin/ bot.js",
-    "dev:compile": "npm run cache && tsc -w -p tsconfig.json",
+    "cache": "node dist/cache/cache.js",
+    "dev:start": "nodemon --no-warnings --watch dist --ignore dist/cache dist/bot.js",
+    "dev:compile": "npm run compile && npm run cache && tsc -w -p tsconfig.json",
     "dev:run": "npm install && npm run compile && npm run cache && npm run dev:start",
     "generate": "prisma generate && (clear || cls)",
     "pull": "prisma db pull --force",
