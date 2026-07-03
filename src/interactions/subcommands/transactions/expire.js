@@ -5,7 +5,9 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Player, Team, Transaction, Franchise, Flags } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { prisma } = require("../../../../prisma/prismadb");
-const { Tier } = require("@prisma/client");
+const { Tier, TransactionType } = require("@prisma/client");
+const { tierLabel } = require("../../../helpers/transactions/formatTeam");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 
 const Logger = require("../../../core/logger");
@@ -122,6 +124,14 @@ async function confirmExpire(interaction) {
 	const status = await Transaction.cut(playerID);
 	if (status.contractRemaining != null) return await interaction.editReply(`There was an error while attempting to finalize the expiration of the player's contract. The database was not updated.`);
 
+	await logTransaction({
+		type: TransactionType.EXPIRE,
+		userID: playerData.id,
+		teamID: team.id,
+		franchiseID: franchise.id,
+		tier: team.tier,
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -145,6 +155,11 @@ async function confirmExpire(interaction) {
 			{
 				name: `Team`,
 				value: team.name,
+				inline: true,
+			},
+			{
+				name: `Tier`,
+				value: tierLabel(team.tier),
 				inline: true,
 			},
 		],

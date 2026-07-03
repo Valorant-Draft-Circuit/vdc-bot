@@ -2,9 +2,11 @@ const { ChatInputCommandInteraction, GuildMember, ButtonBuilder, ButtonStyle } =
 
 const { EmbedBuilder, ActionRowBuilder } = require("discord.js");
 const { Player, Franchise, Transaction, Team } = require("../../../../prisma");
-const { ContractStatus } = require("@prisma/client");
+const { ContractStatus, TransactionType } = require("@prisma/client");
 const { CHANNELS, TransactionsNavigationOptions } = require("../../../../utils/enums");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
+const { formatTeamWithTier } = require("../../../helpers/transactions/formatTeam");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 /** Send confirmation to Unsub a player
  * @param {ChatInputCommandInteraction} interaction
@@ -81,6 +83,15 @@ async function confirmUnsub(interaction) {
 	const player = await Transaction.unsub(playerData.id);
 	if (player.team !== null) return await interaction.editReply(`There was an error while attempting to unsub the player. The database was not updated.`);
 
+	await logTransaction({
+		type: TransactionType.UNSUB,
+		userID: playerData.id,
+		teamID: team.id,
+		franchiseID: franchise.id,
+		tier: team.tier,
+		details: { trigger: `manual` },
+	});
+
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
 	embedEdits.setDescription(`This operation was successfully completed.`);
@@ -90,7 +101,7 @@ async function confirmUnsub(interaction) {
 	// create the base embed
 	const announcement = new EmbedBuilder({
 		author: { name: `VDC Transactions Manager` },
-		description: `${guildMember} (${playerTag})'s temporary contract with ${team.name} has ended!`,
+		description: `${guildMember} (${playerTag})'s temporary contract with ${formatTeamWithTier(team)} has ended!`,
 		thumbnail: {
 			url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchise.Brand.logo}`,
 		},

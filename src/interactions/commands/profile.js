@@ -154,7 +154,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	await interaction.editReply(progress.join(`\n`));
 
 	const player = await Player.getBy({ discordID: userID });
-	if (!player.primaryRiotAccountID) {
+	if (!player || !player.primaryRiotAccountID) {
 		progress[progress.length - 1] =
 			`❌ I looked through our database and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!`;
 		return await interaction.editReply(progress.join(`\n`));

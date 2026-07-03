@@ -4,8 +4,10 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { Tier } = require("@prisma/client");
+const { Tier, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
+const { tierLabel } = require("../../../helpers/transactions/formatTeam");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -91,6 +93,15 @@ async function confirmUpdateTier(interaction) {
 	});
 	if (updatedPlayer.team !== newTeam.id) return await interaction.editReply(`There was an error while attempting to update the player's tier. The database was not updated.`);
 
+	await logTransaction({
+		type: TransactionType.UPDATE_TIER,
+		userID: player.id,
+		teamID: newTeam.id,
+		franchiseID: franchise.id,
+		tier: newTeam.tier,
+		details: { fromTier: data[3], toTier: data[4] },
+	});
+
 	await guildMember.roles.remove([
 		...Object.values(ROLES.LEAGUE),
 		...Object.values(ROLES.TIER),
@@ -146,6 +157,11 @@ async function confirmUpdateTier(interaction) {
 			{
 				name: `Team`,
 				value: newTeam.name,
+				inline: true,
+			},
+			{
+				name: `Tier`,
+				value: tierLabel(newTeam.tier),
 				inline: true,
 			},
 		],

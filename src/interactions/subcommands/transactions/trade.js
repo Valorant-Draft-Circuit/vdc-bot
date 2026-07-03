@@ -5,8 +5,9 @@ const { ChatInputCommandInteraction, ButtonInteraction, StringSelectMenuInteract
 const { Franchise, Player, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { CHANNELS, ROLES, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { Tier, LeagueStatus } = require("@prisma/client");
+const { Tier, LeagueStatus, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
+const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
@@ -127,6 +128,16 @@ async function confirmTrade(/** @type ButtonInteraction */ interaction) {
 	const f2PA = f2PlayerOffers.map(fp => `\`U\` | [\`${fp.riotIGN}\`](${fp.trackerURL}) - ${fp.name}`)
 	const f2DPA = f2DraftPickOffers.map(fdp => `\`P\` | \`${fdp.tier}\` - Round ${fdp.round}, Pick ${fdp.pick}, (${fdp.overallPick})`);
 	const f2Gives = [...f2PA, ...f2DPA];
+
+	await logTransaction({
+		type: TransactionType.TRADE,
+		details: {
+			franchise1: { id: franchise1.id, name: franchise1.name },
+			franchise2: { id: franchise2.id, name: franchise2.name },
+			f1Gives: f1Gives,
+			f2Gives: f2Gives,
+		},
+	});
 
 	// create the base embed
 	const announcement = new EmbedBuilder({
