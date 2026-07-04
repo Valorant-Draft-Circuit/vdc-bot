@@ -102,16 +102,25 @@ function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires
 	});
 }
 
-/** Player history timeline embed */
-function buildHistoryEmbed({ targetUser, rows }) {
+const HISTORY_PAGE_SIZE = 5;
+
+/** Player history timeline embed, paginated. The player mention in the
+ * description and the page counter in the footer carry the state the
+ * pagination buttons recover (same recover-from-message idiom as the
+ * confirmation embeds). */
+function buildHistoryEmbed({ targetUser, rows, page = 0 }) {
 	const now = Date.now();
-	const lines = rows.slice(0, 10).map((row) => {
+	const totalPages = Math.max(1, Math.ceil(rows.length / HISTORY_PAGE_SIZE));
+	const clampedPage = Math.min(Math.max(page, 0), totalPages - 1);
+	const pageRows = rows.slice(clampedPage * HISTORY_PAGE_SIZE, (clampedPage + 1) * HISTORY_PAGE_SIZE);
+
+	const lines = pageRows.map((row) => {
 		const timestamp = `<t:${Math.round(row.date.getTime() / 1000)}:d>`;
 		const isActive = (row.type === `MUTE` || row.type === `BAN`)
 			&& (row.expires === null || row.expires.getTime() > now);
 		const status = isActive ? ` **[ACTIVE]**` : ``;
 		const firstLine = row.message.split(`\n`)[0];
-		return `${timestamp} \`${row.type}\`${status} - ${firstLine}`;
+		return `\`#${row.id}\` ${timestamp} \`${row.type}\`${status} - ${firstLine}`;
 	});
 
 	return new EmbedBuilder({
@@ -119,14 +128,48 @@ function buildHistoryEmbed({ targetUser, rows }) {
 		title: `Moderation history`,
 		description: [
 			`**Player:** ${targetUser} (\`${targetUser.id}\`)`,
-			`**Total entries:** ${rows.length}${rows.length > 10 ? ` (showing latest 10)` : ``}`,
+			`**Total entries:** ${rows.length}`,
 			``,
 			lines.length > 0 ? lines.join(`\n`) : `No moderation history.`,
 		].join(`\n`),
 		color: MOD_COLOR,
-		footer: { text: `Moderation - History` },
+		footer: { text: `Moderation - History | Page ${clampedPage + 1}/${totalPages}` },
 		timestamp: Date.now(),
 	});
 }
 
-module.exports = { getEmbedField, buildConfirmationEmbed, buildLogEmbed, buildDmEmbed, buildHistoryEmbed };
+/** Full detail of one ModLogs row (for /mod action <id>) */
+function buildActionDetailEmbed(row) {
+	const now = Date.now();
+	const isActive = (row.type === `MUTE` || row.type === `BAN`)
+		&& (row.expires === null || row.expires.getTime() > now);
+
+	const expiryValue = row.expires === null
+		? (isActive ? `never (permanent or season-scoped)` : `-`)
+		: `<t:${Math.round(row.expires.getTime() / 1000)}:f>`;
+
+	return new EmbedBuilder({
+		author: { name: `VDC Moderation` },
+		title: `Action #${row.id} - ${row.type}${isActive ? ` [ACTIVE]` : ``}`,
+		color: MOD_COLOR,
+		fields: [
+			{ name: `Target`, value: `<@${row.discordID}> (\`${row.discordID}\`)`, inline: true },
+			{ name: `Moderator`, value: `\`${row.Moderator?.name ?? row.modID}\``, inline: true },
+			{ name: `Date`, value: `<t:${Math.round(row.date.getTime() / 1000)}:f>`, inline: true },
+			{ name: `Expires`, value: expiryValue, inline: true },
+			{ name: `Message`, value: row.message.slice(0, 1024) },
+		],
+		footer: { text: `Moderation - Action #${row.id}` },
+		timestamp: Date.now(),
+	});
+}
+
+/** Recover the pagination state buildHistoryEmbed wrote onto the message. */
+function parseHistoryEmbedState(embed) {
+	const targetID = embed.description?.match(/\*\*Player:\*\* <@(\d+)>/)?.[1] ?? null;
+	const pageMatch = embed.footer?.text?.match(/Page (\d+)\/(\d+)/);
+	const page = pageMatch ? Number(pageMatch[1]) - 1 : 0;
+	return { targetID, page };
+}
+
+module.exports = { getEmbedField, buildConfirmationEmbed, buildLogEmbed, buildDmEmbed, buildHistoryEmbed, buildActionDetailEmbed, parseHistoryEmbedState, HISTORY_PAGE_SIZE };

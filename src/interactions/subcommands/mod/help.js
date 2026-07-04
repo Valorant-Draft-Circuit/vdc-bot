@@ -24,8 +24,12 @@ const COMMAND_GUIDE = [
 		value: `Lift a sanction early (e.g. a successful appeal). The record stays on the dashboard with an appeal note.`,
 	},
 	{
+		name: `/mod action`,
+		value: `Look up one action by the \`#id\` shown in /mod history - full message, moderator, dates, expiry.`,
+	},
+	{
 		name: `/mod history`,
-		value: `Show a player's moderation timeline (latest 10 entries, active punishments marked).`,
+		value: `Show a player's moderation timeline (5 per page with Back/Next buttons, active punishments marked).`,
 	},
 	{
 		name: `Options`,

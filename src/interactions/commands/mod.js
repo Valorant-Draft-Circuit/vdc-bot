@@ -1,5 +1,5 @@
 const { ChatInputCommandInteraction } = require(`discord.js`);
-const { note, warn, history, mute, unmute, ban, unban, help } = require(`../subcommands/mod`);
+const { note, warn, history, mute, unmute, ban, unban, help, action } = require(`../subcommands/mod`);
 const { hasModAccess } = require(`../../helpers/mod/guards`);
 
 module.exports = {
@@ -35,6 +35,8 @@ module.exports = {
 				return history.history(interaction, targetUser);
 			case `help`:
 				return help.help(interaction);
+			case `action`:
+				return action.action(interaction, interaction.options.getInteger(`id`));
 		}
 	},
 };

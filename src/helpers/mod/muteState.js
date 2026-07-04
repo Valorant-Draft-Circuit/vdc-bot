@@ -48,11 +48,13 @@ function expiryKey(type, discordID) {
 	return `${EXPIRY_KEY_PREFIX}${type}:${discordID}`;
 }
 
-/** Set the TTL wake-up key for a timed sanction (no key for permanent) */
+/** Set the TTL wake-up key for a timed punishment (no key for permanent).
+ * Enforcement work (DM, DB write, role ops) takes seconds, so a very short
+ * duration can already be past by the time we arm the key - clamp to a 1s
+ * minimum instead of skipping, so the lift still fires immediately. */
 async function setExpiryKey(type, discordID, expires) {
 	if (!expires) return;
-	const ttlSeconds = Math.ceil((expires.getTime() - Date.now()) / 1000);
-	if (ttlSeconds <= 0) return;
+	const ttlSeconds = Math.max(1, Math.ceil((expires.getTime() - Date.now()) / 1000));
 	await getRedisClient().set(expiryKey(type, discordID), `1`, `EX`, ttlSeconds);
 }
 

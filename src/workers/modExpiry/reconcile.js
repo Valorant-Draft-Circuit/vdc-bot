@@ -37,9 +37,11 @@ async function reconcileOnce(guild) {
 		if (activeMuteIDs.has(discordID)) continue;
 		const member = await guild.members.fetch(discordID).catch(() => null);
 		if (member && member.roles.cache.has(ROLES.LEAGUE.MUTED)) {
-			await liftMute(guild, discordID);
-			await announceExpiredLift(guild, `UNMUTE`, discordID);
-			logger.log(`INFO`, `Reconciliation lifted expired mute for ${discordID}`);
+			const { lifted } = await liftMute(guild, discordID);
+			if (lifted) {
+				await announceExpiredLift(guild, `UNMUTE`, discordID);
+				logger.log(`INFO`, `Reconciliation lifted expired mute for ${discordID}`);
+			}
 		}
 	}
 
@@ -52,8 +54,8 @@ async function reconcileOnce(guild) {
 			await ModLogs.liftPunishmentRow(row.id, `Season ban ended (covered through season ${row.season}).`);
 			const remainingBans = await ModLogs.activePunishmentsFor(row.discordID, ModLogType.BAN);
 			if (remainingBans.length === 0) {
-				await liftBan(guild, row.discordID, `Season ban ended (through season ${row.season})`);
-				await announceExpiredLift(guild, `UNBAN`, row.discordID);
+				const wasBanned = await liftBan(guild, row.discordID, `Season ban ended (through season ${row.season})`);
+				if (wasBanned) await announceExpiredLift(guild, `UNBAN`, row.discordID);
 			}
 			logger.log(`INFO`, `Reconciliation lifted season ${row.season} ban for ${row.discordID}`);
 		}
@@ -66,9 +68,11 @@ async function reconcileOnce(guild) {
 	for (const [bannedUserID] of guildBans) {
 		if (!everBannedIDs.has(bannedUserID)) continue; // manual ban, no rows - leave alone
 		if (activeBanIDs.has(bannedUserID)) continue;
-		await liftBan(guild, bannedUserID, `Ban expired (reconciliation)`);
-		await announceExpiredLift(guild, `UNBAN`, bannedUserID);
-		logger.log(`INFO`, `Reconciliation lifted expired ban for ${bannedUserID}`);
+		const wasBanned = await liftBan(guild, bannedUserID, `Ban expired (reconciliation)`);
+		if (wasBanned) {
+			await announceExpiredLift(guild, `UNBAN`, bannedUserID);
+			logger.log(`INFO`, `Reconciliation lifted expired ban for ${bannedUserID}`);
+		}
 	}
 }
 

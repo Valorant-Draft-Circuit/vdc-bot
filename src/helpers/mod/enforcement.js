@@ -42,6 +42,7 @@ async function liftMute(guild, discordID) {
 	const muteState = await getMuteState(discordID);
 
 	const member = await guild.members.fetch(discordID).catch(() => null);
+	const hadMutedRole = member?.roles.cache.has(ROLES.LEAGUE.MUTED) ?? false;
 	if (member) {
 		await member.roles.remove(ROLES.LEAGUE.MUTED).catch(() => undefined);
 		if (Array.isArray(muteState) && muteState.length > 0) {
@@ -51,7 +52,11 @@ async function liftMute(guild, discordID) {
 	}
 
 	await clearMuteState(discordID);
-	return member !== null;
+
+	// `lifted` lets automatic callers (subscriber + reconciler, which are
+	// DESIGNED to overlap) announce exactly once: the second racer finds no
+	// role and no snapshot and stays quiet
+	return { memberWasPresent: member !== null, lifted: hadMutedRole || muteState !== null };
 }
 
 /** Ban by ID (works for users not in the guild), set the expiry key.

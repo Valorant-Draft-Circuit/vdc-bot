@@ -28,11 +28,11 @@ async function startExpirySubscriber(client) {
 
 		try {
 			if (type === `MUTE`) {
-				await liftMute(guild, discordID);
-				await announceExpiredLift(guild, `UNMUTE`, discordID);
+				const { lifted } = await liftMute(guild, discordID);
+				if (lifted) await announceExpiredLift(guild, `UNMUTE`, discordID);
 			} else if (type === `BAN`) {
-				await liftBan(guild, discordID, `Ban expired`);
-				await announceExpiredLift(guild, `UNBAN`, discordID);
+				const wasBanned = await liftBan(guild, discordID, `Ban expired`);
+				if (wasBanned) await announceExpiredLift(guild, `UNBAN`, discordID);
 			}
 			logger.log(`INFO`, `Expired ${type} lifted for ${discordID}`);
 		} catch (error) {

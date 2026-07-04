@@ -45,7 +45,7 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 		type: ModLogType.MUTE,
 		appealNote: `This has been APPEALED on ${appealDate}. ${reason}`,
 	});
-	const memberWasPresent = await liftMute(interaction.guild, targetID);
+	const { memberWasPresent } = await liftMute(interaction.guild, targetID);
 
 	await postToModLog(interaction.guild, buildLogEmbed({
 		action: `UNMUTE`, targetID, modTag: interaction.user.tag, reason,

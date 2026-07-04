@@ -6,5 +6,6 @@ const unmute = require(`./unmute`);
 const ban = require(`./ban`);
 const unban = require(`./unban`);
 const help = require(`./help`);
+const action = require(`./action`);
 
-module.exports = { note, warn, history, mute, unmute, ban, unban, help };
+module.exports = { note, warn, history, mute, unmute, ban, unban, help, action };
