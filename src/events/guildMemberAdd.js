@@ -1,6 +1,6 @@
 const { GuildMember, MessageFlags } = require(`discord.js`);
 const { ControlPanel } = require("../../prisma");
-const { GUILD } = require("../../utils/enums");
+const { GUILD, ROLES, CHANNELS } = require("../../utils/enums");
 
 const generalChatID = !Boolean(Number(process.env.PROD)) ?
     `1059244366671118487` : // bot-spam
@@ -21,6 +21,17 @@ module.exports = {
     once: false,
 
     async execute(client, /** @type {GuildMember} */ member) {
+
+        // re-apply the Muted role to anyone who left and rejoined while muted
+        if (Array.isArray(global.muteCache) && global.muteCache.includes(member.id)) {
+            await member.roles.add(ROLES.LEAGUE.MUTED).catch(() => undefined);
+
+            const modLogChannel = await client.channels.fetch(CHANNELS.MOD_LOG).catch(() => null);
+            if (modLogChannel) {
+                await modLogChannel.send({ content: `<@${member.id}> (\`${member.user.username}\`, \`${member.id}\`) rejoined while muted - the Muted role was re-applied.` }).catch(() => undefined);
+            }
+            logger.log(`INFO`, `Re-applied Muted role to rejoining member ${member.id}`);
+        }
 
         if (!Boolean(Number(process.env.PROD))) return;
 

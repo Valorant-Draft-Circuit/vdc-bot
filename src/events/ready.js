@@ -1,4 +1,5 @@
 const { startQueueRuntime } = require(`../core/queue/runtime`);
+const { startModExpiry } = require(`../workers/modExpiry`);
 
 module.exports = {
 
@@ -21,6 +22,11 @@ module.exports = {
 
 		const emotes = (await client.application.emojis.fetch()).map(e => e);
 		logger.log(`INFO`, `Found \`${emotes.length}\` application emote(s)`);
+
+		// moderation durability must not depend on the queue boot succeeding:
+		// start the expiry runtime first so a queue failure can never silently
+		// disable sanction lifts
+		await startModExpiry(client);
 
 		if ((/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
 			await startQueueRuntime(client);

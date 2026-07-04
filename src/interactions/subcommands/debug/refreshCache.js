@@ -3,12 +3,14 @@ const fs = require(`fs`);
 const { ChatInputCommandInteraction } = require(`discord.js`)
 
 const { prisma } = require("../../../../prisma/prismadb");
+const { rewriteMuteCache } = require(`../../../helpers/mod/muteState`);
 
 
 async function refreshCache(/** @type ChatInputCommandInteraction */ interaction) {
     await interaction.editReply({ content: `🔃 Refreshing cache...` });
     await buildMMRCache();
     await buildCombineCountCache();
+    await rewriteMuteCache();
     logger.log(`INFO`, `${interaction.user} (\`${interaction.user.username}\`) refreshed the cache`);
     return await interaction.editReply({ content: `✅ Cache refreshed!` });
 }

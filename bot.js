@@ -39,11 +39,13 @@ process.on(`warning`, (warning) => {
 const mmrCachePath = `./cache/mmrCache.json`;
 const mmrTierLinesCache = `./cache/mmrTierLinesCache.json`;
 const combineCountCache = `./cache/combineCountCache.json`;
+const muteCachePath = `./cache/muteCache.json`;
 
 // initial requires
 global.mmrCache = require(mmrCachePath);
 global.mmrTierLinesCache = require(mmrTierLinesCache);
 global.combineCountCache = require(combineCountCache);
+global.muteCache = require(muteCachePath);
 
 // create watch files for hot-reloading
 fs.watchFile(mmrCachePath, () => {
@@ -66,6 +68,14 @@ fs.watchFile(combineCountCache, () => {
 
     return logger.log(`INFO`, `Reloaded file: \`${combineCountCache}\``);
 });
+
+fs.watchFile(muteCachePath, () => {
+    delete require.cache[require.resolve(muteCachePath)];
+    global.muteCache = require(muteCachePath);
+
+    return logger.log(`INFO`, `Reloaded file: \`${muteCachePath}\``);
+});
+
 // ################################################################################################
 
 
