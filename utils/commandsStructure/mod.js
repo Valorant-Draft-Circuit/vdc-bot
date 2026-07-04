@@ -94,7 +94,7 @@ module.exports = {
             options: [userOption(`The player to look up`)],
         },
         {
-            name: `action`,
+            name: `log`,
             description: `Look up one mod action by its id (shown in /mod history)`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [

@@ -9,7 +9,7 @@ const COMMAND_GUIDE = [
 	},
 	{
 		name: `/mod warn`,
-		value: `Warn a player. \`formal:\` picks formal vs informal. The player is DM'ed the warning.`,
+		value: `Warn a player. \`formal:\` picks formal vs informal (formal warnings are appealable, informal ones are not). The player is DM'ed the warning.`,
 	},
 	{
 		name: `/mod mute`,
@@ -24,7 +24,7 @@ const COMMAND_GUIDE = [
 		value: `Lift a sanction early (e.g. a successful appeal). The record stays on the dashboard with an appeal note.`,
 	},
 	{
-		name: `/mod action`,
+		name: `/mod log`,
 		value: `Look up one action by the \`#id\` shown in /mod history - full message, moderator, dates, expiry.`,
 	},
 	{
@@ -44,7 +44,7 @@ const COMMAND_GUIDE = [
 		name: `Good to know`,
 		value: [
 			`Every action shows a Confirm/Cancel gate before anything happens.`,
-			`All actions are recorded to ModLogs and appear on the moderator dashboard (https://vdc.gg/staff/moderator).`,
+			`All actions are recorded to ModLogs and appear on the moderator dashboard (https://vdc.gg/staff/moderation).`,
 			`You need a linked VDC account to act.`,
 			`Muted players who leave and rejoin are re-muted automatically.`,
 		].join(`\n`),

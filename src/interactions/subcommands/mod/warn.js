@@ -10,8 +10,9 @@ async function request(/** @type ChatInputCommandInteraction */ interaction, tar
 	const targetError = validateTarget(interaction, targetUser);
 	if (targetError) return interaction.editReply(targetError);
 
+	// policy: formal warnings are appealable, informal ones are not
 	const action = isFormal ? ModLogType.FORMAL_WARNING : ModLogType.INFORMAL_WARNING;
-	const embed = buildConfirmationEmbed({ action, targetUser, durationLabel: null, rules, reason });
+	const embed = buildConfirmationEmbed({ action, targetUser, durationLabel: null, rules, reason, appealable: isFormal });
 	const row = new ActionRowBuilder({
 		components: [
 			new ButtonBuilder({ customId: `mod_${ModNavigationOptions.CANCEL}`, label: `Cancel`, style: ButtonStyle.Danger }),
@@ -24,6 +25,7 @@ async function request(/** @type ChatInputCommandInteraction */ interaction, tar
 async function confirm(/** @type ButtonInteraction */ interaction) {
 	const embed = interaction.message.embeds[0];
 	const action = getEmbedField(embed, `Action`);
+	const appealable = action === ModLogType.FORMAL_WARNING;
 	const targetID = getEmbedField(embed, `Target ID`).replaceAll(`\``, ``);
 	const rules = getEmbedField(embed, `Rules`);
 	const reason = getEmbedField(embed, `Reason`);
@@ -35,12 +37,12 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 
 	const targetMember = await interaction.guild.members.fetch(targetID).catch(() => null);
 	if (targetMember) {
-		const dm = buildDmEmbed({ action, guildName: interaction.guild.name, durationLabel: null, rules, reason, expires: null });
+		const dm = buildDmEmbed({ action, guildName: interaction.guild.name, durationLabel: null, rules, reason, expires: null, appealable });
 		await targetMember.send({ embeds: [dm] }).catch(() => logger.log(`WARNING`, `Could not DM warning to ${targetID} (DMs closed)`));
 	}
 
 	await postToModLog(interaction.guild, buildLogEmbed({
-		action, targetID, targetTag: targetMember?.user.tag, modTag: interaction.user.tag, rules, reason,
+		action, targetID, targetTag: targetMember?.user.tag, modTag: interaction.user.tag, rules, reason, appealable,
 	}));
 
 	const done = new EmbedBuilder(embed.toJSON());
