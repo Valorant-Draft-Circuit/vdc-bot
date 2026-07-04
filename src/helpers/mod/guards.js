@@ -8,7 +8,7 @@ const { ROLES } = require(`../../../utils/enums`);
 function hasModAccess(member) {
   const roleCache = member.roles.cache;
   return (
-    roleCache.has(ROLES.OPERATIONS.MOD) || roleCache.has(ROLES.OPERATIONS.ADMIN)
+    roleCache.has(ROLES.OPERATIONS.MOD) || roleCache.has(ROLES.OPERATIONS.ADMIN) || roleCache.has(ROLES.OPERATIONS)
   );
 }
 

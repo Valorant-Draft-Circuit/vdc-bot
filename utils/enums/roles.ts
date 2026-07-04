@@ -37,6 +37,9 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             RECRUIT_FREE_AGENT: "1414441123690184836",
         },
         OPERATIONS: {
+            //in dev, its a crown thing
+            OWNER: `1220838046178476063`, 
+
             // in dev, both of these are the "BADMIN" role
             ADMIN: `1295970432268238940`,
             MOD: `1295970432268238940`,
@@ -79,6 +82,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             RECRUIT_FREE_AGENT: "1417229402772602880",
         },
         OPERATIONS: {
+            OWNER: `1088571112616628335`,
             ADMIN: `963298727810990101`,
             MOD: `966910372894343168`,
 
