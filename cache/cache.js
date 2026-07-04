@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { Franchise, ControlPanel } = require(`../prisma`);
+const { Franchise, ControlPanel, MOD_TOOLS_EPOCH } = require(`../prisma`);
 const { prisma } = require('../prisma/prismadb');
 const { Client, Application } = require('discord.js');
 
@@ -22,6 +22,7 @@ const tierSortWeights = {
     await generateCache();
     await buildMMRCache();
     await buildCombineCountCache();
+    await buildMuteCache();
     await emoteSync();
 })();
 
@@ -30,7 +31,8 @@ module.exports = {
     clearCache: clearCache,
     generateCache: generateCache,
     buildMMRCache: buildMMRCache,
-    buildCombineCountCache: buildCombineCountCache
+    buildCombineCountCache: buildCombineCountCache,
+    buildMuteCache: buildMuteCache,
 }
 
 // #####################################################################################
@@ -162,4 +164,14 @@ async function buildCombineCountCache() {
 
     fs.writeFileSync(`./cache/combineCountCache.json`, JSON.stringify(mapped));
     return mapped;
+}
+
+/** Build the active-mute cache (list of muted discordIDs) */
+async function buildMuteCache() {
+    const activeMutes = await prisma.modLogs.findMany({
+        where: { type: `MUTE`, date: { gte: MOD_TOOLS_EPOCH }, OR: [{ expires: null }, { expires: { gt: new Date() } }] },
+        select: { discordID: true },
+        distinct: [`discordID`],
+    });
+    fs.writeFileSync(`./cache/muteCache.json`, JSON.stringify(activeMutes.map((m) => m.discordID)));
 }

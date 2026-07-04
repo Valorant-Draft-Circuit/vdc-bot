@@ -10,16 +10,16 @@ const {
 	tierQueueKeys,
 	playerKey,
 } = require(`../../../helpers/queue/queueKeys`);
+const { ROLES } = require(`../../../../utils/enums`);
 
 //TODO: Move these roles to enums
 const INACTIVE_ROLE_ID = `1060750208746668132`;
-const MUTED_ROLE_ID = `979222361708589096`;
 const PRIORITY_BUCKETS = new Set([`DE`, `FA`, `RFA`, `SIGNED`]);
 
 async function joinQueue(interaction, queueConfig) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	if (interaction.member.roles.cache.has(INACTIVE_ROLE_ID) || interaction.member.roles.cache.has(MUTED_ROLE_ID)) {
+	if (interaction.member.roles.cache.has(INACTIVE_ROLE_ID) || interaction.member.roles.cache.has(ROLES.LEAGUE.MUTED)) {
 		return interaction.editReply({ content: `You are not allowed to join the queue.` });
 	}
 
