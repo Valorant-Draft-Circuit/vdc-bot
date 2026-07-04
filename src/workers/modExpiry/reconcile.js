@@ -1,6 +1,6 @@
 const { Guild } = require(`discord.js`);
 const { ModLogType } = require(`@prisma/client`);
-const { ModLogs } = require(`../../../prisma`);
+const { ModLogs, ControlPanel } = require(`../../../prisma`);
 const { ROLES } = require(`../../../utils/enums`);
 const { getRedisClient } = require(`../../core/redis`);
 const { EXPIRY_KEY_PREFIX } = require(`../../helpers/mod/muteState`);
@@ -11,12 +11,12 @@ const { liftMute, liftBan, announceExpiredLift } = require(`../../helpers/mod/en
  * overwrites a key that already exists. */
 async function rearmExpiryKeys() {
 	const redis = getRedisClient();
-	const timedSanctions = [
-		...(await ModLogs.activeSanctions(ModLogType.MUTE)),
-		...(await ModLogs.activeSanctions(ModLogType.BAN)),
+	const timedPunishments = [
+		...(await ModLogs.activePunishments(ModLogType.MUTE)),
+		...(await ModLogs.activePunishments(ModLogType.BAN)),
 	].filter((row) => row.expires !== null);
 
-	for (const row of timedSanctions) {
+	for (const row of timedPunishments) {
 		const ttlSeconds = Math.ceil((row.expires.getTime() - Date.now()) / 1000);
 		if (ttlSeconds <= 0) continue;
 		await redis.set(`${EXPIRY_KEY_PREFIX}${row.type}:${row.discordID}`, `1`, `EX`, ttlSeconds, `NX`);
@@ -30,7 +30,7 @@ async function rearmExpiryKeys() {
 async function reconcileOnce(guild) {
 	await rearmExpiryKeys();
 
-	const activeMuteIDs = new Set((await ModLogs.activeSanctions(ModLogType.MUTE)).map((row) => row.discordID));
+	const activeMuteIDs = new Set((await ModLogs.activePunishments(ModLogType.MUTE)).map((row) => row.discordID));
 	const everMutedIDs = await ModLogs.everSanctioned(ModLogType.MUTE);
 
 	for (const discordID of everMutedIDs) {
@@ -43,7 +43,23 @@ async function reconcileOnce(guild) {
 		}
 	}
 
-	const activeBanIDs = new Set((await ModLogs.activeSanctions(ModLogType.BAN)).map((row) => row.discordID));
+	// season bans: lift rows whose season has rolled past, then unban on
+	// Discord only when no OTHER active ban remains for that player
+	const currentSeason = Number(await ControlPanel.getSeason());
+	if (Number.isFinite(currentSeason)) {
+		const staleSeasonBans = await ModLogs.staleSeasonBans(currentSeason);
+		for (const row of staleSeasonBans) {
+			await ModLogs.liftPunishmentRow(row.id, `Season ban ended (covered through season ${row.season}).`);
+			const remainingBans = await ModLogs.activePunishmentsFor(row.discordID, ModLogType.BAN);
+			if (remainingBans.length === 0) {
+				await liftBan(guild, row.discordID, `Season ban ended (through season ${row.season})`);
+				await announceExpiredLift(guild, `UNBAN`, row.discordID);
+			}
+			logger.log(`INFO`, `Reconciliation lifted season ${row.season} ban for ${row.discordID}`);
+		}
+	}
+
+	const activeBanIDs = new Set((await ModLogs.activePunishments(ModLogType.BAN)).map((row) => row.discordID));
 	const everBannedIDs = new Set(await ModLogs.everSanctioned(ModLogType.BAN));
 	const guildBans = await guild.bans.fetch();
 

@@ -12,7 +12,7 @@ async function request(/** @type ChatInputCommandInteraction */ interaction, tar
 	// unmute is allowed when ANY mute residue exists - an active row, the Muted
 	// role itself, or a leftover snapshot - so a lift that was missed (e.g. a
 	// restart ate the expiry event) can always be healed manually
-	const activeMutes = await ModLogs.activeSanctionsFor(targetUser.id, ModLogType.MUTE);
+	const activeMutes = await ModLogs.activePunishmentsFor(targetUser.id, ModLogType.MUTE);
 	const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 	const hasMutedRole = targetMember?.roles.cache.has(ROLES.LEAGUE.MUTED) ?? false;
 	const staleSnapshot = await getMuteState(targetUser.id);
@@ -40,7 +40,7 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 	if (!modID) return interaction.editReply(`You need a linked VDC account to log mod actions - link your Discord at https://vdc.gg/me first.`);
 
 	const appealDate = new Date().toISOString().slice(0, 10);
-	await ModLogs.liftSanctions({
+	await ModLogs.liftPunishments({
 		discordID: targetID,
 		type: ModLogType.MUTE,
 		appealNote: `This has been APPEALED on ${appealDate}. ${reason}`,

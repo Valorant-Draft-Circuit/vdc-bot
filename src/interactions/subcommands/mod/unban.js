@@ -7,7 +7,7 @@ const { resolveModUserID } = require(`../../../helpers/mod/guards`);
 const { liftBan, postToModLog } = require(`../../../helpers/mod/enforcement`);
 
 async function request(/** @type ChatInputCommandInteraction */ interaction, targetUser, reason) {
-	const activeBans = await ModLogs.activeSanctionsFor(targetUser.id, ModLogType.BAN);
+	const activeBans = await ModLogs.activePunishmentsFor(targetUser.id, ModLogType.BAN);
 	if (activeBans.length === 0) return interaction.editReply(`${targetUser} has no active ban on record.`);
 
 	const embed = buildConfirmationEmbed({ action: `UNBAN`, targetUser, durationLabel: null, reason });
@@ -29,7 +29,7 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 	if (!modID) return interaction.editReply(`You need a linked VDC account to log mod actions - link your Discord at https://vdc.gg/me first.`);
 
 	const appealDate = new Date().toISOString().slice(0, 10);
-	await ModLogs.liftSanctions({
+	await ModLogs.liftPunishments({
 		discordID: targetID,
 		type: ModLogType.BAN,
 		appealNote: `This has been APPEALED on ${appealDate}. ${reason}`,

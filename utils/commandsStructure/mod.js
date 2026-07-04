@@ -23,9 +23,16 @@ const rulesOption = {
 
 const durationOption = {
     name: `duration`,
-    description: `Duration like 30m, 12h, 7d, 2w - or "perm" for permanent`,
+    description: `Duration: 45s, 12h, 32d, 2w - or "perm" / "season" / "4seasons" (bans)`,
     type: ApplicationCommandOptionType.String,
     required: true,
+};
+
+const appealableOption = {
+    name: `appealable`,
+    description: `Can the player appeal this punishment? (default: yes)`,
+    type: ApplicationCommandOptionType.Boolean,
+    required: false,
 };
 
 /** @type {import('discord.js').RESTPostAPIApplicationCommandsJSONBody} */
@@ -60,13 +67,13 @@ module.exports = {
             name: `mute`,
             description: `Mute a player (strips roles, applies Muted role)`,
             type: ApplicationCommandOptionType.Subcommand,
-            options: [userOption(`The player to mute`), durationOption, rulesOption, reasonOption(`Explanation for the mute`)],
+            options: [userOption(`The player to mute`), durationOption, rulesOption, reasonOption(`Explanation for the mute`), appealableOption],
         },
         {
             name: `ban`,
             description: `Ban a player from the server`,
             type: ApplicationCommandOptionType.Subcommand,
-            options: [userOption(`The player to ban`), durationOption, rulesOption, reasonOption(`Explanation for the ban`)],
+            options: [userOption(`The player to ban`), durationOption, rulesOption, reasonOption(`Explanation for the ban`), appealableOption],
         },
         {
             name: `unmute`,
@@ -85,6 +92,11 @@ module.exports = {
             description: `View a player's moderation history`,
             type: ApplicationCommandOptionType.Subcommand,
             options: [userOption(`The player to look up`)],
+        },
+        {
+            name: `help`,
+            description: `How to use the moderation commands`,
+            type: ApplicationCommandOptionType.Subcommand,
         },
     ],
 };

@@ -7,7 +7,7 @@ const { resolveModUserID, validateTarget, validateMuteEnforceable } = require(`.
 const { applyMute, postToModLog } = require(`../../../helpers/mod/enforcement`);
 const { parseDuration } = require(`../../../helpers/mod/duration`);
 
-async function request(/** @type ChatInputCommandInteraction */ interaction, targetUser, durationInput, rules, reason) {
+async function request(/** @type ChatInputCommandInteraction */ interaction, targetUser, durationInput, rules, reason, appealable) {
 	const targetError = validateTarget(interaction, targetUser);
 	if (targetError) return interaction.editReply(targetError);
 
@@ -23,8 +23,11 @@ async function request(/** @type ChatInputCommandInteraction */ interaction, tar
 	} catch (error) {
 		return interaction.editReply(error.message);
 	}
+	if (duration.seasons) {
+		return interaction.editReply(`Season-scoped punishments are only supported for bans.`);
+	}
 
-	const embed = buildConfirmationEmbed({ action: ModLogType.MUTE, targetUser, durationLabel: duration.label, rules, reason });
+	const embed = buildConfirmationEmbed({ action: ModLogType.MUTE, targetUser, durationLabel: duration.label, rules, reason, appealable });
 	const row = new ActionRowBuilder({
 		components: [
 			new ButtonBuilder({ customId: `mod_${ModNavigationOptions.CANCEL}`, label: `Cancel`, style: ButtonStyle.Danger }),
@@ -38,6 +41,7 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 	const embed = interaction.message.embeds[0];
 	const targetID = getEmbedField(embed, `Target ID`).replaceAll(`\``, ``);
 	const durationLabel = getEmbedField(embed, `Duration`);
+	const appealable = getEmbedField(embed, `Appealable`) !== `no`;
 	const rules = getEmbedField(embed, `Rules`);
 	const reason = getEmbedField(embed, `Reason`);
 	const { expires } = parseDuration(durationLabel);
@@ -51,7 +55,7 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 	const enforceError = validateMuteEnforceable(interaction, targetMember);
 	if (enforceError) return interaction.editReply(enforceError);
 
-	const dm = buildDmEmbed({ action: `MUTE`, guildName: interaction.guild.name, durationLabel, rules, reason, expires });
+	const dm = buildDmEmbed({ action: `MUTE`, guildName: interaction.guild.name, durationLabel, rules, reason, expires, appealable });
 	await targetMember.send({ embeds: [dm] }).catch(() => logger.log(`WARNING`, `Could not DM mute notice to ${targetID} (DMs closed)`));
 
 	// record before enforcement: a crash between the two must never leave an untracked live sanction
@@ -68,7 +72,7 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 	}
 
 	await postToModLog(interaction.guild, buildLogEmbed({
-		action: `MUTE`, targetID, targetTag: targetMember.user.tag, modTag: interaction.user.tag, durationLabel, rules, reason,
+		action: `MUTE`, targetID, targetTag: targetMember.user.tag, modTag: interaction.user.tag, durationLabel, rules, reason, appealable,
 	}));
 
 	const done = new EmbedBuilder(embed.toJSON());

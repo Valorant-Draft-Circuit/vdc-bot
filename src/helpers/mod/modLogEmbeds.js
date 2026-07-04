@@ -17,30 +17,36 @@ function getEmbedField(embed, name) {
 	return field ? field.value : null;
 }
 
-/** Confirmation embed shown before any mutating action executes */
-function buildConfirmationEmbed({ action, targetUser, durationLabel, rules, reason }) {
+/** Confirmation embed shown before any mutating action executes.
+ * `appealable` is only meaningful for mute/ban; other actions omit it. */
+function buildConfirmationEmbed({ action, targetUser, durationLabel, rules, reason, appealable }) {
+	const fields = [
+		{ name: `Action`, value: action, inline: true },
+		{ name: `Target`, value: `${targetUser}`, inline: true },
+		{ name: `Target ID`, value: `\`${targetUser.id}\``, inline: true },
+		{ name: `Duration`, value: durationLabel ?? `-`, inline: true },
+	];
+	if (appealable !== undefined) {
+		fields.push({ name: `Appealable`, value: appealable ? `Yes` : `No`, inline: true });
+	}
+	fields.push({ name: `Rules`, value: rules ?? `-` }, { name: `Reason`, value: reason });
+
 	return new EmbedBuilder({
 		author: { name: `VDC Moderation` },
 		description: `Are you sure you want to perform the following action?`,
 		color: MOD_COLOR,
-		fields: [
-			{ name: `Action`, value: action, inline: true },
-			{ name: `Target`, value: `${targetUser}`, inline: true },
-			{ name: `Target ID`, value: `\`${targetUser.id}\``, inline: true },
-			{ name: `Duration`, value: durationLabel ?? `-`, inline: true },
-			{ name: `Rules`, value: rules ?? `-` },
-			{ name: `Reason`, value: reason },
-		],
+		fields,
 		footer: { text: `Moderation - ${action}` },
 	});
 }
 
 /** Mod-log channel announcement */
-function buildLogEmbed({ action, targetID, targetTag, modTag, durationLabel, rules, reason, extra }) {
+function buildLogEmbed({ action, targetID, targetTag, modTag, durationLabel, rules, reason, appealable, extra }) {
 	const lines = [
 		`**Target:** <@${targetID}> (\`${targetTag ?? targetID}\`)`,
 		`**Moderator:** \`${modTag}\``,
 		durationLabel ? `**Duration:** ${durationLabel}` : null,
+		appealable !== undefined ? `**Appealable:** ${appealable ? `Yes` : `No`}` : null,
 		rules ? `**Rules:** ${rules}` : null,
 		`**Reason:** ${reason}`,
 		extra ?? null,
@@ -56,21 +62,33 @@ function buildLogEmbed({ action, targetID, targetTag, modTag, durationLabel, rul
 	});
 }
 
-/** DM sent to the sanctioned player - follows the standard punishment template */
-function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires }) {
+/** DM sent to the sanctioned player - follows the standard punishment template.
+ * `appealable: false` (mute/ban only) replaces the appeal path with an explicit
+ * statement; omitted/true keeps the standard appeal line. */
+function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires, appealable }) {
+	const seasonCount = durationLabel?.match(/^(\d+)?seasons?$/)?.[1];
 	const expiryLine = expires
 		? `This expires <t:${Math.round(expires.getTime() / 1000)}:R>.`
-		: durationLabel === `permanent` ? `This is permanent.` : null;
+		: durationLabel === `permanent` ? `This is permanent.`
+		: durationLabel === `season` ? `This ban lasts through the current season.`
+		: seasonCount ? `This ban lasts for ${seasonCount} seasons, including the current one.` : null;
 
-	const appealLine = action === `BAN`
-		? `If you'd like to appeal this punishment, use the ban appeal form: ${BAN_APPEAL_URL}`
-		: `If you'd like to appeal this punishment, you may do so via ${APPEAL_TICKETS_URL}`;
+	const appealableLine = appealable !== undefined
+		? `**Appealable:** ${appealable ? `Yes` : `No`}`
+		: null;
+
+	const appealLine = appealable === false
+		? `This punishment is not appealable.`
+		: action === `BAN`
+			? `If you'd like to appeal this punishment, use the ban appeal form: ${BAN_APPEAL_URL}`
+			: `If you'd like to appeal this punishment, you may do so via ${APPEAL_TICKETS_URL}`;
 
 	const lines = [
 		`You have received a **${action}** in **${guildName}**.`,
 		rules ? `**Rules broken:** ${rules}` : null,
 		`**Reason:** ${reason}`,
 		expiryLine,
+		appealableLine,
 		``,
 		appealLine,
 		`If you have any questions about the expectations of the league or the rules, please refer to the rulebook: ${RULEBOOK_URL}. For more information on the VDC Behavioral Guidelines, see: ${GUIDELINES_URL}`,

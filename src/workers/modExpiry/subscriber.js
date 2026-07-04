@@ -7,7 +7,7 @@ const { GUILD } = require(`../../../utils/enums`);
 let subscriberClient;
 
 /** Subscribe a dedicated connection to Redis expired-key events and lift
- * sanctions in real time. (A subscribed ioredis connection cannot run other
+ * punishments in real time. (A subscribed ioredis connection cannot run other
  * commands, hence the duplicate; this also avoids contending with the queue.)
  * @param {Client} client
  */
