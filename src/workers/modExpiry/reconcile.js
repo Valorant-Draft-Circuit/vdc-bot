@@ -31,7 +31,7 @@ async function reconcileOnce(guild) {
 	await rearmExpiryKeys();
 
 	const activeMuteIDs = new Set((await ModLogs.activePunishments(ModLogType.MUTE)).map((row) => row.discordID));
-	const everMutedIDs = await ModLogs.everSanctioned(ModLogType.MUTE);
+	const everMutedIDs = await ModLogs.everPunished(ModLogType.MUTE);
 
 	for (const discordID of everMutedIDs) {
 		if (activeMuteIDs.has(discordID)) continue;
@@ -62,7 +62,7 @@ async function reconcileOnce(guild) {
 	}
 
 	const activeBanIDs = new Set((await ModLogs.activePunishments(ModLogType.BAN)).map((row) => row.discordID));
-	const everBannedIDs = new Set(await ModLogs.everSanctioned(ModLogType.BAN));
+	const everBannedIDs = new Set(await ModLogs.everPunished(ModLogType.BAN));
 	const guildBans = await guild.bans.fetch();
 
 	for (const [bannedUserID] of guildBans) {
