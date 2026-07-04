@@ -41,7 +41,7 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 	const embed = interaction.message.embeds[0];
 	const targetID = getEmbedField(embed, `Target ID`).replaceAll(`\``, ``);
 	const durationLabel = getEmbedField(embed, `Duration`);
-	const appealable = getEmbedField(embed, `Appealable`) !== `no`;
+	const appealable = getEmbedField(embed, `Appealable`)?.toLowerCase() !== `no`;
 	const rules = getEmbedField(embed, `Rules`);
 	const reason = getEmbedField(embed, `Reason`);
 	const { expires } = parseDuration(durationLabel);
