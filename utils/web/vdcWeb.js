@@ -3,7 +3,7 @@
 async function updateMeilisearchPlayer(playerId) {
     logger.log(`DEBUG`, `Updating Meilisearch player document for player id: \`${playerId}\``);
     try {
-        const res = await fetch(`https://${process.env.VDC_WEB_URL}/internal/api/meilisearch/player/${playerId}`);
+        const res = await fetch(`https://${process.env.VDC_WEB_URL}/api/internal/meilisearch/player/${playerId}`);
         if (!res.ok) {
             logger.log(`WARNING`, `Unable to update Meilisearch player document.`);
         }
