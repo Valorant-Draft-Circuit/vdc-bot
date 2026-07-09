@@ -4,7 +4,7 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { ROLES, CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
-const { LeagueStatus, TransactionType } = require("@prisma/client");
+const { LeagueStatus, ContractStatus, TransactionType } = require("@prisma/client");
 const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
@@ -12,6 +12,7 @@ const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { cancelUnsubTimer } = require("../../../helpers/transactions/activeSubTimers");
 const { tierLabel } = require("../../../helpers/transactions/formatTeam");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
+const { restorePairedSubbedOutPlayer } = require("../../../helpers/transactions/subbedOutPairing");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -111,6 +112,11 @@ async function confirmSign(interaction) {
 
 	// the player is now officially signed, so cancel any pending auto-unsub from a prior sub
 	cancelUnsubTimer(playerData.id);
+
+	// signing an active sub ends their stint, so restore whoever they were covering for
+	if (playerData.Status.contractStatus === ContractStatus.ACTIVE_SUB && playerData.team !== null) {
+		await restorePairedSubbedOutPlayer(playerData.id, playerData.team);
+	}
 
 	await logTransaction({
 		type: TransactionType.SIGN,
