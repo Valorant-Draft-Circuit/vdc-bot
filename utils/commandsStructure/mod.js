@@ -106,6 +106,12 @@ module.exports = {
             options: [userOption(`The player to unban`), reasonOption(`Why the ban is lifted (e.g. appeal)`, false)],
         },
         {
+            name: `unmapban`,
+            description: `Lift a player's map ban early`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [userOption(`The player to lift the map ban for`), reasonOption(`Why the map ban is lifted (e.g. appeal)`, false)],
+        },
+        {
             name: `history`,
             description: `View a player's moderation history`,
             type: ApplicationCommandOptionType.Subcommand,
