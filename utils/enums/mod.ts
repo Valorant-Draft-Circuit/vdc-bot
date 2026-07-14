@@ -8,6 +8,7 @@ export enum ModNavigationOptions {
     BAN_CONFIRM     = 303,
     UNMUTE_CONFIRM  = 304,
     UNBAN_CONFIRM   = 305,
+    MAPBAN_CONFIRM  = 306,
 
     HISTORY_PREV    = 310,
     HISTORY_NEXT    = 311,

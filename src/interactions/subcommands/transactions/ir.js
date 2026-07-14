@@ -8,6 +8,7 @@ const { ContractStatus, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { tierLabel } = require("../../../helpers/transactions/formatTeam");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
+const { freezeMapBans, unfreezeMapBans } = require(`../../../helpers/mod/mapBans`);
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -111,6 +112,10 @@ async function confirmToggleIR(interaction, mode) {
 		franchiseID: team.Franchise.id,
 		tier: team.tier,
 	});
+
+	// map bans only tick for active players. snapshot/resume on IR transitions
+	if (mode === `SET`) await freezeMapBans(playerID, playerData);
+	else await unfreezeMapBans(playerID);
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);

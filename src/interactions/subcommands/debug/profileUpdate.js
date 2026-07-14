@@ -1,7 +1,7 @@
 const { GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
 const { Player } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
-const { rebuildMemberProfile } = require(`../../../helpers/mod/profileRebuild`);
+const { rebuildMemberProfile } = require(`../../../helpers/profileRebuild`);
 
 
 const getAccountByPuuid = `https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid`;
@@ -173,8 +173,9 @@ async function profileUpdate(/** @type ChatInputCommandInteraction */ interactio
 	// --------------------------------------------------------------------------------------------
 	const rebuild = await rebuildMemberProfile(guildMember, {
 		gameNameOverride: gameName,
-		onProgress: async (line) => {
-			progress.push(line);
+		onProgress: async (line, replacesPrevious) => {
+			if (replacesPrevious) progress[progress.length - 1] = line;
+			else progress.push(line);
 			await interaction.editReply(progress.join(`\n`));
 		},
 	});
