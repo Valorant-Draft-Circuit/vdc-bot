@@ -108,6 +108,16 @@ function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires
 	});
 }
 
+function buildMapBanLiftedEmbed({ discordID, liftedMaps }) {
+	return new EmbedBuilder({
+		author: { name: `VDC Moderation` },
+		description: `<@${discordID}>'s map ban has been lifted (\`${liftedMaps}\` remaining map${liftedMaps === 1 ? `` : `s`} appealed/removed) and they are eligible to play again.`,
+		color: MOD_COLOR,
+		footer: { text: `Moderation - Map Ban Lifted` },
+		timestamp: Date.now(),
+	});
+}
+
 function buildMapBanServedEmbed({ discordID, mapsServed }) {
 	return new EmbedBuilder({
 		author: { name: `VDC Moderation` },
@@ -188,4 +198,4 @@ function parseHistoryEmbedState(embed) {
 	return { targetID, page };
 }
 
-module.exports = { getEmbedField, buildConfirmationEmbed, buildLogEmbed, buildDmEmbed, buildMapBanServedEmbed, buildHistoryEmbed, buildActionDetailEmbed, parseHistoryEmbedState, HISTORY_PAGE_SIZE };
+module.exports = { getEmbedField, buildConfirmationEmbed, buildLogEmbed, buildDmEmbed, buildMapBanServedEmbed, buildMapBanLiftedEmbed, buildHistoryEmbed, buildActionDetailEmbed, parseHistoryEmbedState, HISTORY_PAGE_SIZE };

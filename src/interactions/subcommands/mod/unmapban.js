@@ -1,7 +1,7 @@
 const { ChatInputCommandInteraction, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require(`discord.js`);
 const { Player } = require(`../../../../prisma`);
-const { ModNavigationOptions } = require(`../../../../utils/enums`);
-const { buildConfirmationEmbed, buildLogEmbed, getEmbedField } = require(`../../../helpers/mod/modLogEmbeds`);
+const { CHANNELS, ModNavigationOptions } = require(`../../../../utils/enums`);
+const { buildConfirmationEmbed, buildLogEmbed, buildMapBanLiftedEmbed, getEmbedField } = require(`../../../helpers/mod/modLogEmbeds`);
 const { resolveModUserID } = require(`../../../helpers/mod/guards`);
 const { postToModLog } = require(`../../../helpers/mod/enforcement`);
 const { getMapBanState, liftMapBans } = require(`../../../helpers/mod/mapBans`);
@@ -46,6 +46,13 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 		durationLabel: `${liftedMaps} map${liftedMaps === 1 ? `` : `s`} lifted`,
 		reason,
 	}));
+
+	const suspensionChannel = await interaction.guild.channels.fetch(CHANNELS.PLAYER_SUSPENSION).catch(() => null);
+	if (suspensionChannel) {
+		await suspensionChannel
+			.send({ embeds: [buildMapBanLiftedEmbed({ discordID: targetID, liftedMaps })] })
+			.catch(() => logger.log(`WARNING`, `Could not post map ban lift for ${targetID} to the player suspension channel`));
+	}
 
 	const done = new EmbedBuilder(embed.toJSON());
 	done.setDescription(`This action was completed.`);
