@@ -8,6 +8,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 const { LeagueStatus, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
+const { freezeMapBans } = require(`../../../helpers/mod/mapBans`);
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
@@ -91,6 +92,9 @@ async function confirmRetire(interaction) {
 		type: TransactionType.RETIRE,
 		userID: playerData.id,
 	});
+
+	// retired players are ineligible to play. freeze any active map bans
+	await freezeMapBans(playerID, playerData);
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);

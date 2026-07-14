@@ -1,10 +1,12 @@
 const { Guild } = require(`discord.js`);
 const { ModLogType } = require(`@prisma/client`);
 const { ModLogs, ControlPanel } = require(`../../../prisma`);
-const { ROLES } = require(`../../../utils/enums`);
+const { ROLES, CHANNELS } = require(`../../../utils/enums`);
 const { getRedisClient } = require(`../../core/redis`);
 const { EXPIRY_KEY_PREFIX } = require(`../../helpers/mod/muteState`);
 const { liftMute, liftBan, announceExpiredLift } = require(`../../helpers/mod/enforcement`);
+const { sweepServedMapBans } = require(`../../helpers/mod/mapBans`);
+const { buildMapBanServedEmbed } = require(`../../helpers/mod/modLogEmbeds`);
 
 /** Re-arm missing Redis expiry keys from active timed rows, so real-time
  * expiry self-heals after a Redis wipe/flush. SET NX never shortens or
@@ -72,6 +74,22 @@ async function reconcileOnce(guild) {
 		if (wasBanned) {
 			await announceExpiredLift(guild, `UNBAN`, bannedUserID);
 			logger.log(`INFO`, `Reconciliation lifted expired ban for ${bannedUserID}`);
+		}
+	}
+
+	// map bans resolve by maps played, not by time, so no expiry key fires for them
+	const servedMapBans = await sweepServedMapBans();
+	if (servedMapBans.length > 0) {
+		const suspensionChannel = await guild.channels.fetch(CHANNELS.PLAYER_SUSPENSION).catch(() => null);
+		for (const served of servedMapBans) {
+			const announced = suspensionChannel !== null && await suspensionChannel
+				.send({ embeds: [buildMapBanServedEmbed(served)] })
+				.then(() => true)
+				.catch(() => false);
+			if (!announced) continue;
+
+			await served.markAnnounced();
+			logger.log(`INFO`, `Announced fully served map ban for ${served.discordID}`);
 		}
 	}
 }

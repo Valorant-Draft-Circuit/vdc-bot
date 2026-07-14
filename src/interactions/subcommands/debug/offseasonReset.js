@@ -3,6 +3,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 const { Transaction, Player, Roles, Team, ControlPanel, Flags } = require("../../../../prisma");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
 const { EmbedBuilder } = require("discord.js");
+const { unfreezeMapBans } = require(`../../../helpers/mod/mapBans`);
 
 async function offseasonReset(/** @type ChatInputCommandInteraction */ interaction) {
     const seasonState = await ControlPanel.getLeagueState();
@@ -211,6 +212,7 @@ async function removeInactiveReserve(interaction, inactiveReserve) {
     // uncaptain the player & ensure that the player's Captain property is now null
     const player = await Transaction.toggleInactiveReserve({ playerID: inactiveReserve.id, toggle: 'REMOVE' });
     if (player.Status.contractStatus === ContractStatus.INACTIVE_RESERVE) return interaction.editReply(`There was an error removing ${inactiveReserve.name} from inactive reserve.`);
+    await unfreezeMapBans(playerDiscordID);
     // Remove the discord role of captain from the player
     await guildMember.roles.remove(ROLES.LEAGUE.INACTIVE_RESERVE);
     // create transactions embed

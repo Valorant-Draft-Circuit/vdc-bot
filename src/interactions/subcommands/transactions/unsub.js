@@ -7,6 +7,7 @@ const { CHANNELS, TransactionsNavigationOptions } = require("../../../../utils/e
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { formatTeamWithTier } = require("../../../helpers/transactions/formatTeam");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
+const { restorePairedSubbedOutPlayer } = require("../../../helpers/transactions/subbedOutPairing");
 
 /** Send confirmation to Unsub a player
  * @param {ChatInputCommandInteraction} interaction
@@ -82,6 +83,8 @@ async function confirmUnsub(interaction) {
 	// cut the player & ensure that the player's team property is now null
 	const player = await Transaction.unsub(playerData.id);
 	if (player.team !== null) return await interaction.editReply(`There was an error while attempting to unsub the player. The database was not updated.`);
+
+	await restorePairedSubbedOutPlayer(playerData.id, team.id);
 
 	await logTransaction({
 		type: TransactionType.UNSUB,

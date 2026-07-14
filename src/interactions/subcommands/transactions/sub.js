@@ -8,6 +8,7 @@ const { LeagueStatus, ContractStatus, TransactionType } = require("@prisma/clien
 const { registerUnsubTimer, clearUnsubTimer } = require(`../../../helpers/transactions/activeSubTimers`);
 const { tierLabel, formatTeamWithTier } = require(`../../../helpers/transactions/formatTeam`);
 const { logTransaction } = require(`../../../helpers/transactions/logTransaction`);
+const { restorePairedSubbedOutPlayer } = require(`../../../helpers/transactions/subbedOutPairing`);
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
 
@@ -64,12 +65,12 @@ async function requestSub(
 		fields: [
 			{
 				name: `\u200B`,
-				value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`         MMR: \`\n\`        Team: \`\n\`   Franchise: \`\n\`  Unsub Time: \``,
+				value: `**Transaction**\n\`  Player Tag: \`\n\`   Player ID: \`\n\`         MMR: \`\n\`        Team: \`\n\`   Franchise: \`\n\`  Unsub Time: \`\n\` Sub Out Tag: \`\n\`  Sub Out ID: \``,
 				inline: true,
 			},
 			{
 				name: `\u200B`,
-				value: `SUB\n${subIn}\n\`${subIn.id}\`\n\`${oldMMR} => ${newMMR} / ${mmrCap}\`\n${team.name}\n${franchise.name}\n<t:${unsubTime}:t> (<t:${unsubTime}:R>)`,
+				value: `SUB\n${subIn}\n\`${subIn.id}\`\n\`${oldMMR} => ${newMMR} / ${mmrCap}\`\n${team.name}\n${franchise.name}\n<t:${unsubTime}:t> (<t:${unsubTime}:R>)\n${subOut}\n\`${subOut.id}\``,
 				inline: true,
 			},
 		],
@@ -98,8 +99,10 @@ async function confirmSub(interaction) {
 		.replaceAll(`\``, ``)
 		.split(`\n`);
 	const playerID = data[2];
+	const subbedOutDiscordID = data[8];
 
 	const player = await Player.getBy({ discordID: playerID });
+	const subbedOutPlayer = await Player.getBy({ discordID: subbedOutDiscordID });
 	const playerIGN = await Player.getIGNby({ discordID: playerID });
 	const team = await Team.getBy({ name: data[4] });
 	const franchise = await Franchise.getBy({ name: data[5] });
@@ -111,12 +114,16 @@ async function confirmSub(interaction) {
 	const updatedPlayer = await Transaction.sub({ userID: player.id, teamID: team.id, tier: team.tier });
 	if (updatedPlayer.team !== team.id) return await interaction.editReply(`There was an error while attempting to sub the player. The database was not updated.`);
 
+	// must stay outside logTransaction's best-effort catch; the status write is the source of truth
+	await Transaction.markSubbedOut(subbedOutPlayer.id);
+
 	await logTransaction({
 		type: TransactionType.SUB,
 		userID: player.id,
 		teamID: team.id,
 		franchiseID: franchise.id,
 		tier: team.tier,
+		details: { subbedOutID: subbedOutPlayer.id },
 	});
 
 	const embed = interaction.message.embeds[0];
@@ -174,6 +181,8 @@ async function confirmSub(interaction) {
 		// unsub the player & ensure that the player's team property is now null
 		const updatedPlayer = await Transaction.unsub(player.id);
 		if (updatedPlayer.team !== null) return await interaction.channel.send(`There was an error while attempting to unsub ${guildMember} (${playerTag}). The database was not updated.`);
+
+		await restorePairedSubbedOutPlayer(player.id, team.id);
 
 		await logTransaction({
 			type: TransactionType.UNSUB,
