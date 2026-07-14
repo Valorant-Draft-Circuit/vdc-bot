@@ -114,8 +114,7 @@ async function confirmSub(interaction) {
 	const updatedPlayer = await Transaction.sub({ userID: player.id, teamID: team.id, tier: team.tier });
 	if (updatedPlayer.team !== team.id) return await interaction.editReply(`There was an error while attempting to sub the player. The database was not updated.`);
 
-	// mark who the sub replaced so vdc-web can pair the roster rows. This status write is
-	// the source of truth for the pairing & must stay outside the best-effort transaction log
+	// must stay outside logTransaction's best-effort catch; the status write is the source of truth
 	await Transaction.markSubbedOut(subbedOutPlayer.id);
 
 	await logTransaction({

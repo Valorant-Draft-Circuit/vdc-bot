@@ -39,8 +39,6 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 	const modID = await resolveModUserID(interaction.user.id);
 	if (!modID) return interaction.editReply(`You need a linked VDC account to log mod actions - link your Discord at https://vdc.gg/me first.`);
 
-	// an ineligible target (IR, retired, viewer) starts frozen: the ban only
-	// begins ticking when they rejoin the FA/RFA/SIGNED group
 	const targetPlayer = await Player.getBy({ discordID: targetID }).catch(() => null);
 	const startsFrozen = targetPlayer != null && !isEligibleToPlay(targetPlayer);
 	const details = startsFrozen
@@ -49,7 +47,6 @@ async function confirm(/** @type ButtonInteraction */ interaction) {
 
 	await ModLogs.create({ discordID: targetID, modID, type: ModLogType.MAP_BAN, message: `${rules}\n${reason}`, details });
 
-	// the DM projects against the aggregate of all active bans (stacked bans sum)
 	const state = await getMapBanState(targetID, targetPlayer);
 	const eligibilityLine = await buildEligibilityLine({ player: targetPlayer, remainingMaps: state.totalRemaining });
 

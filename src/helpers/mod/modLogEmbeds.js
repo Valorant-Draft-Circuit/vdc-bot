@@ -64,8 +64,7 @@ function buildLogEmbed({ action, targetID, targetTag, modTag, durationLabel, rul
 
 /** DM sent to the sanctioned player - follows the standard punishment template.
  * `appealable: false` (mute/ban/mapban only) replaces the appeal path with an
- * explicit statement; omitted/true keeps the standard appeal line.
- * `mapCount` + `eligibilityLine` are MAP_BAN-only additions. */
+ * explicit statement; omitted/true keeps the standard appeal line. */
 function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires, appealable, mapCount, eligibilityLine }) {
 	const seasonCount = durationLabel?.match(/^(\d+)?seasons?$/)?.[1];
 	const expiryLine = expires
@@ -105,6 +104,16 @@ function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires
 		description: lines.join(`\n`),
 		color: MOD_COLOR,
 		footer: { text: `VDC Moderation` },
+		timestamp: Date.now(),
+	});
+}
+
+function buildMapBanServedEmbed({ discordID, mapsServed }) {
+	return new EmbedBuilder({
+		author: { name: `VDC Moderation` },
+		description: `<@${discordID}> has fully served their map ban (\`${mapsServed}\` map${mapsServed === 1 ? `` : `s`}) and is eligible to play again.`,
+		color: MOD_COLOR,
+		footer: { text: `Moderation - Map Ban Served` },
 		timestamp: Date.now(),
 	});
 }
@@ -179,4 +188,4 @@ function parseHistoryEmbedState(embed) {
 	return { targetID, page };
 }
 
-module.exports = { getEmbedField, buildConfirmationEmbed, buildLogEmbed, buildDmEmbed, buildHistoryEmbed, buildActionDetailEmbed, parseHistoryEmbedState, HISTORY_PAGE_SIZE };
+module.exports = { getEmbedField, buildConfirmationEmbed, buildLogEmbed, buildDmEmbed, buildMapBanServedEmbed, buildHistoryEmbed, buildActionDetailEmbed, parseHistoryEmbedState, HISTORY_PAGE_SIZE };

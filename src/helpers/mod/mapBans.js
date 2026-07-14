@@ -1,6 +1,6 @@
 const { MatchType, LeagueStatus, ContractStatus } = require(`@prisma/client`);
 const { prisma } = require(`../../../prisma/prismadb`);
-const { ModLogs, ControlPanel, Team } = require(`../../../prisma`);
+const { ModLogs, ControlPanel, Team, Player } = require(`../../../prisma`);
 
 const REGULAR_SEASON_MAPS_PER_MATCH_DAY = 2;
 const PLAYOFF_MAPS_BY_MATCH_TYPE = {
@@ -8,9 +8,6 @@ const PLAYOFF_MAPS_BY_MATCH_TYPE = {
 	[MatchType.BO5]: 5,
 };
 
-/** A map ban only ticks down while the player is eligible to play: FA/RFA/SIGNED
- * (or a GM holding a player contract) and not on inactive reserve. Everyone else
- * (viewers, retired, IR, non-playing franchise members) is frozen. */
 function isEligibleToPlay(player) {
 	const leagueStatus = player.Status.leagueStatus;
 	const contractStatus = player.Status.contractStatus;
@@ -29,9 +26,6 @@ function isEligibleToPlay(player) {
 	return isPlayingGeneralManager;
 }
 
-/** Tier the ban ticks against: the player's team's tier when rostered,
- * otherwise the tier their effective MMR places them in (PLAYER MMR caps).
- * Returns null when neither is resolvable (e.g. no linked Riot account). */
 async function resolvePlayerTier(player) {
 	if (player.team != null) {
 		const team = await Team.getBy({ id: player.team });
@@ -48,9 +42,6 @@ async function resolvePlayerTier(player) {
 	return matchedTier ?? null;
 }
 
-/** Maps served since `since`: each distinct regular-season (BO2) match day with a
- * played game in the tier counts 2 maps (forfeits included); playoff (BO3/BO5)
- * games count 1 each but only when the player's team played them. */
 async function countMapsServed({ tier, teamID, since }) {
 	const playedGames = await prisma.games.findMany({
 		where: {
@@ -88,11 +79,6 @@ function parseDetails(row) {
 	}
 }
 
-/** Remaining-maps state for every MAP_BAN row a player has.
- * `player` is a Player.getBy result and may be null (unregistered target);
- * without a resolvable tier nothing ticks, so remaining stays at full count.
- * remaining = mapCount - servedAtFreeze - mapsSince(resumedAt ?? row.date),
- * frozen rows skip the live portion. Concurrent bans sum. */
 async function getMapBanState(discordID, player) {
 	const rows = await ModLogs.mapBansFor(discordID);
 	if (rows.length === 0) return { totalRemaining: 0, bans: [] };
@@ -119,8 +105,6 @@ async function getMapBanState(discordID, player) {
 	return { totalRemaining, bans };
 }
 
-/** Snapshot progress when a player leaves the eligible group (IR set, retire).
- * servedAtFreeze accumulates across repeated freeze/unfreeze cycles. */
 async function freezeMapBans(discordID, player) {
 	const state = await getMapBanState(discordID, player);
 	for (const ban of state.bans) {
@@ -133,7 +117,6 @@ async function freezeMapBans(discordID, player) {
 	}
 }
 
-/** Resume ticking when a player rejoins the eligible group (IR removed). */
 async function unfreezeMapBans(discordID) {
 	const rows = await ModLogs.mapBansFor(discordID);
 	for (const row of rows) {
@@ -147,15 +130,48 @@ async function unfreezeMapBans(discordID) {
 	}
 }
 
+async function sweepServedMapBans() {
+	const rows = await ModLogs.allMapBans();
+
+	const rowsByPlayer = new Map();
+	for (const row of rows) {
+		const details = parseDetails(row);
+		if (details.mapCount == null) continue;
+		if (!rowsByPlayer.has(row.discordID)) rowsByPlayer.set(row.discordID, []);
+		rowsByPlayer.get(row.discordID).push({ row, details });
+	}
+
+	const served = [];
+	for (const [discordID, playerBans] of rowsByPlayer) {
+		const unannounced = playerBans.filter((ban) => ban.details.servedAnnouncedAt == null);
+		if (unannounced.length === 0) continue;
+
+		const player = await Player.getBy({ discordID }).catch(() => null);
+		const state = await getMapBanState(discordID, player);
+		if (state.totalRemaining > 0) continue;
+
+		served.push({
+			discordID,
+			mapsServed: unannounced.reduce((sum, ban) => sum + ban.details.mapCount, 0),
+			markAnnounced: async () => {
+				for (const ban of unannounced) {
+					await ModLogs.updateDetails(ban.row.id, {
+						...ban.details,
+						servedAnnouncedAt: new Date().toISOString(),
+					});
+				}
+			},
+		});
+	}
+
+	return served;
+}
+
 function fallbackEligibilityLine(remainingMaps) {
 	const mapsWord = remainingMaps === 1 ? `map` : `maps`;
 	return `Because of this ban you will be ineligible to play for your next ${remainingMaps} ${mapsWord}.`;
 }
 
-/** Courtesy projection for the DM, computed from the tier's remaining schedule.
- * Spells out partial match days ("through Match Day 8, plus Map 1 of Match Day 9").
- * Falls back to plain map-count wording when the end is not computable
- * (no tier, frozen at issue, or the ban outruns the known schedule). */
 async function buildEligibilityLine({ player, remainingMaps }) {
 	if (remainingMaps <= 0) return null;
 	if (player == null) return fallbackEligibilityLine(remainingMaps);
@@ -225,5 +241,6 @@ module.exports = {
 	getMapBanState,
 	freezeMapBans,
 	unfreezeMapBans,
+	sweepServedMapBans,
 	buildEligibilityLine,
 };

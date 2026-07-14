@@ -7,8 +7,6 @@ const { tierLabel } = require(`./transactions/formatTeam`);
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
-/** Shared lookups the rebuild needs. Bulk callers (profileUpdateServer) load this
- * once and pass it per member instead of re-querying for every rebuild. */
 async function loadRebuildContext() {
 	const leagueState = await ControlPanel.getLeagueState();
 
@@ -44,8 +42,6 @@ async function loadRebuildContext() {
 }
 
 /** Rebuild a member's league roles & nickname from current DB state.
- * Progress lines that complete a step pass `replacesPrevious: true` so callers
- * rendering a transcript can overwrite the matching in-progress line.
  * @param {GuildMember} guildMember
  * @param {{ gameNameOverride?: string, onProgress?: (line: string, replacesPrevious?: boolean) => Promise<void>, context?: Awaited<ReturnType<typeof loadRebuildContext>> }} options
  * @returns {Promise<{ state: string, slug: string|null, nickname: string, readableRoles: string[] } | null>}
@@ -336,10 +332,6 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 
 module.exports = { rebuildMemberProfile, loadRebuildContext, getTierRole };
 
-/** Tier roles for the rebuild. Signed players (including playing GMs and IR)
- * wear their TEAM's tier role, matching how sign.js assigns it. Unsigned
- * players are placed by effective MMR against the PLAYER tier lines and also
- * receive the matching tier free-agent role. */
 async function getTierRole(player, isSigned) {
 	if (isSigned) {
 		const teamTier = player.Team.tier;

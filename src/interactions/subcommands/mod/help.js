@@ -34,7 +34,7 @@ const COMMAND_GUIDE = [
   {
     name: `/mod mapban`,
     value: [
-      `Bans the player from playing their next N maps.\nA regular-season match day counts as 2 maps; the ban pauses while the player is on IR, retired, or otherwise not an active player, and unserved maps carry into the next season.\nThe player is DM'ed with the match day they become eligible again.`,
+      `Bans the player from playing their next N maps.\nA regular-season match day counts as 2 maps.\nThe ban pauses while the player is on IR, retired, or otherwise not an active player, and unserved maps carry into the next season.\nThe player is DM'ed with the match day they become eligible again, and an announcement is posted to the player-suspension channel once the ban is fully served.`,
       `> \`/mod mapban user:@yuls maps:3 rules:Rule 12: No-show reason:Missed match without notice\``,
     ].join(`\n`),
   },
