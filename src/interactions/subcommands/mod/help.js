@@ -41,7 +41,7 @@ const COMMAND_GUIDE = [
   {
     name: `/mod unmute + /mod unban + /mod unmapban`,
     value: [
-      `Lift a sanction early (e.g. a successful appeal).\nThe record stays on the dashboard with an appeal note.\nLifting a map ban marks its remaining maps as served without the "fully served" announcement.`,
+      `Lift a sanction early (e.g. a successful appeal).\nThe record stays on the dashboard with an appeal note.\nLifting a map ban waives its remaining maps and posts a "map ban lifted" notice to the player-suspension channel so franchise management knows the player is eligible to play.`,
       `> \`/mod unmapban user:@yuls reason:Appeal accepted\``,
     ].join(`\n`),
   },
