@@ -1,31 +1,18 @@
 const { GuildMember } = require(`discord.js`);
-const { Player, ControlPanel } = require(`../../../prisma`);
+const { Player, ControlPanel } = require(`../../prisma`);
 const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
-const { prisma } = require(`../../../prisma/prismadb`);
-const { ROLES } = require(`../../../utils/enums`);
+const { prisma } = require(`../../prisma/prismadb`);
+const { ROLES } = require(`../../utils/enums`);
+const { tierLabel } = require(`./transactions/formatTeam`);
 
 const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
-/** Rebuild a member's league roles & nickname from current DB state.
- * Extracted from debug/profileUpdate.js so /mod unmute can reuse it.
- * @param {GuildMember} guildMember
- * @param {{ gameNameOverride?: string, onProgress?: (line: string) => Promise<void> }} options
- * @returns {Promise<{ state: string, slug: string|null, nickname: string, readableRoles: string[] } | null>}
- *          null when the player has no VDC account or no linked Riot account
- */
-async function rebuildMemberProfile(guildMember, options = {}) {
-	const { gameNameOverride, onProgress } = options;
-	const progress = onProgress ?? (async () => undefined);
-	const userID = guildMember.id;
+/** Shared lookups the rebuild needs. Bulk callers (profileUpdateServer) load this
+ * once and pass it per member instead of re-querying for every rebuild. */
+async function loadRebuildContext() {
+	const leagueState = await ControlPanel.getLeagueState();
 
-	const player = await Player.getBy({ discordID: userID });
-	if (!player || !player.primaryRiotAccountID) return null;
-
-	// Get all filtering/processing data & set flags (such as isFM (franchise management))
-	// --------------------------------------------------------------------------------------------
-	await progress(`🔨 Creating filters & checking league state...`);
-
-	// determine if player is GM - will override the slug checks if they are, since nonplaying GMs will still receive slug & role
+	// franchise management discord ids. nonplaying (A)GMs still receive slug & role
 	const searchSelectParams = { Accounts: { where: { provider: `discord` }, select: { providerAccountId: true } } };
 	const gmids = (await prisma.franchise.findMany({
 		include: {
@@ -45,6 +32,39 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 		]
 	}).flat().filter(v => v !== undefined);
 
+	const franchiseRoleIDs = (await prisma.franchise.findMany({
+		where: { active: true }
+	})).map(f => f.roleID);
+
+	const allCaptains = (await prisma.teams.findMany({
+		where: { active: true }, select: { captain: true }
+	})).map(t => t.captain).filter(cid => cid !== null);
+
+	return { leagueState, gmids, franchiseRoleIDs, allCaptains };
+}
+
+/** Rebuild a member's league roles & nickname from current DB state.
+ * Progress lines that complete a step pass `replacesPrevious: true` so callers
+ * rendering a transcript can overwrite the matching in-progress line.
+ * @param {GuildMember} guildMember
+ * @param {{ gameNameOverride?: string, onProgress?: (line: string, replacesPrevious?: boolean) => Promise<void>, context?: Awaited<ReturnType<typeof loadRebuildContext>> }} options
+ * @returns {Promise<{ state: string, slug: string|null, nickname: string, readableRoles: string[] } | null>}
+ *          null when the player has no VDC account or no linked Riot account
+ */
+async function rebuildMemberProfile(guildMember, options = {}) {
+	const { gameNameOverride, onProgress, context } = options;
+	const progress = onProgress ?? (async () => undefined);
+	const userID = guildMember.id;
+
+	const player = await Player.getBy({ discordID: userID });
+	if (!player || !player.primaryRiotAccountID) return null;
+
+	// Get all filtering/processing data & set flags (such as isFM (franchise management))
+	// --------------------------------------------------------------------------------------------
+	await progress(`🔨 Creating filters & checking league state...`);
+
+	const { leagueState, gmids, franchiseRoleIDs, allCaptains } = context ?? await loadRebuildContext();
+
 	// determine if the player is signed
 	const isFM = gmids.includes(userID);
 	const isSigned = player.team !== null;
@@ -52,21 +72,13 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 	// determine if the player is IR
 	const isInactiveReserve = player.Status.contractStatus === ContractStatus.INACTIVE_RESERVE;
 
-	// determine leaguestate
-	const leagueState = await ControlPanel.getLeagueState();
-
-	await progress(`✅ The league state is \`${leagueState}\`, \`${guildMember.user.username}\` **is${isFM ? `` : ` not`}** in franchise management & \`${guildMember.user.username}\` **is${isSigned ? `` : ` not`}** signed!`);
+	await progress(`✅ The league state is \`${leagueState}\`, \`${guildMember.user.username}\` **is${isFM ? `` : ` not`}** in franchise management & \`${guildMember.user.username}\` **is${isSigned ? `` : ` not`}** signed!`, true);
 	// --------------------------------------------------------------------------------------------
 
 
 	// Clear roles and create blank roles array to rebuild from
 	// --------------------------------------------------------------------------------------------
 	await progress(`🔨 Clearing \`${guildMember.user.username}\`'s roles & prepping to rebuild...`);
-
-	// get franchise role IDs to clear
-	const franchiseRoleIDs = (await prisma.franchise.findMany({
-		where: { active: true }
-	})).map(f => f.roleID);
 
 	await guildMember.roles.remove([
 		...Object.values(ROLES.LEAGUE),
@@ -85,7 +97,7 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 	// currently accolades are set via whatever is currently in the nickname, but when the Accolades table is updated, this will also become a black initialization
 	const accolades = guildMember.nickname?.match(emoteregex);
 
-	await progress(`✅ Roles cleared & rebuild ready!`);
+	await progress(`✅ Roles cleared & rebuild ready!`, true);
 	// --------------------------------------------------------------------------------------------
 
 
@@ -159,7 +171,7 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 		else state = `VIEWER`;
 	}
 
-	await progress(`✅ \`${guildMember.user.username}\`'s team is \`${team ? team.name : null}\`, their franchise is \`${franchise ? franchise.name : null}\`, their slug is \`${slug}\` and their state is \`${state}\``);
+	await progress(`✅ \`${guildMember.user.username}\`'s team is \`${team ? team.name : null}\`, their franchise is \`${franchise ? franchise.name : null}\`, their slug is \`${slug}\` and their state is \`${state}\``, true);
 	// --------------------------------------------------------------------------------------------
 
 
@@ -167,13 +179,9 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 	// --------------------------------------------------------------------------------------------
 	await progress(`🔃 Checking if \`${guildMember.user.username}\` is a captain...`);
 
-	const allCaptains = (await prisma.teams.findMany({
-		where: { active: true }, select: { captain: true }
-	})).map(t => t.captain).filter(cid => cid !== null);
-
 	isCaptain = allCaptains.includes(player.id);
 
-	await progress(`✅ \`${guildMember.user.username}\` **is${isCaptain ? ` ` : ` not `}**a team captain!`);
+	await progress(`✅ \`${guildMember.user.username}\` **is${isCaptain ? ` ` : ` not `}**a team captain!`, true);
 	// --------------------------------------------------------------------------------------------
 
 
@@ -293,7 +301,7 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 		readableRoles.push(`Captain`);
 	}
 
-	await progress(`✅ Roles array built! The roles \`${guildMember.user.username}\` will receive are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`);
+	await progress(`✅ Roles array built! The roles \`${guildMember.user.username}\` will receive are: ${readableRoles.map(rr => `\`${rr}\``).join(`, `)}`, true);
 	// --------------------------------------------------------------------------------------------
 
 
@@ -310,7 +318,7 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 
 	await guildMember.setNickname(nickname);
 
-	await progress(`✅ \`${guildMember.user.username}\`'s server nickname has been updated to \`${nickname}\`!`);
+	await progress(`✅ \`${guildMember.user.username}\`'s server nickname has been updated to \`${nickname}\`!`, true);
 	// --------------------------------------------------------------------------------------------
 
 
@@ -320,76 +328,37 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 
 	await guildMember.roles.add([...roles]);
 
-	await progress(`✅ \`${guildMember.user.username}\`'s server roles have been updated!`);
+	await progress(`✅ \`${guildMember.user.username}\`'s server roles have been updated!`, true);
 	// --------------------------------------------------------------------------------------------
 
 	return { state, slug, nickname, readableRoles };
 }
 
-module.exports = { rebuildMemberProfile };
+module.exports = { rebuildMemberProfile, loadRebuildContext, getTierRole };
 
+/** Tier roles for the rebuild. Signed players (including playing GMs and IR)
+ * wear their TEAM's tier role, matching how sign.js assigns it. Unsigned
+ * players are placed by effective MMR against the PLAYER tier lines and also
+ * receive the matching tier free-agent role. */
 async function getTierRole(player, isSigned) {
+	if (isSigned) {
+		const teamTier = player.Team.tier;
+		return {
+			roles: [ROLES.TIER[teamTier]],
+			readableRoles: [tierLabel(teamTier)],
+		};
+	}
+
 	const mmrEffective = player.PrimaryRiotAccount.MMR.mmrEffective;
 	const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
 
-	let roles = [];
-	let readableRoles = [];
-	if (tierLines.RECRUIT.min <= mmrEffective &&
-		mmrEffective <= tierLines.RECRUIT.max) { 	// RECRUIT
-		roles.push(ROLES.TIER.RECRUIT);
-		readableRoles.push(`Recruit`);
-		if (!isSigned) {
-			roles.push(ROLES.TIER.RECRUIT_FREE_AGENT);
-			readableRoles.push(`Recruit Free Agent`);
-		}
-	} else if ( 									// PROSPECT
-		tierLines.PROSPECT.min <= mmrEffective &&
-		mmrEffective <= tierLines.PROSPECT.max
-	) {
-		roles.push(ROLES.TIER.PROSPECT);
-		readableRoles.push(`Prospect`);
-
-		if (!isSigned) {
-			roles.push(ROLES.TIER.PROSPECT_FREE_AGENT);
-			readableRoles.push(`Prospect Free Agent`);
-		}
-	} else if ( 									// APPRENCICE
-		tierLines.APPRENTICE.min <= mmrEffective &&
-		mmrEffective <= tierLines.APPRENTICE.max
-	) {
-		roles.push(ROLES.TIER.APPRENTICE);
-		readableRoles.push(`Apprentice`);
-
-		if (!isSigned) {
-			roles.push(ROLES.TIER.APPRENTICE_FREE_AGENT);
-			readableRoles.push(`Apprentice Free Agent`);
-		}
-	} else if ( 									// EXPERT
-		tierLines.EXPERT.min <= mmrEffective &&
-		mmrEffective <= tierLines.EXPERT.max
-	) {
-		roles.push(ROLES.TIER.EXPERT);
-		readableRoles.push(`Expert`);
-
-		if (!isSigned) {
-			roles.push(ROLES.TIER.EXPERT_FREE_AGENT);
-			readableRoles.push(`Expert Free Agent`);
-		}
-	} else if ( 									// MYTHIC
-		tierLines.MYTHIC.min <= mmrEffective &&
-		mmrEffective <= tierLines.MYTHIC.max
-	) {
-		roles.push(ROLES.TIER.MYTHIC);
-		readableRoles.push(`Mythic`);
-
-		if (!isSigned) {
-			roles.push(ROLES.TIER.MYTHIC_FREE_AGENT);
-			readableRoles.push(`Mythic Free Agent`);
-		}
-	}
+	const mmrTier = Object.keys(tierLines).find(
+		(tier) => tierLines[tier].min <= mmrEffective && mmrEffective <= tierLines[tier].max
+	);
+	if (mmrTier === undefined) return { roles: [], readableRoles: [] };
 
 	return {
-		roles: roles,
-		readableRoles: readableRoles
+		roles: [ROLES.TIER[mmrTier], ROLES.TIER[`${mmrTier}_FREE_AGENT`]],
+		readableRoles: [tierLabel(mmrTier), `${tierLabel(mmrTier)} Free Agent`],
 	};
 }

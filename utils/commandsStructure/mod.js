@@ -76,6 +76,24 @@ module.exports = {
             options: [userOption(`The player to ban`), durationOption, rulesOption, reasonOption(`Explanation for the ban`), appealableOption],
         },
         {
+            name: `mapban`,
+            description: `Ban a player from playing their next N maps.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                userOption(`The player to map ban`),
+                {
+                    name: `maps`,
+                    description: `Number of maps the player is banned from playing`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: true,
+                    min_value: 1,
+                },
+                rulesOption,
+                reasonOption(`Explanation for the map ban`),
+                appealableOption,
+            ],
+        },
+        {
             name: `unmute`,
             description: `Lift a player's mute early`,
             type: ApplicationCommandOptionType.Subcommand,

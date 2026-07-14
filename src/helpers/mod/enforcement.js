@@ -1,7 +1,7 @@
 const { Guild, GuildMember, EmbedBuilder } = require(`discord.js`);
 const { ROLES, CHANNELS } = require(`../../../utils/enums`);
 const { saveMuteState, getMuteState, clearMuteState, rewriteMuteCache, setExpiryKey, clearExpiryKey } = require(`./muteState`);
-const { rebuildMemberProfile } = require(`./profileRebuild`);
+const { rebuildMemberProfile } = require(`../profileRebuild`);
 const { buildLogEmbed } = require(`./modLogEmbeds`);
 
 /** Strip all roles (snapshot them), apply the Muted role, set the expiry key.
