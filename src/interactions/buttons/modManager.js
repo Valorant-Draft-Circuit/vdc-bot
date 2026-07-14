@@ -1,5 +1,5 @@
 const { ButtonInteraction, MessageFlags, EmbedBuilder } = require(`discord.js`);
-const { note, warn, mute, unmute, ban, unban, mapban, history } = require(`../subcommands/mod`);
+const { note, warn, mute, unmute, ban, unban, mapban, unmapban, history } = require(`../subcommands/mod`);
 const { ModNavigationOptions } = require(`../../../utils/enums`);
 const { hasModAccess } = require(`../../helpers/mod/guards`);
 
@@ -28,6 +28,8 @@ module.exports = {
 				return unban.confirm(interaction);
 			case ModNavigationOptions.MAPBAN_CONFIRM:
 				return mapban.confirm(interaction);
+			case ModNavigationOptions.UNMAPBAN_CONFIRM:
+				return unmapban.confirm(interaction);
 			case ModNavigationOptions.HISTORY_PREV:
 				return history.page(interaction, -1);
 			case ModNavigationOptions.HISTORY_NEXT:

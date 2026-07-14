@@ -39,10 +39,10 @@ const COMMAND_GUIDE = [
     ].join(`\n`),
   },
   {
-    name: `/mod unmute + /mod unban`,
+    name: `/mod unmute + /mod unban + /mod unmapban`,
     value: [
-      `Lift a sanction early (e.g. a successful appeal).\nThe record stays on the dashboard with an appeal note.`,
-      `> \`/mod unmute user:@yuls reason:Appeal accepted\``,
+      `Lift a sanction early (e.g. a successful appeal).\nThe record stays on the dashboard with an appeal note.\nLifting a map ban marks its remaining maps as served without the "fully served" announcement.`,
+      `> \`/mod unmapban user:@yuls reason:Appeal accepted\``,
     ].join(`\n`),
   },
   {

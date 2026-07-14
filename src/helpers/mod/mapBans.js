@@ -43,31 +43,46 @@ async function resolvePlayerTier(player) {
 }
 
 async function countMapsServed({ tier, teamID, since }) {
-	const playedGames = await prisma.games.findMany({
-		where: {
-			tier: tier,
-			datePlayed: { gt: since },
-			matchID: { not: null },
-		},
-		select: {
-			Match: { select: { matchType: true, matchDay: true, home: true, away: true } },
-		},
-	});
-
-	const regularSeasonMatchDays = new Set();
-	let playoffMapsServed = 0;
-	for (const game of playedGames) {
-		if (game.Match == null) continue;
-
-		if (game.Match.matchType === MatchType.BO2) {
-			if (game.Match.matchDay != null) regularSeasonMatchDays.add(game.Match.matchDay);
-		} else if (PLAYOFF_MAPS_BY_MATCH_TYPE[game.Match.matchType] !== undefined) {
-			const teamPlayedIt = teamID != null && (game.Match.home === teamID || game.Match.away === teamID);
-			if (teamPlayedIt) playoffMapsServed += 1;
-		}
+	if (teamID != null) {
+		return await prisma.games.count({
+			where: {
+				tier: tier,
+				datePlayed: { gt: since },
+				Match: {
+					matchType: { in: [MatchType.BO2, MatchType.BO3, MatchType.BO5] },
+					OR: [{ home: teamID }, { away: teamID }],
+				},
+			},
+		});
 	}
 
-	return regularSeasonMatchDays.size * REGULAR_SEASON_MAPS_PER_MATCH_DAY + playoffMapsServed;
+	const tierMatches = await prisma.matches.findMany({
+		where: { tier: tier, matchType: MatchType.BO2, matchDay: { not: null } },
+		select: { season: true, matchDay: true, Games: { select: { datePlayed: true } } },
+	});
+	return countCompletedMatchDayMaps(tierMatches, since);
+}
+
+// teamless players serve an MD only once every match of it has been played,
+// so a single rescheduled match holds the whole MD open
+function countCompletedMatchDayMaps(tierMatches, since) {
+	const matchDays = new Map();
+	for (const match of tierMatches) {
+		const key = `${match.season}:${match.matchDay}`;
+		if (!matchDays.has(key)) matchDays.set(key, []);
+		matchDays.get(key).push(match);
+	}
+
+	let mapsServed = 0;
+	for (const dayMatches of matchDays.values()) {
+		const everyMatchPlayed = dayMatches.every((match) => match.Games.length > 0);
+		if (!everyMatchPlayed) continue;
+
+		const completedAt = Math.max(...dayMatches.flatMap((match) => match.Games.map((game) => game.datePlayed.getTime())));
+		if (completedAt > since.getTime()) mapsServed += REGULAR_SEASON_MAPS_PER_MATCH_DAY;
+	}
+
+	return mapsServed;
 }
 
 function parseDetails(row) {
@@ -128,6 +143,29 @@ async function unfreezeMapBans(discordID) {
 			resumedAt: new Date().toISOString(),
 		});
 	}
+}
+
+// a lifted ban is marked fully served and pre-stamped as announced,
+// so the reconcile sweep never posts a "fully served" message for it
+async function liftMapBans(discordID, liftNote) {
+	const player = await Player.getBy({ discordID }).catch(() => null);
+	const state = await getMapBanState(discordID, player);
+
+	let liftedMaps = 0;
+	for (const ban of state.bans) {
+		if (ban.remaining <= 0) continue;
+
+		liftedMaps += ban.remaining;
+		await ModLogs.updateDetails(ban.row.id, {
+			...ban.details,
+			servedAtFreeze: ban.details.mapCount,
+			frozen: false,
+			servedAnnouncedAt: new Date().toISOString(),
+		});
+		await ModLogs.appendNote(ban.row.id, liftNote);
+	}
+
+	return liftedMaps;
 }
 
 async function sweepServedMapBans() {
@@ -194,14 +232,20 @@ async function buildEligibilityLine({ player, remainingMaps }) {
 	});
 
 	const banSlots = [];
-	const seenMatchDays = new Set();
-	for (const match of upcomingMatches) {
-		if (match.matchType === MatchType.BO2) {
-			if (match.matchDay == null || seenMatchDays.has(match.matchDay)) continue;
+	if (player.team != null) {
+		for (const match of upcomingMatches) {
+			if (match.matchDay == null || (match.home !== player.team && match.away !== player.team)) continue;
+			const maps = match.matchType === MatchType.BO2
+				? REGULAR_SEASON_MAPS_PER_MATCH_DAY
+				: PLAYOFF_MAPS_BY_MATCH_TYPE[match.matchType];
+			banSlots.push({ matchDay: match.matchDay, maps });
+		}
+	} else {
+		const seenMatchDays = new Set();
+		for (const match of upcomingMatches) {
+			if (match.matchType !== MatchType.BO2 || match.matchDay == null || seenMatchDays.has(match.matchDay)) continue;
 			seenMatchDays.add(match.matchDay);
 			banSlots.push({ matchDay: match.matchDay, maps: REGULAR_SEASON_MAPS_PER_MATCH_DAY });
-		} else if (player.team != null && match.matchDay != null && (match.home === player.team || match.away === player.team)) {
-			banSlots.push({ matchDay: match.matchDay, maps: PLAYOFF_MAPS_BY_MATCH_TYPE[match.matchType] });
 		}
 	}
 
@@ -238,9 +282,11 @@ module.exports = {
 	isEligibleToPlay,
 	resolvePlayerTier,
 	countMapsServed,
+	countCompletedMatchDayMaps,
 	getMapBanState,
 	freezeMapBans,
 	unfreezeMapBans,
+	liftMapBans,
 	sweepServedMapBans,
 	buildEligibilityLine,
 };
