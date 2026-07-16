@@ -10,6 +10,7 @@ const { profileUpdateServer } = require("./profileUpdateServer");
 const { offseasonReset } = require("./offseasonReset");
 const { resetMapBan } = require("./resetMapBan");
 const { activeSubs } = require("./activeSubs");
+const { debugGame } = require("./game");
 
 
 module.exports = {
@@ -25,4 +26,5 @@ module.exports = {
     offseasonReset: offseasonReset,
     resetMapBan: resetMapBan,
     activeSubs: activeSubs,
+    debugGame: debugGame,
 }
