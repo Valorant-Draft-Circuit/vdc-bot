@@ -228,6 +228,19 @@ module.exports = {
             name: `active-subs`,
             description: `List all active substitutes across every tier.`,
             type: ApplicationCommandOptionType.Subcommand
+        },
+        {
+            name: `game`,
+            description: `Inspect a submitted game & clean up a broken submission (missing PlayerStats)`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `link`,
+                    description: `The tracker.gg match link that was submitted`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true
+                }
+            ]
         }
     ]
 }
