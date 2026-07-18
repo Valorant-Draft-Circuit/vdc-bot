@@ -40,9 +40,10 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             //in dev, its a crown thing
             OWNER: `1220838046178476063`, 
 
-            // in dev, both of these are the "BADMIN" role
+            // in dev, all of these are the "BADMIN" role
             ADMIN: `1295970432268238940`,
             MOD: `1295970432268238940`,
+            TRIAL_MOD: `1295970432268238940`,
 
             // in dev, the GM/AGM IDs are just the VDC GM/STAFF role
             GM: `1189024973017321572`,
@@ -85,6 +86,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
             OWNER: `1088571112616628335`,
             ADMIN: `963298727810990101`,
             MOD: `966910372894343168`,
+            TRIAL_MOD: `966910396818653265`,
 
             // GM/AGM IDs
             GM: `963862762881175572`,
