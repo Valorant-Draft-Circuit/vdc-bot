@@ -1,5 +1,6 @@
 const { startQueueRuntime } = require(`../core/queue/runtime`);
 const { startModExpiry } = require(`../workers/modExpiry`);
+const { startWebVetoAnnouncer } = require(`../workers/webVetoAnnouncer`);
 
 module.exports = {
 
@@ -27,6 +28,8 @@ module.exports = {
 		// start the expiry runtime first so a queue failure can never silently
 		// disable sanction lifts
 		await startModExpiry(client);
+
+		startWebVetoAnnouncer(client);
 
 		if ((/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
 			await startQueueRuntime(client);
