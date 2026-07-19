@@ -30,7 +30,8 @@ module.exports = {
 		}
 
 		if (subcommand === `status`) {
-			return status(interaction);
+			const tier = interaction.options.getString(`tier`, false);
+			return status(interaction, tier);
 		}
 
 		return joinQueue(interaction, queueConfig);
