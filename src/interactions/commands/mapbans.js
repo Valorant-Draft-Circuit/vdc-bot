@@ -1,6 +1,6 @@
 const { EmbedBuilder, ChatInputCommandInteraction, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, PermissionFlagsBits, MessageFlags } = require(`discord.js`);
 const { ControlPanel, Player } = require(`../../../prisma`);
-const { MatchType, MapBanType } = require(`@prisma/client`);
+const { MatchType, MapBanType, VetoSource } = require(`@prisma/client`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { CHANNELS } = require(`../../../utils/enums/channels`);
 const { COLORS } = require(`../../../utils/enums/colors`);
@@ -80,10 +80,17 @@ module.exports = {
             content: `The mapban for this match (\`${nextMatch.tier}\` - <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} vs. <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name}) exists already: <#${activebans.find(ab => ab.name == channelName).id}>`
         });
 
-        // if the ban has already been completed, send this
-        if (nextMatch.MapBans.length != 0) return await interaction.editReply({
-            content: `The mapbans for this match has already begun and/or completed!`
-        });
+        // if the ban has already begun/completed, direct them to wherever it lives
+        if (nextMatch.MapBans.length != 0) {
+            const isWebOwned = nextMatch.MapBans.some(mb => mb.source == VetoSource.WEB);
+            const webUrl = nextMatch.MapBans.find(mb => mb.vetoUrl != null)?.vetoUrl;
+            if (isWebOwned && webUrl) return await interaction.editReply({
+                content: `The mapbans for this match are running on the website: ${webUrl}`
+            });
+            return await interaction.editReply({
+                content: `The mapbans for this match has already begun and/or completed!`
+            });
+        }
         // ########################################################################################
 
 
@@ -152,6 +159,11 @@ module.exports = {
             ]
         });
         await newchannel.send({ embeds: [embed] });
+
+        await prisma.mapBans.updateMany({
+            where: { matchID: nextMatch.matchID },
+            data: { vetoUrl: `https://discord.com/channels/${interaction.guild.id}/${newchannel.id}` }
+        });
         // ########################################################################################
 
 
@@ -207,6 +219,7 @@ function generateDatabaseInfo(matchID, banOrder, home, away) {
             order: i,
             type: type,
             team: isDefault ? null : teamID,
+            source: VetoSource.BOT,
         });
     }
     return dbOut;

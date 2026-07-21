@@ -20,10 +20,13 @@ module.exports = {
 
     async execute(client, /** @type BaseInteraction */ interaction) {
 
-        // Ignore DMs
+        // Ignore DMs, except the web veto pager's Acknowledge buttons which live on DMs
         if (interaction.channel.isDMBased()) {
-            logger.log(`WARNING`, `User ${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) tried to use a command in DMs`);
-            return await interaction.reply({ content: `You cannot use this command in direct messages` });
+            const isWebVetoButton = interaction.isButton() && interaction.customId.startsWith(`webveto_`);
+            if (!isWebVetoButton) {
+                logger.log(`WARNING`, `User ${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) tried to use a command in DMs`);
+                return await interaction.reply({ content: `You cannot use this command in direct messages` });
+            }
         }
 
         try {
