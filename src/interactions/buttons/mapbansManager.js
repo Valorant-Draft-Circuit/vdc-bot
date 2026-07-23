@@ -2,6 +2,7 @@ const { ButtonInteraction, ButtonBuilder, ActionRowBuilder, MessageFlags, Button
 const { MapBansSide, MapBanType } = require(`@prisma/client`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { Team } = require(`../../../prisma`);
+const { beginBotVeto } = require(`../commands/mapbans`);
 
 module.exports = {
     id: `mapbansManager`,
@@ -17,6 +18,9 @@ module.exports = {
 
         // if args have delete, process that
         if (splitargs[0] == `delete`) return await deleteChannel(interaction, matchID);
+
+        // the player chose to run the veto on discord instead of the website
+        if (splitargs[0] == `botstart`) return await beginBotVeto(interaction, matchID);
         // ########################################################################################
 
 
