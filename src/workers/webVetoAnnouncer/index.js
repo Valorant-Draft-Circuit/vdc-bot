@@ -39,7 +39,11 @@ function startWebVetoAnnouncer(client) {
         try {
             await tick(client);
         } catch (error) {
-            logger.log(`ERROR`, `Web veto pager tick failed`, error.stack);
+            if (`${error.message}`.includes(`Engine is not yet connected`)) {
+                logger.log(`VERBOSE`, `Web veto pager tick skipped: database engine not connected yet, retrying next poll`);
+            } else {
+                logger.log(`ERROR`, `Web veto pager tick failed`, error.stack);
+            }
         }
     }, POLL_INTERVAL_MS);
     logger.log(`INFO`, `Web veto pager started (${POLL_INTERVAL_MS / 1000}s poll, ${DEFAULT_ESCALATION_MINUTES}m default escalation)`);
