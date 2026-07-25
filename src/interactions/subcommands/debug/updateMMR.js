@@ -74,11 +74,22 @@ async function buildMMRCache() {
         }
     });
 
-    const mapped = playerMMRs.map((p) => {
-        const disc = p.Accounts[0].providerAccountId;
-        const mmr = p.PrimaryRiotAccount?.MMR?.mmrEffective;
-        return { discordID: disc, mmr: mmr, ls: p.Status.leagueStatus, cs: p.Status.contractStatus};
-    }).filter((p => p.mmr !== null && p.mmr !== undefined));
+    const mapped = [];
+    for (const player of playerMMRs) {
+        const discordAccount = player.Accounts[0];
+        const mmrEffective = player.PrimaryRiotAccount?.MMR?.mmrEffective;
+
+        const hasDiscordLink = discordAccount != null;
+        const hasMMR = mmrEffective !== null && mmrEffective !== undefined;
+        if (!hasDiscordLink || !hasMMR) continue;
+
+        mapped.push({
+            discordID: discordAccount.providerAccountId,
+            mmr: mmrEffective,
+            ls: player.Status?.leagueStatus,
+            cs: player.Status?.contractStatus,
+        });
+    }
 
     const tierLines = await ControlPanel.getMMRCaps(`PLAYER`);
 
