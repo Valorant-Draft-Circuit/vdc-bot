@@ -9,7 +9,6 @@ const { prisma } = require("../../../../prisma/prismadb");
 
 const Logger = require("../../../core/logger");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
-const { cancelUnsubTimer } = require("../../../helpers/transactions/activeSubTimers");
 const { tierLabel } = require("../../../helpers/transactions/formatTeam");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 const { restorePairedSubbedOutPlayer } = require("../../../helpers/transactions/subbedOutPairing");
@@ -121,9 +120,6 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 	// cut the player & ensure that the player's team property is now null
 	const player = await Transaction.cut(playerID);
 	if (player.User.team !== null) return await interaction.editReply(`There was an error while attempting to cut the player. The database was not updated.`);
-
-	// the player is now cut, so cancel any pending auto-unsub from a prior sub
-	cancelUnsubTimer(playerData.id);
 
 	// cutting an active sub ends their stint, so restore whoever they were covering for
 	if (playerData.Status.contractStatus === ContractStatus.ACTIVE_SUB && playerData.team !== null) {

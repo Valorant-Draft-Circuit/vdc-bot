@@ -5,15 +5,10 @@ const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Franchise, Player, Team, Transaction, ControlPanel } = require(`../../../../prisma`);
 const { CHANNELS, TransactionsNavigationOptions } = require(`../../../../utils/enums`);
 const { LeagueStatus, ContractStatus, TransactionType } = require("@prisma/client");
-const { registerUnsubTimer, clearUnsubTimer } = require(`../../../helpers/transactions/activeSubTimers`);
-const { tierLabel, formatTeamWithTier } = require(`../../../helpers/transactions/formatTeam`);
-const { logTransaction } = require(`../../../helpers/transactions/logTransaction`);
-const { restorePairedSubbedOutPlayer } = require(`../../../helpers/transactions/subbedOutPairing`);
+const { tierLabel } = require(`../../../helpers/transactions/formatTeam`);
+const { ACTIVE_SUB_WINDOW_MS } = require(`../../../helpers/transactions/activeSubWindow`);
 
 const sum = (array) => array.reduce((s, v) => s += v == null ? 0 : v, 0);
-
-// const activeSubTime = 10; // conversion to milliseconds
-const activeSubTime = 12 /* Hours a sub is active for the team */ * 60 * 60 * 1000; // conversion to milliseconds
 
 async function requestSub(
 	/** @type ChatInputCommandInteraction */ interaction,
@@ -39,7 +34,7 @@ async function requestSub(
 	const mmrWithoutSubOut = sum(rosterWithoutSubOut.map((p) => p.PrimaryRiotAccount.MMR.mmrEffective));
 	const newMMR = mmrWithoutSubOut + subInData.PrimaryRiotAccount.MMR.mmrEffective;
 
-	const unsubTime = Math.round(Date.now() / 1000) + activeSubTime / 1000;
+	const unsubTime = Math.round(Date.now() / 1000) + ACTIVE_SUB_WINDOW_MS / 1000;
 	const mmrCap = (await ControlPanel.getMMRCaps(`TEAM`))[team.tier];
 
 	// console.log(roster.map(r => `${r.PrimaryRiotAccount.riotIGN} - ${r.PrimaryRiotAccount.MMR.mmrEffective}`))
@@ -110,21 +105,25 @@ async function confirmSub(interaction) {
 	const playerTag = playerIGN.split(`#`)[0];
 	const guildMember = await interaction.guild.members.fetch(playerID);
 
-	// cut the player & ensure that the player's team property is now null
+	// auto-unsub is dated from the SUB row, so record it first: if it fails, abort before anything commits
+	try {
+		await Transaction.log({
+			type: TransactionType.SUB,
+			userID: player.id,
+			teamID: team.id,
+			franchiseID: franchise.id,
+			tier: team.tier,
+			details: { subbedOutID: subbedOutPlayer.id },
+		});
+	} catch (error) {
+		logger.log(`ERROR`, `Failed to record SUB transaction; aborting sub`, error.stack);
+		return await interaction.editReply(`There was an error while recording the substitution. No changes were made.`);
+	}
+
 	const updatedPlayer = await Transaction.sub({ userID: player.id, teamID: team.id, tier: team.tier });
 	if (updatedPlayer.team !== team.id) return await interaction.editReply(`There was an error while attempting to sub the player. The database was not updated.`);
 
-	// must stay outside logTransaction's best-effort catch; the status write is the source of truth
 	await Transaction.markSubbedOut(subbedOutPlayer.id);
-
-	await logTransaction({
-		type: TransactionType.SUB,
-		userID: player.id,
-		teamID: team.id,
-		franchiseID: franchise.id,
-		tier: team.tier,
-		details: { subbedOutID: subbedOutPlayer.id },
-	});
 
 	const embed = interaction.message.embeds[0];
 	const embedEdits = new EmbedBuilder(embed);
@@ -165,50 +164,7 @@ async function confirmSub(interaction) {
 	const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
 	await transactionsChannel.send({ embeds: [announcement] });
 
-	const unsubTimerHandle = setTimeout(async () => {
-		clearUnsubTimer(player.id);
-
-		// The player may have been officially signed or cut during the active sub
-		// window, which clears their ACTIVE_SUB status. Re-fetch and only auto-unsub
-		// if they're still an active sub on the same team, otherwise this stale timer
-		// would wrongly drop a now-signed player from their roster.
-		const currentPlayer = await Player.getBy({ userID: player.id });
-		const isStillActiveSubForTeam =
-			currentPlayer?.Status.contractStatus === ContractStatus.ACTIVE_SUB &&
-			currentPlayer.team === team.id;
-		if (!isStillActiveSubForTeam) return;
-
-		// unsub the player & ensure that the player's team property is now null
-		const updatedPlayer = await Transaction.unsub(player.id);
-		if (updatedPlayer.team !== null) return await interaction.channel.send(`There was an error while attempting to unsub ${guildMember} (${playerTag}). The database was not updated.`);
-
-		await restorePairedSubbedOutPlayer(player.id, team.id);
-
-		await logTransaction({
-			type: TransactionType.UNSUB,
-			userID: player.id,
-			teamID: team.id,
-			franchiseID: franchise.id,
-			tier: team.tier,
-			details: { trigger: `auto` },
-		});
-
-		// create the base embed
-		const announcement = new EmbedBuilder({
-			author: { name: `VDC Transactions Manager` },
-			description: `${guildMember} (${playerTag})'s temporary contract with ${formatTeamWithTier(team)} has ended!`,
-			thumbnail: {
-				url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${franchise.Brand.logo}`,
-			},
-			color: 0xe92929,
-			footer: { text: `Transactions — Unsub` },
-			timestamp: Date.now(),
-		});
-
-		return await transactionsChannel.send({ embeds: [announcement] });
-	}, activeSubTime);
-
-	registerUnsubTimer(player.id, unsubTimerHandle);
+	// auto-unsub is handled by the subExpiry worker, dated from this SUB transaction
 }
 module.exports = {
 	requestSub: requestSub,
