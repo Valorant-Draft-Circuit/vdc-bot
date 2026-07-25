@@ -1,5 +1,5 @@
 const { ChatInputCommandInteraction } = require(`discord.js`);
-const { updateFranchiseManagement, refreshFranchisesChannel, modifyAccolades } = require(`../subcommands/league`);
+const { updateFranchiseManagement, refreshFranchisesChannel, modifyAccolades, requestAwardFinal, requestAwardPickems } = require(`../subcommands/league`);
 const { CHANNELS } = require(`../../../utils/enums`);
 
 
@@ -20,6 +20,10 @@ module.exports = {
                 return await interaction.editReply(`The <#${CHANNELS.FRANCHISES}> channel has been updated!`)
             case `modify-accolades`:
                 return await modifyAccolades(interaction);
+            case `award-final`:
+                return await requestAwardFinal(interaction);
+            case `award-pickems`:
+                return await requestAwardPickems(interaction);
             default:
                 return await interaction.editReply({ content: `That subcommand doesn't exist! Please try again or open a tech ticket!` });
         }

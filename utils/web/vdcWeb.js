@@ -12,6 +12,21 @@ async function updateMeilisearchPlayer(playerId) {
     }
 }
 
+async function getPickemAwards(season) {
+    try {
+        const res = await fetch(`https://${process.env.VDC_WEB_URL}/api/pickems/awards?season=${season}`);
+        if (!res.ok) {
+            logger.log(`WARNING`, `Unable to fetch Pick'Ems awards for season ${season} (status ${res.status}).`);
+            return null;
+        }
+        return await res.json();
+    } catch (error) {
+        logger.log(`WARNING`, `Unable to fetch Pick'Ems awards. Error: ${error}`);
+        return null;
+    }
+}
+
 module.exports = {
 	updateMeilisearchPlayer,
+	getPickemAwards,
 };
