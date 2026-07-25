@@ -109,6 +109,32 @@ module.exports = {
                     required: true
                 }
             ]
+        },
+        {
+            name: `award-final`,
+            description: `Award championship accolades (WIN, WIN_FM, WIN_SUB) to a grand final's winner`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `match-id`,
+                    description: `The grand final's match ID (run after the final is submitted and processed)`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: true
+                }
+            ]
+        },
+        {
+            name: `award-pickems`,
+            description: `Award Pick'Ems accolades (overall, per-tier, top group) for a season`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `season`,
+                    description: `The season to award Pick'Ems accolades for (run after Pick'Ems are fully resolved)`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: true
+                }
+            ]
         }
     ]
 }

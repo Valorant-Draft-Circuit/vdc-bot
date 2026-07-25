@@ -1,6 +1,7 @@
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const { Player } = require("../../../../prisma");
 const { prisma } = require("../../../../prisma/prismadb");
+const { decodeAccoladeData } = require("../../../helpers/league/accolades");
 
 async function modifyAccolades(/** @type ChatInputCommandInteraction */ interaction) {
     const { _hoistedOptions } = interaction.options;
@@ -71,31 +72,4 @@ async function modifyAccolades(/** @type ChatInputCommandInteraction */ interact
 
 module.exports = {
     modifyAccolades: modifyAccolades
-}
-
-function decodeAccoladeData(shorthand, tier, season) {
-    const defs = {
-        WIN: {
-            readable: `Winner`, emote: `🏆`, title: `Grand Finals Winner`,
-            description: `Player for the Winning Season ${season} ${tier} Team`
-        },
-        WIN_FM: {
-            readable: `Franchise Management`, emote: `👑`, title: `Franchise Management for a Winning Grand Finals Team`,
-            description: `Franchise Manager for the Winning Season ${season} ${tier} Team`
-        },
-        WIN_SUB: {
-            readable: `Substitute`, emote: `🥈`, title: `Substitute for a Player in a Grand Finals Match`,
-            description: `Substitute for the Winning Season ${season} ${tier} Team during Grand Finals`
-        },
-        AST: {
-            readable: `All Star`, emote: `⭐`, title: `All Star`,
-            description: `All Star for Season ${season} ${tier} Tier`
-        },
-        MVP: {
-            readable: `MVP`, emote: `🏅`, title: `Most Valuable Player`,
-            description: `MVP of ${tier} Season ${season}`
-        },
-    }
-
-    return defs[shorthand];
 }
