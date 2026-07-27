@@ -2,6 +2,7 @@ const { startQueueRuntime } = require(`../core/queue/runtime`);
 const { startModExpiry } = require(`../workers/modExpiry`);
 const { startSubExpiry } = require(`../workers/subExpiry`);
 const { startWebVetoAnnouncer } = require(`../workers/webVetoAnnouncer`);
+const { startMatchPoller } = require(`../workers/matchPoller`);
 
 module.exports = {
 
@@ -33,6 +34,8 @@ module.exports = {
 		await startSubExpiry(client);
 
 		startWebVetoAnnouncer(client);
+
+		await startMatchPoller(client);
 
 		if ((/true/i).test(process.env.QUEUE_SYSTEM_ENABLED)) {
 			await startQueueRuntime(client);

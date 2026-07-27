@@ -5,6 +5,7 @@
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
+    "test": "node --test",
     "deploy": "npm run cache && npm run start",
 
     "compile": "tsc -p tsconfig.json",
