@@ -31,6 +31,8 @@ async function getQueueMatchContext(queueId) {
 		matchData,
 		tier: matchData.tier,
 		players,
+		teamA: teamA || [],
+		teamB: teamB || [],
 	};
 }
 
