@@ -26,6 +26,8 @@ module.exports = {
 			return interaction.reply({ content: `Only the person who ran \`/submit\` can respond to this.`, flags: MessageFlags.Ephemeral });
 		}
 
+		if (state.pingMessageId) await interaction.channel?.messages.delete(state.pingMessageId).catch(() => undefined);
+
 		const title = state.gameType === GameType.COMBINE ? `Combine Match` : `${state.homeName} vs ${state.awayName}`;
 		const context = formatMatchContext(state);
 
@@ -55,11 +57,13 @@ module.exports = {
 		await redis.del(stateKey);
 
 		const submitted = [];
+		const alreadySubmitted = [];
 		const failed = [];
 		for (const game of state.games) {
 			try {
-				const response = await submitGame({ gameId: game.game_id, gameType: state.gameType, tier: state.tier });
-				if (response.ok) submitted.push(game);
+				const result = await submitGame({ gameId: game.game_id, gameType: state.gameType, tier: state.tier });
+				if (result.completed) submitted.push(game);
+				else if (result.reason === `game_exist`) alreadySubmitted.push(game);
 				else failed.push(game);
 			} catch (error) {
 				logger.log(`ERROR`, `Auto-submit failed for game ${game.game_id}`, error.stack);
@@ -89,16 +93,23 @@ module.exports = {
 			}
 		}
 
+		const gameUrl = (game) => state.matchID
+			? `https://vdc.gg/match/${state.matchID}?game=${game.game_id}`
+			: `https://tracker.gg/valorant/match/${game.game_id}`;
+
 		const lines = [];
+		if (state.matchID) lines.push(`Match: [#${state.matchID}](https://vdc.gg/match/${state.matchID})`);
 		if (submitted.length) lines.push(`Submitted **${submitted.length}** game(s):`);
-		for (const game of submitted) lines.push(`✅ ${game.map ?? `Unknown map`} · \`${game.game_id}\``);
-		for (const game of failed) lines.push(`❌ ${game.map ?? `Unknown map`} · \`${game.game_id}\` (failed, try a link)`);
+		for (const game of submitted) lines.push(`✅ [${game.map ?? `Game`}](${gameUrl(game)})`);
+		for (const game of alreadySubmitted) lines.push(`☑️ [${game.map ?? `Game`}](${gameUrl(game)}) (already submitted by a teammate)`);
+		for (const game of failed) lines.push(`❌ ${game.map ?? `Unknown map`} · \`${game.game_id}\` (couldn't submit. contact tech or try a link)`);
 
 		const body = lines.join(`\n`) || `Nothing was submitted.`;
+		const doneContext = formatMatchContext({ tier: state.tier, matchType: state.matchType, matchDay: state.matchDay });
 		const done = new EmbedBuilder({
 			author: { name: `VDC Match Submission` },
 			title: title,
-			description: context ? `${context}\n\n${body}` : body,
+			description: doneContext ? `${doneContext}\n\n${body}` : body,
 			thumbnail: { url: iconURL },
 			color: failed.length ? 0xE9A129 : 0xE92929,
 			footer: { text: `Valorant Draft Circuit — Match Result Submissions` },

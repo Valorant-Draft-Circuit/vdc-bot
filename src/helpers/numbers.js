@@ -23,17 +23,30 @@ async function detectMatches(options) {
 }
 
 /**
- * Submit a single game to the numbers service for processing.
+ * Submit a single game to the numbers service for processing. The service replies HTTP 200 even for
+ * rejections, distinguishing outcome in the body, so this returns the parsed classification rather
+ * than a raw response: `completed` is true only on a real submit; `reason` carries the rejection
+ * reason (e.g. `game_exist` when the game was already recorded).
  * @param {{ gameId: string, gameType: string, tier: string }} options
+ * @returns {Promise<{ httpOk: boolean, completed: boolean, reason: ?string }>}
  */
 async function submitGame(options) {
 	const { gameId, gameType, tier } = options;
 
-	return await fetch(`${NUMBERS_BASE_URL}/gameSubmit`, {
+	const response = await fetch(`${NUMBERS_BASE_URL}/gameSubmit`, {
 		method: `POST`,
 		headers: { 'Content-Type': `application/json` },
 		body: JSON.stringify({ game_id: gameId, game_type: gameType, tier: tier }),
 	});
+
+	let body = {};
+	try {
+		body = await response.json();
+	} catch {
+		body = {};
+	}
+
+	return { httpOk: response.ok, completed: body.completed === true, reason: body.reason ?? null };
 }
 
 module.exports = { detectMatches, submitGame };
