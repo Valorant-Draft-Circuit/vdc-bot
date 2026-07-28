@@ -17,15 +17,10 @@ function detectStateKey(messageId) {
 	return `submitdetect:${messageId}`;
 }
 
-/** The user-facing message for a detect result's reason (plain text; used for reasons that have
- * nothing to link). already_submitted is rendered as an embed via buildAlreadySubmittedEmbed. */
 function reasonMessage(result) {
 	return REASON_MESSAGES[result.reason] ?? `I couldn't detect a match to submit.`;
 }
 
-/** Embed for an already-submitted result: the match (linked to vdc.gg) with each game listed and
- * hyperlinked to its vdc.gg game view. Combines have no match page, so their game falls back to
- * tracker.gg. Embeds render markdown links; plain content doesn't. */
 function buildAlreadySubmittedEmbed(result) {
 	const lines = [REASON_MESSAGES.already_submitted];
 	if (result.matchID) {
@@ -57,14 +52,23 @@ const FLAG_LABELS = {
 	over_cap: `extra game beyond series length`,
 	off_veto_map: `map not in the veto`,
 	duplicate_map: `map already played`,
+	unrostered_players: `emergency sub not on a roster — verify before submitting`,
 };
+
+const SOFT_REVIEW_FLAGS = new Set([`unrostered_players`]);
+
+function isSubmittable(game) {
+	return game.flags.every((flag) => SOFT_REVIEW_FLAGS.has(flag));
+}
+
+function needsReview(game) {
+	return game.flags.some((flag) => SOFT_REVIEW_FLAGS.has(flag));
+}
 
 function describeFlags(flags) {
 	return flags.map((flag) => FLAG_LABELS[flag] ?? flag).join(`, `);
 }
 
-/** The one-line match context (tier · type · matchday · match #), omitting any part that's absent
- * (e.g. combines have no matchType/matchDay/matchID). */
 function formatMatchContext({ tier, matchType, matchDay, matchID }) {
 	return [
 		tier ? `Tier: \`${tier}\`` : null,
@@ -74,16 +78,19 @@ function formatMatchContext({ tier, matchType, matchDay, matchID }) {
 	].filter(Boolean).join(` · `);
 }
 
-/** A game renders as three fields: a full-width header (map + any warning) then the two teams
- * as side-by-side inline columns, one player per line. */
+function annotatePlayers(players, unrostered) {
+	const esubs = new Set(unrostered ?? []);
+	return players.map((ign) => (esubs.has(ign) ? `${ign} (esub?)` : ign));
+}
+
 function buildGameFields(game, index, homeSide, awaySide) {
 	const mapName = game.map ?? `Unknown map`;
 	const headerValue = game.flags.length ? `⚠ ${describeFlags(game.flags)}` : `​`;
 
 	return [
 		{ name: `Game ${index + 1} · ${mapName}`, value: headerValue, inline: false },
-		{ name: homeSide, value: game.home_players.join(`\n`), inline: true },
-		{ name: awaySide, value: game.away_players.join(`\n`), inline: true },
+		{ name: homeSide, value: annotatePlayers(game.home_players, game.unrostered).join(`\n`), inline: true },
+		{ name: awaySide, value: annotatePlayers(game.away_players, game.unrostered).join(`\n`), inline: true },
 	];
 }
 
@@ -93,22 +100,21 @@ function buildGameFields(game, index, homeSide, awaySide) {
  */
 function buildCandidateEmbed(result) {
 	const { scheduledMatch, games } = result;
-	const recommendedCount = games.filter((game) => game.recommended).length;
+	const submittable = games.filter(isSubmittable);
+	const reviewCount = submittable.filter(needsReview).length;
 
 	const context = formatMatchContext(scheduledMatch);
 
 	const fields = games.flatMap((game, index) => buildGameFields(game, index, scheduledMatch.homeName, scheduledMatch.awayName));
 
+	const summary = submittable.length
+		? `I'll submit **${submittable.length}** game(s) on confirm${reviewCount ? ` (**${reviewCount}** need review — emergency sub)` : ``}. Review the lineups below.`
+		: `Nothing new to submit here (already submitted or needs review).`;
+
 	return new EmbedBuilder({
 		author: { name: `VDC Match Submission` },
 		title: `${scheduledMatch.homeName} vs ${scheduledMatch.awayName}`,
-		description: [
-			context,
-			``,
-			recommendedCount
-				? `I'll submit **${recommendedCount}** game(s) on confirm. Review the lineups below.`
-				: `Nothing new to submit here (already submitted or needs review).`,
-		].join(`\n`),
+		description: [context, ``, summary].join(`\n`),
 		thumbnail: { url: iconURL },
 		color: 0xE92929,
 		fields,
@@ -151,5 +157,8 @@ module.exports = {
 	detectStateKey,
 	buildCandidateEmbed,
 	buildCombineCandidateEmbed,
+	isSubmittable,
+	needsReview,
+	annotatePlayers,
 	iconURL,
 };

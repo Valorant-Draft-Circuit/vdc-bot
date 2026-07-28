@@ -15,6 +15,7 @@ const {
    detectStateKey,
    buildCandidateEmbed,
    buildCombineCandidateEmbed,
+   isSubmittable,
 } = require(`../../helpers/submitDetect`);
 
 const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
@@ -137,11 +138,14 @@ async function submitCombineFromAutoDetection(interaction) {
    const cancel = new ButtonBuilder({ customId: `submitdetect_cancel`, label: `Cancel`, style: ButtonStyle.Danger });
    const message = await interaction.editReply({ embeds: [buildCombineCandidateEmbed(game, queueContext.tier)], components: [new ActionRowBuilder({ components: [confirm, cancel] })] });
 
+   const ping = await interaction.followUp({ content: `<@${interaction.user.id}> confirm your combine submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
+
    const submissionState = {
       userId: interaction.user.id,
       gameType: GameType.COMBINE,
       tier: queueContext.tier,
       queueId: queueContext.queueId,
+      pingMessageId: ping?.id ?? null,
       games: [{ game_id: game.game_id, map: game.map }],
    };
    const redis = getRedisClient();
@@ -194,19 +198,21 @@ async function submitScheduledFromAutoDetection(interaction, { type }) {
       return await interaction.editReply({ content: reasonMessage(result) });
    }
 
-   const recommendedGames = result.games.filter((game) => game.recommended);
+   const submittableGames = result.games.filter(isSubmittable);
    const embed = buildCandidateEmbed(result);
 
    const components = [];
-   if (recommendedGames.length) {
-      const confirm = new ButtonBuilder({ customId: `submitdetect_confirm`, label: `Submit ${recommendedGames.length} game(s)`, style: ButtonStyle.Success });
+   if (submittableGames.length) {
+      const confirm = new ButtonBuilder({ customId: `submitdetect_confirm`, label: `Submit ${submittableGames.length} game(s)`, style: ButtonStyle.Success });
       const cancel = new ButtonBuilder({ customId: `submitdetect_cancel`, label: `Cancel`, style: ButtonStyle.Danger });
       components.push(new ActionRowBuilder({ components: [confirm, cancel] }));
    }
 
    const message = await interaction.editReply({ embeds: [embed], components });
 
-   if (!recommendedGames.length) return message;
+   if (!submittableGames.length) return message;
+
+   const ping = await interaction.followUp({ content: `<@${interaction.user.id}> confirm your match submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
 
    const submissionState = {
       userId: interaction.user.id,
@@ -217,7 +223,8 @@ async function submitScheduledFromAutoDetection(interaction, { type }) {
       matchID: result.scheduledMatch.matchID,
       homeName: result.scheduledMatch.homeName,
       awayName: result.scheduledMatch.awayName,
-      games: recommendedGames.map((game) => ({ game_id: game.game_id, map: game.map })),
+      pingMessageId: ping?.id ?? null,
+      games: submittableGames.map((game) => ({ game_id: game.game_id, map: game.map })),
    };
 
    const redis = getRedisClient();
