@@ -15,7 +15,7 @@ module.exports = class BotClient extends Client {
         super({
             presence: {
                 activities: [
-                    { type: ActivityType.Watching, name: `travestey write bad code` }
+                    { type: ActivityType.Custom, name: `hi travestey` }
                 ]
             },
             intents: [

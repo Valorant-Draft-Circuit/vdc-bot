@@ -8,10 +8,16 @@ module.exports = {
     contexts: [InteractionContextType.Guild],
     options: [
         {
-            name: `tier`,
-            description: `The tier of the match`,
+            name: `url`,
+            description: `Optional tracker.gg match link. Leave empty to auto-detect your recent match games`,
             type: ApplicationCommandOptionType.String,
-            required: true,
+            required: false,
+        },
+        {
+            name: `tier`,
+            description: `Only needed when submitting a link; auto-detected otherwise`,
+            type: ApplicationCommandOptionType.String,
+            required: false,
             choices: [
                 { name: 'Recruit', value: Tier.RECRUIT },
                 { name: `Prospect`, value: Tier.PROSPECT },
@@ -19,12 +25,6 @@ module.exports = {
                 { name: `Expert`, value: Tier.EXPERT },
                 { name: `Mythic`, value: Tier.MYTHIC },
             ]
-        },
-        {
-            name: `url`,
-            description: `The URL of the match`,
-            type: ApplicationCommandOptionType.String,
-            required: true,
         },
     ]
 }
