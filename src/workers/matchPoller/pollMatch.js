@@ -28,13 +28,15 @@ async function orderedHomePollTargets(homeTeamId) {
 	return [...new Set(discordIds)].slice(0, MAX_HOME_POLL_TARGETS);
 }
 
-/** Submit every recommended game to the numbers service. Returns how many were accepted. */
+/** Submit every recommended game to the numbers service. Returns how many were newly submitted.
+ * submitGame returns { completed, reason }: `completed` is a real new submit; a `game_exist` reason
+ * means it was already recorded (e.g. a manual /submit beat us) and is not counted or warned. */
 async function submitCleanGames(match, result) {
 	let submitted = 0;
 	for (const game of result.games) {
 		const response = await submitGame({ gameId: game.game_id, gameType: gameTypeFor(match.matchType), tier: result.scheduledMatch.tier });
-		if (response.ok) submitted += 1;
-		else logger.log(`WARNING`, `matchPoller: gameSubmit rejected game ${game.game_id} for match ${match.matchID} (status ${response.status})`);
+		if (response.completed) submitted += 1;
+		else if (response.reason !== `game_exist`) logger.log(`WARNING`, `matchPoller: gameSubmit did not complete for game ${game.game_id} in match ${match.matchID} (${response.reason ?? `no reason`})`);
 	}
 	return submitted;
 }
