@@ -8,6 +8,7 @@ const {
 } = require(`../../core/queue/matchLifecycle`);
 const { detectMatches } = require(`../../helpers/numbers`);
 const { getRedisClient } = require(`../../core/redis`);
+const { acquireMatchSubmitLock, releaseMatchSubmitLock } = require(`../../helpers/submitLock`);
 const {
    DETECT_STATE_TTL_SECONDS,
    reasonMessage,
@@ -155,9 +156,9 @@ async function submitCombineFromAutoDetection(interaction) {
 
 const CAP_BY_MATCH_TYPE = { BO2: 2, BO3: 3, BO5: 5 };
 
-/** Only the home team of the caller's current unplayed scheduled match may submit it. Checked
- * bot-side so away-team players never hit the numbers service. */
-async function resolveHomeTeamGate(discordId) {
+/** Resolve the caller's current unplayed scheduled match. Either team may submit; the per-match
+ * Redis lock (not this function) serializes concurrent submitters. */
+async function resolveCurrentMatch(discordId) {
    const player = await Player.getBy({ discordID: discordId });
    const teamId = player?.team;
    if (!teamId) return { ok: false, message: `You don't appear to be on a team, so I can't submit a scheduled match for you.` };
@@ -169,31 +170,41 @@ async function resolveHomeTeamGate(discordId) {
          matchType: { in: [MatchType.BO2, MatchType.BO3, MatchType.BO5] },
          OR: [{ home: teamId }, { away: teamId }],
       },
-      include: { Games: true },
+      include: { Games: true, Home: true, Away: true },
       orderBy: { dateScheduled: `asc` },
    });
 
    const currentMatch = matches.find((match) => match.Games.length < (CAP_BY_MATCH_TYPE[match.matchType] ?? Infinity));
    if (!currentMatch) return { ok: false, message: `I couldn't find an unplayed scheduled match for your team.` };
-   if (currentMatch.home !== teamId) return { ok: false, message: `Only the home team submits match results. Ask a home team player to run \`/submit\`.` };
 
-   return { ok: true };
+   const callerTeamName = currentMatch.home === teamId ? currentMatch.Home?.name : currentMatch.Away?.name;
+   return { ok: true, matchID: currentMatch.matchID, callerTeamName: callerTeamName ?? `your team` };
 }
 
-/** Season/playoff: detect the scheduled match's games and confirm before submitting. */
+/** Season/playoff: either team may submit. A per-match Redis lock serializes concurrent submitters
+ * and is held across the human confirm step; detect the scheduled match's games and confirm before
+ * submitting. */
 async function submitScheduledFromAutoDetection(interaction, { type }) {
-   const gate = await resolveHomeTeamGate(interaction.user.id);
-   if (!gate.ok) return await interaction.editReply({ content: gate.message });
+   const current = await resolveCurrentMatch(interaction.user.id);
+   if (!current.ok) return await interaction.editReply({ content: current.message });
+
+   const lock = await acquireMatchSubmitLock(current.matchID, { teamName: current.callerTeamName, userId: interaction.user.id });
+   if (!lock.ok) {
+      const submitter = lock.heldByTeamName ? `**${lock.heldByTeamName}**` : `The other team`;
+      return await interaction.editReply({ content: `${submitter} is already submitting this match, so you don't need to. You're all set. (If they don't finish, either team can run \`/submit\` again later.)` });
+   }
 
    let result;
    try {
       result = await detectMatches({ discordUserId: interaction.user.id });
    } catch (error) {
       logger.log(`ERROR`, `Match detection failed`, error.stack);
+      await releaseMatchSubmitLock(current.matchID, lock.lockValue);
       return await interaction.editReply({ content: `I couldn't reach the numbers service to detect your match. Please try again or submit with a tracker.gg link.` });
    }
 
    if (result.reason) {
+      await releaseMatchSubmitLock(current.matchID, lock.lockValue);
       if (result.reason === `already_submitted`) return await interaction.editReply({ embeds: [buildAlreadySubmittedEmbed(result)] });
       return await interaction.editReply({ content: reasonMessage(result) });
    }
@@ -210,7 +221,10 @@ async function submitScheduledFromAutoDetection(interaction, { type }) {
 
    const message = await interaction.editReply({ embeds: [embed], components });
 
-   if (!submittableGames.length) return message;
+   if (!submittableGames.length) {
+      await releaseMatchSubmitLock(current.matchID, lock.lockValue);
+      return message;
+   }
 
    const ping = await interaction.followUp({ content: `<@${interaction.user.id}> confirm your match submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
 
@@ -224,6 +238,8 @@ async function submitScheduledFromAutoDetection(interaction, { type }) {
       homeName: result.scheduledMatch.homeName,
       awayName: result.scheduledMatch.awayName,
       pingMessageId: ping?.id ?? null,
+      lockMatchID: current.matchID,
+      lockValue: lock.lockValue,
       games: submittableGames.map((game) => ({ game_id: game.game_id, map: game.map })),
    };
 
