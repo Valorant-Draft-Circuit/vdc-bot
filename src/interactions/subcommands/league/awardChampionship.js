@@ -3,18 +3,40 @@ const { Team, Player } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { LeagueNavigationOptions } = require(`../../../../utils/enums`);
 const { tierLabel } = require(`../../../helpers/transactions/formatTeam`);
-const { awardAccoladeIfAbsent } = require(`../../../helpers/league/accolades`);
+const { decodeAccoladeData, awardAccoladeIfAbsent, appendAccoladeEmoteToNickname, NicknameUpdateOutcome, MAX_DISCORD_NICKNAME_LENGTH } = require(`../../../helpers/league/accolades`);
 
 // game wins needed to clinch a series by match format (grand finals are BO5, or BO3 if downgraded)
 const GAMES_TO_CLINCH = { BO2: 2, BO3: 2, BO5: 3 };
+
+// keeps the summary embed's skip list inside Discord's 1024 character field limit
+const MAX_NICKNAME_SKIPS_LISTED = 10;
+
+const NICKNAME_SKIP_REASONS = {
+	[NicknameUpdateOutcome.NOT_MANAGEABLE]: `my role is below theirs`,
+	[NicknameUpdateOutcome.TOO_LONG]: `nickname would exceed ${MAX_DISCORD_NICKNAME_LENGTH} characters`,
+	[NicknameUpdateOutcome.FAILED]: `Discord rejected the update`,
+};
 
 function discordIdFromAccounts(accounts) {
 	return accounts?.find((account) => account.provider === `discord`)?.providerAccountId ?? null;
 }
 
+function mentionRecipient(recipient) {
+	return recipient.discordID ? `<@${recipient.discordID}>` : `\`${recipient.userID}\``;
+}
+
 function formatRecipients(recipients) {
 	if (recipients.length === 0) return `*none*`;
-	return recipients.map((r) => (r.discordID ? `<@${r.discordID}>` : `\`${r.userID}\``)).join(`, `);
+	return recipients.map(mentionRecipient).join(`, `);
+}
+
+function formatNicknameSkips(skips) {
+	const lines = skips.slice(0, MAX_NICKNAME_SKIPS_LISTED).map((skip) => `${mentionRecipient(skip.recipient)}: ${skip.reason}`);
+
+	const unlistedCount = skips.length - lines.length;
+	if (unlistedCount > 0) lines.push(`*...and ${unlistedCount} more (see bot alerts)*`);
+
+	return lines.join(`\n`);
 }
 
 /** Derive everyone owed a championship accolade from a single final's match id.
@@ -113,8 +135,54 @@ async function requestAwardFinal(interaction) {
 	return await interaction.editReply({ embeds: [embed], components: [row] });
 }
 
+/** Give every recipient their accolade's emote in the server, so a champion's
+ * nickname reads `SLUG | Tag 🏆` the way the transaction commands expect.
+ * Runs after the accolade rows are written; the DB is the source of truth, and a
+ * member the bot can't rename must never cost anyone their accolade.
+ * @param {import('discord.js').Guild} guild
+ * @returns {Promise<{ updated: object[], alreadyPresent: object[], skipped: object[] }>}
+ */
+async function applyChampionshipNicknames(guild, groups) {
+	const updated = [];
+	const alreadyPresent = [];
+	const skipped = [];
+
+	for (const group of groups) {
+		const emote = decodeAccoladeData(group.shorthand).emote;
+
+		for (const recipient of group.recipients) {
+			if (recipient.discordID == null) {
+				skipped.push({ recipient: recipient, reason: `no linked discord account` });
+				continue;
+			}
+
+			const guildMember = await guild.members.fetch(recipient.discordID).catch(() => null);
+			if (guildMember == null) {
+				skipped.push({ recipient: recipient, reason: `not in the server` });
+				continue;
+			}
+
+			const result = await appendAccoladeEmoteToNickname(guildMember, emote);
+			if (result.outcome === NicknameUpdateOutcome.UPDATED) {
+				updated.push(recipient);
+				continue;
+			}
+			if (result.outcome === NicknameUpdateOutcome.ALREADY_PRESENT) {
+				alreadyPresent.push(recipient);
+				continue;
+			}
+
+			skipped.push({ recipient: recipient, reason: NICKNAME_SKIP_REASONS[result.outcome] });
+			logger.log(`ALERT`, `Could not add the ${emote} accolade emote to ${guildMember.user.username}'s nickname (${result.outcome}). Please rename them to \`${result.nickname}\` manually!`);
+		}
+	}
+
+	return { updated, alreadyPresent, skipped };
+}
+
 /** Award the accolades on confirm, re-deriving from the stashed match id so the
- * write reflects current DB state, then report created vs already-present.
+ * write reflects current DB state, then hand out the matching nickname emotes and
+ * report created vs already-present for both.
  * @param {ChatInputCommandInteraction} interaction
  */
 async function confirmAwardFinal(interaction) {
@@ -145,9 +213,19 @@ async function confirmAwardFinal(interaction) {
 		}
 	}
 
+	const nicknames = await applyChampionshipNicknames(interaction.guild, groups);
+
+	const summaryLines = [
+		`Awarded **${createdCount}** new accolade(s); **${existingCount}** already present.`,
+		`Renamed **${nicknames.updated.length}** member(s); **${nicknames.alreadyPresent.length}** already had their emote.`,
+	];
+	const skippedFields = nicknames.skipped.length === 0
+		? []
+		: [{ name: `Nicknames not updated (${nicknames.skipped.length})`, value: formatNicknameSkips(nicknames.skipped) }];
+
 	const summary = new EmbedBuilder(embed);
-	summary.setDescription(`Awarded **${createdCount}** new accolade(s); **${existingCount}** already present.`);
-	summary.setFields([]);
+	summary.setDescription(summaryLines.join(`\n`));
+	summary.setFields(skippedFields);
 	await interaction.message.edit({ embeds: [summary], components: [] });
 	return await interaction.deleteReply();
 }

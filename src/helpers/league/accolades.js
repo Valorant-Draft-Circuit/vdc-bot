@@ -1,4 +1,19 @@
+const { GuildMember } = require(`discord.js`);
 const { prisma } = require(`../../../prisma/prismadb`);
+
+// accolade emotes live as a trailing block on the server nickname (`SLUG | Tag 🏆👑`);
+// the same pattern is used by every transaction command that rewrites a nickname
+const nicknameEmoteRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+
+const MAX_DISCORD_NICKNAME_LENGTH = 32;
+
+const NicknameUpdateOutcome = {
+  UPDATED: `updated`,
+  ALREADY_PRESENT: `alreadyPresent`,
+  NOT_MANAGEABLE: `notManageable`,
+  TOO_LONG: `tooLong`,
+  FAILED: `failed`,
+};
 
 /** Shared accolade definition map (emote + readable + title + description).
  * The `readable` string is the season/tier-independent value stored in the
@@ -101,4 +116,43 @@ async function awardAccoladeIfAbsent({ userID, season, tier, shorthand }) {
   return { created: true };
 }
 
-module.exports = { decodeAccoladeData, awardAccoladeIfAbsent };
+/** Fold `emote` into the nickname's trailing accolade block, keeping the
+ * `SLUG | Tag 🏆👑` shape the transaction commands write. */
+function nicknameWithAccoladeEmote(nickname, emote) {
+  const existingEmotes = nickname.match(nicknameEmoteRegex) ?? [];
+  const nameWithoutEmotes = nickname.replace(nicknameEmoteRegex, ``).trim();
+
+  return `${nameWithoutEmotes} ${existingEmotes.join(``)}${emote}`;
+}
+
+/** Add an accolade's emote to a member's server nickname, preserving the emotes
+ * they already carry. Safe to re-run: an emote already on the nickname is left
+ * alone. Never throws, so one unmanageable member can't abort a bulk award.
+ * @param {GuildMember} guildMember
+ * @param {string} emote
+ * @returns {Promise<{ outcome: string, nickname?: string, error?: Error }>}
+ */
+async function appendAccoladeEmoteToNickname(guildMember, emote) {
+  const currentNickname = guildMember.displayName;
+  if (currentNickname.includes(emote)) return { outcome: NicknameUpdateOutcome.ALREADY_PRESENT };
+  if (!guildMember.manageable) return { outcome: NicknameUpdateOutcome.NOT_MANAGEABLE };
+
+  const updatedNickname = nicknameWithAccoladeEmote(currentNickname, emote);
+  if (updatedNickname.length > MAX_DISCORD_NICKNAME_LENGTH) return { outcome: NicknameUpdateOutcome.TOO_LONG, nickname: updatedNickname };
+
+  try {
+    await guildMember.setNickname(updatedNickname);
+  } catch (error) {
+    return { outcome: NicknameUpdateOutcome.FAILED, nickname: updatedNickname, error: error };
+  }
+
+  return { outcome: NicknameUpdateOutcome.UPDATED, nickname: updatedNickname };
+}
+
+module.exports = {
+  decodeAccoladeData,
+  awardAccoladeIfAbsent,
+  appendAccoladeEmoteToNickname,
+  NicknameUpdateOutcome,
+  MAX_DISCORD_NICKNAME_LENGTH,
+};
