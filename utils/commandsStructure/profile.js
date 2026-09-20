@@ -25,6 +25,18 @@ module.exports = {
             description: `Update your nickname & the database to reflect your new Valorant IGN!`,
             type: ApplicationCommandOptionType.Subcommand,
             required: false,
+            options: [
+                {
+                    name: `sync`,
+                    description: `Sync just this instead of running the full update`,
+                    type: ApplicationCommandOptionType.String,
+                    required: false,
+                    choices: [
+                        { name: `discord`, value: `discord` },
+                        { name: `riot`, value: `riot` },
+                    ],
+                }
+            ]
         },
     ]
 }
