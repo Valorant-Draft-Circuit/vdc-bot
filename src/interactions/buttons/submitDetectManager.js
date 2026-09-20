@@ -29,11 +29,13 @@ module.exports = {
 
 		if (state.pingMessageId) await interaction.channel?.messages.delete(state.pingMessageId).catch(() => undefined);
 
+		// the DEL is the atomic claim: exactly one confirm or cancel click proceeds
+		if (await redis.del(stateKey) === 0) return interaction.deferUpdate().catch(() => undefined);
+
 		const title = state.gameType === GameType.COMBINE ? `Combine Match` : `${state.homeName} vs ${state.awayName}`;
 		const context = formatMatchContext(state);
 
 		if (action === `cancel`) {
-			await redis.del(stateKey);
 			if (state.lockValue) await releaseMatchSubmitLock(state.lockMatchID ?? state.matchID, state.lockValue);
 			const cancelled = new EmbedBuilder({
 				author: { name: `VDC Match Submission` },
@@ -46,8 +48,6 @@ module.exports = {
 		}
 
 		try {
-			// Immediately acknowledge: drop the buttons and show a processing state so the user sees
-			// their click landed while the games submit (which can take a moment).
 			const processing = new EmbedBuilder({
 				author: { name: `VDC Match Submission` },
 				title: title,
@@ -57,7 +57,6 @@ module.exports = {
 				footer: { text: `Valorant Draft Circuit — Match Result Submissions` },
 			});
 			await interaction.update({ embeds: [processing], components: [] });
-			await redis.del(stateKey);
 
 			const submitted = [];
 			const alreadySubmitted = [];

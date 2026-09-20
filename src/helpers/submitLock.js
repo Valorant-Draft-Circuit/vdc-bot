@@ -27,7 +27,19 @@ async function acquireMatchSubmitLock(matchID, { teamName, userId }) {
 		return { ok: false, heldByTeamName: currentValue ? parseTeamName(currentValue) : null };
 	} catch (error) {
 		logger.log(`WARNING`, `submitLock acquire failed for match ${matchID}; proceeding without lock`, error?.stack ?? error);
-		return { ok: true, lockValue: null, degraded: true };
+		return { ok: true, lockValue: null };
+	}
+}
+
+/** Re-arm the lock's TTL (only while still ours) so it outlives the confirm state it guards. */
+async function refreshMatchSubmitLock(matchID, lockValue) {
+	if (!lockValue) return;
+	try {
+		const redis = getRedisClient();
+		const currentValue = await redis.get(matchSubmitLockKey(matchID));
+		if (currentValue === lockValue) await redis.pexpire(matchSubmitLockKey(matchID), LOCK_TTL_MS);
+	} catch (error) {
+		logger.log(`WARNING`, `submitLock refresh failed for match ${matchID}`, error?.stack ?? error);
 	}
 }
 
@@ -40,4 +52,4 @@ async function releaseMatchSubmitLock(matchID, lockValue) {
 	}
 }
 
-module.exports = { matchSubmitLockKey, acquireMatchSubmitLock, releaseMatchSubmitLock };
+module.exports = { acquireMatchSubmitLock, refreshMatchSubmitLock, releaseMatchSubmitLock };
