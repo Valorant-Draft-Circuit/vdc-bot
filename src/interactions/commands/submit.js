@@ -8,6 +8,7 @@ const {
 } = require(`../../core/queue/matchLifecycle`);
 const { detectMatches } = require(`../../helpers/numbers`);
 const { getRedisClient } = require(`../../core/redis`);
+const { acquireMatchSubmitLock, refreshMatchSubmitLock, releaseMatchSubmitLock } = require(`../../helpers/submitLock`);
 const {
    DETECT_STATE_TTL_SECONDS,
    reasonMessage,
@@ -37,7 +38,7 @@ module.exports = {
       if (state === `COMBINES`) type = GameType.COMBINE;
       else if (state === `REGULAR_SEASON`) type = GameType.SEASON;
       else if (state === `PLAYOFFS`) type = GameType.PLAYOFF;
-      else return await interaction.editReply({ content: `The league state enum in the control panel is set incorrectly. Please open a tech ticket.` });
+      else return await interaction.editReply({ content: `VDC is not accepting match submissions at this time. If you believe this is an error, please open a tech ticket.` });
 
       if (url) return await submitFromLink(interaction, { url, submittedTier, type });
       return await submitFromAutoDetection(interaction, { type });
@@ -46,16 +47,16 @@ module.exports = {
 
 /** Legacy path: submit a single game from a tracker.gg link. */
 async function submitFromLink(interaction, { url, submittedTier, type }) {
-   if (!validMatchRegex.test(url)) return await interaction.editReply({ content: `That doesn't look like a valid match URL! Please try again or open a tech ticket!` });
+   if (!validMatchRegex.test(url)) return await interaction.editReply({ content: `That doesn't look like a valid match URL. Please try again or open a tech ticket.` });
 
    const gameID = url.replace(`https://tracker.gg/valorant/match/`, ``);
    const exists = await Games.exists({ id: gameID });
-   if (exists) return await interaction.editReply({ content: `Looks like this match was already submitted!` });
+   if (exists) return await interaction.editReply({ content: `Looks like this match was already submitted.` });
 
    const response = await fetch(`${riotMatchesV1}/${gameID}?api_key=${process.env.VDC_API_KEY}`);
    const data = await response.json();
-   if (data.matchInfo === undefined) return await interaction.editReply({ content: `There was a problem checking Riot's servers! Please try again or open a tech ticket!` });
-   if (data.matchInfo.provisioningFlowId !== `CustomGame`) return await interaction.editReply({ content: `The match you submitted ([\`${gameID}\`](${url})) doesn't look like a custom game! Please double check your match and try again` });
+   if (data.matchInfo === undefined) return await interaction.editReply({ content: `There was a problem checking Riot's servers. Please try again or open a tech ticket.` });
+   if (data.matchInfo.provisioningFlowId !== `CustomGame`) return await interaction.editReply({ content: `The match you submitted ([\`${gameID}\`](${url})) doesn't look like a custom game. Please double check your match and try again.` });
 
    const queueContext = type === GameType.COMBINE
       ? await resolveQueueSubmissionContext(interaction.user.id)
@@ -103,7 +104,6 @@ async function submitFromLink(interaction, { url, submittedTier, type }) {
    return await interaction.editReply({ embeds: [embed] });
 }
 
-/** No link: dispatch to combine or scheduled auto detection. */
 async function submitFromAutoDetection(interaction, { type }) {
    if (type === GameType.COMBINE) return await submitCombineFromAutoDetection(interaction);
    return await submitScheduledFromAutoDetection(interaction, { type });
@@ -155,9 +155,8 @@ async function submitCombineFromAutoDetection(interaction) {
 
 const CAP_BY_MATCH_TYPE = { BO2: 2, BO3: 3, BO5: 5 };
 
-/** Only the home team of the caller's current unplayed scheduled match may submit it. Checked
- * bot-side so away-team players never hit the numbers service. */
-async function resolveHomeTeamGate(discordId) {
+/** The caller's current unplayed scheduled match; the Redis lock, not this, serializes submitters. */
+async function resolveCurrentMatch(discordId) {
    const player = await Player.getBy({ discordID: discordId });
    const teamId = player?.team;
    if (!teamId) return { ok: false, message: `You don't appear to be on a team, so I can't submit a scheduled match for you.` };
@@ -169,33 +168,53 @@ async function resolveHomeTeamGate(discordId) {
          matchType: { in: [MatchType.BO2, MatchType.BO3, MatchType.BO5] },
          OR: [{ home: teamId }, { away: teamId }],
       },
-      include: { Games: true },
+      include: { Games: true, Home: true, Away: true },
       orderBy: { dateScheduled: `asc` },
    });
 
    const currentMatch = matches.find((match) => match.Games.length < (CAP_BY_MATCH_TYPE[match.matchType] ?? Infinity));
    if (!currentMatch) return { ok: false, message: `I couldn't find an unplayed scheduled match for your team.` };
-   if (currentMatch.home !== teamId) return { ok: false, message: `Only the home team submits match results. Ask a home team player to run \`/submit\`.` };
 
-   return { ok: true };
+   const callerTeamName = currentMatch.home === teamId ? currentMatch.Home?.name : currentMatch.Away?.name;
+   return { ok: true, matchID: currentMatch.matchID, callerTeamName: callerTeamName ?? `your team` };
 }
 
-/** Season/playoff: detect the scheduled match's games and confirm before submitting. */
+function contendedMessage(lock) {
+   const submitter = lock.heldByTeamName ? `**${lock.heldByTeamName}**` : `The other team`;
+   return `${submitter} is already submitting this match, so you don't need to. You're all set. (If they don't finish, either team can run \`/submit\` again later.)`;
+}
+
+/** Season/playoff: detect the games and confirm; the lock is held across the confirm step. */
 async function submitScheduledFromAutoDetection(interaction, { type }) {
-   const gate = await resolveHomeTeamGate(interaction.user.id);
-   if (!gate.ok) return await interaction.editReply({ content: gate.message });
+   const current = await resolveCurrentMatch(interaction.user.id);
+   if (!current.ok) return await interaction.editReply({ content: current.message });
+
+   let lockMatchID = current.matchID;
+   let lock = await acquireMatchSubmitLock(lockMatchID, { teamName: current.callerTeamName, userId: interaction.user.id });
+   if (!lock.ok) return await interaction.editReply({ content: contendedMessage(lock) });
 
    let result;
    try {
       result = await detectMatches({ discordUserId: interaction.user.id });
    } catch (error) {
       logger.log(`ERROR`, `Match detection failed`, error.stack);
+      await releaseMatchSubmitLock(lockMatchID, lock.lockValue);
       return await interaction.editReply({ content: `I couldn't reach the numbers service to detect your match. Please try again or submit with a tracker.gg link.` });
    }
 
    if (result.reason) {
+      await releaseMatchSubmitLock(lockMatchID, lock.lockValue);
       if (result.reason === `already_submitted`) return await interaction.editReply({ embeds: [buildAlreadySubmittedEmbed(result)] });
       return await interaction.editReply({ content: reasonMessage(result) });
+   }
+
+   // detect anchors on the lobby actually played, which differs from the caller's earliest
+   // unplayed match when an earlier one was postponed; the lock must guard the detected match
+   if (Number(result.scheduledMatch.matchID) !== Number(lockMatchID)) {
+      await releaseMatchSubmitLock(lockMatchID, lock.lockValue);
+      lockMatchID = Number(result.scheduledMatch.matchID);
+      lock = await acquireMatchSubmitLock(lockMatchID, { teamName: current.callerTeamName, userId: interaction.user.id });
+      if (!lock.ok) return await interaction.editReply({ content: contendedMessage(lock) });
    }
 
    const submittableGames = result.games.filter(isSubmittable);
@@ -210,7 +229,10 @@ async function submitScheduledFromAutoDetection(interaction, { type }) {
 
    const message = await interaction.editReply({ embeds: [embed], components });
 
-   if (!submittableGames.length) return message;
+   if (!submittableGames.length) {
+      await releaseMatchSubmitLock(lockMatchID, lock.lockValue);
+      return message;
+   }
 
    const ping = await interaction.followUp({ content: `<@${interaction.user.id}> confirm your match submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
 
@@ -224,11 +246,14 @@ async function submitScheduledFromAutoDetection(interaction, { type }) {
       homeName: result.scheduledMatch.homeName,
       awayName: result.scheduledMatch.awayName,
       pingMessageId: ping?.id ?? null,
+      lockMatchID: lockMatchID,
+      lockValue: lock.lockValue,
       games: submittableGames.map((game) => ({ game_id: game.game_id, map: game.map })),
    };
 
    const redis = getRedisClient();
    await redis.set(detectStateKey(message.id), JSON.stringify(submissionState), `EX`, DETECT_STATE_TTL_SECONDS);
+   await refreshMatchSubmitLock(lockMatchID, lock.lockValue);
 
    return message;
 }
