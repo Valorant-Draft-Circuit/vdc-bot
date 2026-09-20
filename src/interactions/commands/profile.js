@@ -1,9 +1,11 @@
-const { EmbedBuilder, GuildMember, ChatInputCommandInteraction } = require(`discord.js`);
+const { EmbedBuilder, GuildMember, ChatInputCommandInteraction, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require(`discord.js`);
 const { Player, Franchise, ControlPanel, Roles } = require(`../../../prisma`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { StatusEmotes, ROLES } = require("../../../utils/enums");
 const { updateMeilisearchPlayer } = require("../../../utils/web/vdcWeb");
+const { dedupeNickname } = require(`../../helpers/nickname`);
+const { memberAvatarURL, memberBannerURL } = require(`../../helpers/discordMedia`);
 
 /** Riot's API endpoint to fetch a user's account by their puuid 
  * @TODO Update to the internal VDC endpoint once it's ready */
@@ -22,8 +24,12 @@ module.exports = {
 		switch (_subcommand) {
 			case `user`:
 				return await user(interaction);
-			case `update`:
+			case `update`: {
+				const syncScope = interaction.options.getString(`sync`);
+				if (syncScope === `discord`) return await update(interaction, { skipRiot: true });
+				if (syncScope === `riot`) return await updateRiotIGNs(interaction);
 				return await update(interaction);
+			}
 			default:
 				return await interaction.editReply({ content: `That's not a valid subcommand or this command is a work in progress!` });
 		}
@@ -144,7 +150,110 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 	return await interaction.editReply({ embeds: [embed], ephemeral: false });
 }
 
-async function update(/** @type ChatInputCommandInteraction */ interaction) {
+// grabs everyone's fresh IGNs from riot and swaps the new primary name into the nickname
+async function updateRiotIGNs(/** @type ChatInputCommandInteraction */ interaction) {
+	const progress = [];
+
+	progress.push(`🔍 Searching the VDC database for you & your accounts...`);
+	await interaction.editReply(progress.join(`\n`));
+
+	const player = await Player.getBy({ discordID: interaction.user.id });
+	if (!player || !player.primaryRiotAccountID) {
+		progress[progress.length - 1] =
+			`❌ I looked through our database and I don't see your Riot account linked anywhere! Please link one [here](https://vdc.gg/me)!`;
+		return await interaction.editReply(progress.join(`\n`));
+	}
+
+	progress[progress.length - 1] = `✅ Found user \`${player.PrimaryRiotAccount.riotIGN}\`!`;
+	await interaction.editReply(progress.join(`\n`));
+
+	progress.push(`🔃 Fetching your current IGNs from Riot's servers...`);
+	await interaction.editReply(progress.join(`\n`));
+
+	const riotAccounts = player.Accounts.filter((account) => account.provider === `riot`);
+	const changes = [];
+	let primaryRename = null;
+	for (const account of riotAccounts) {
+		const response = await fetch(`${getAccountByPuuid}/${account.providerAccountId}?api_key=${process.env.VDC_API_KEY}`);
+		if (!response.ok) {
+			progress[progress.length - 1] =
+				`❌ There was a problem checking Riot's API for \`${account.riotIGN ?? account.providerAccountId}\`! Please try again later and/or let a member of the tech team know!`;
+			changes.forEach((line) => progress.push(line));
+			if (changes.length > 0) await updateMeilisearchPlayer(player.id);
+			return await interaction.editReply(progress.join(`\n`));
+		}
+
+		const { gameName, tagLine } = await response.json();
+		const updatedIGN = `${gameName}#${tagLine}`;
+		if (updatedIGN === account.riotIGN) continue;
+
+		const isPrimaryAccount = account.providerAccountId === player.primaryRiotAccountID;
+		const oldGameName = account.riotIGN?.split(`#`)[0] ?? null;
+		if (isPrimaryAccount && oldGameName && oldGameName !== gameName) primaryRename = { oldGameName, newGameName: gameName };
+
+		await prisma.account.update({
+			where: { providerAccountId: account.providerAccountId },
+			data: { riotIGN: updatedIGN },
+		});
+		changes.push(`> ✅ \`${account.riotIGN ?? `(not set)`}\` -> \`${updatedIGN}\``);
+	}
+
+	if (changes.length === 0) {
+		progress[progress.length - 1] = `✅ Your Riot IGNs are already up to date!`;
+		return await interaction.editReply(progress.join(`\n`));
+	}
+
+	progress[progress.length - 1] = `✅ Updated \`${changes.length}\` IGN(s)!`;
+	changes.forEach((line) => progress.push(line));
+	await interaction.editReply(progress.join(`\n`));
+
+	await updateMeilisearchPlayer(player.id);
+
+	if (primaryRename) {
+		progress.push(`🔃 Updating your server nickname...`);
+		await interaction.editReply(progress.join(`\n`));
+
+		progress[progress.length - 1] = await renameInNickname(interaction, player, primaryRename);
+		await interaction.editReply(progress.join(`\n`));
+	}
+
+	progress.push(`\n✅ Your Riot IGNs are up to date!`);
+	return await interaction.editReply(progress.join(`\n`));
+}
+
+// offers dedupe when someone's name repeats their own team tag (FF | FF Player)
+async function offerNicknameDedupe(interaction, slug, nickname) {
+	const dedupedNickname = dedupeNickname(slug, nickname);
+	if (!dedupedNickname) return;
+
+	const confirm = new ButtonBuilder({ customId: `nickdedupe_confirm`, label: `Dedupe it`, style: ButtonStyle.Success });
+	const keep = new ButtonBuilder({ customId: `nickdedupe_keep`, label: `Keep as is`, style: ButtonStyle.Secondary });
+	await interaction.followUp({
+		content: `<@${interaction.user.id}> your nickname repeats your franchise tag. Want \`${nickname}\` deduped to \`${dedupedNickname}\`?`,
+		components: [new ActionRowBuilder({ components: [confirm, keep] })],
+		allowedMentions: { users: [interaction.user.id] },
+	}).catch(() => null);
+}
+
+// swaps the renamed game name into the nickname without touching the prefix or accolades
+async function renameInNickname(interaction, player, { oldGameName, newGameName }) {
+	const guildMember = await interaction.guild.members.fetch(interaction.user.id);
+	const baseNickname = guildMember.nickname ?? guildMember.user.username;
+
+	if (!guildMember.manageable) return `❌ I don't have permission to update your server nickname... please create a tech ticket.`;
+	if (!baseNickname.includes(oldGameName)) return `🤔 I left your nickname alone since it doesn't contain \`${oldGameName}\`... run \`/profile update\` to rebuild it.`;
+
+	const newNickname = baseNickname.replace(oldGameName, newGameName);
+	try {
+		await guildMember.setNickname(newNickname);
+		await offerNicknameDedupe(interaction, player.Team?.Franchise?.slug ?? null, newNickname);
+		return `✅ Your server nickname has been updated to \`${newNickname}\`!`;
+	} catch (error) {
+		logger.log(`WARNING`, `Failed to rename ${interaction.user.id} to ${newNickname}`, error.stack);
+		return `❌ I couldn't set your nickname to \`${newNickname}\`... please run \`/profile update\` or create a tech ticket.`;
+	}
+}
+async function update(/** @type ChatInputCommandInteraction */ interaction, { skipRiot = false } = {}) {
 	const userID = interaction.user.id;
 	let progress = []
 
@@ -185,82 +294,87 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
 
-	// Get most recent riotIGN from Riot
-	// --------------------------------------------------------------------------------------------
-	progress.push(`🔃 Fetching your current Riot IGN from Riot's servers...`);
-	await interaction.editReply(progress.join(`\n`));
-
-	// get the player's updated IGN from Riot's accountByPuuid endpoint
 	const puuid = player.primaryRiotAccountID;
-	const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
-	if (!response.ok) {
-		progress[progress.length - 1] =
-			`❌ There was a problem checking Riot's API! Please try again later and/or let a member of the tech team know!`;
-		return await interaction.editReply(progress.join(`\n`));
-	}
+	let updatedIGN = null;
 
-	const { gameName, tagLine } = await response.json();
-	const updatedIGN = `${gameName}#${tagLine}`;
-
-	progress[progress.length - 1] = `✅ Received IGN \`${updatedIGN}\` from Riot!`;
-	await interaction.editReply(progress.join(`\n`));
-	// --------------------------------------------------------------------------------------------
-
-
-	// For each alt account, update the database
-	// --------------------------------------------------------------------------------------------
-	progress.push(`🔍 Looking for your alt accounts...`);
-	await interaction.editReply(progress.join(`\n`));
-
-	// get the total number of alts the user has
-	const altAccounts = player.Accounts.filter(a => a.provider == `riot` && a.providerAccountId !== puuid);
-
-	if (altAccounts.length == 0) {				// NO ALTS
-		progress[progress.length - 1] = `✅ You have no alt accounts registered with VDC!`;
+	if (!skipRiot) {
+		// Get most recent riotIGN from Riot
+		// --------------------------------------------------------------------------------------------
+		progress.push(`🔃 Fetching your current Riot IGN from Riot's servers...`);
 		await interaction.editReply(progress.join(`\n`));
 
-	} else {									// ALTS
-		progress[progress.length - 1] = `✅ Found \`${altAccounts.length}\` alt accounts registered with VDC!`;
-		await interaction.editReply(progress.join(`\n`));
-
-		// iterate through each alt 
-		for (let i = 0; i < altAccounts.length; i++) {
-			const altAccount = altAccounts[i];
-
-			progress.push(`> 🔃 Updating account with IGN \`${altAccount.riotIGN}\`...`);
-			await interaction.editReply(progress.join(`\n`));
-
-			// get the alt's updated IGN from Riot's accountByPuuid endpoint
-			const puuid = altAccount.providerAccountId;
-			const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
-			if (!response.ok) {
-				progress[progress.length - 1] =
-					`> ❌ There was a problem checking Riot's API for account \`${altAccount.riotIGN}\`! Please try again later and/or let a member of the tech team know!`;
-				return await interaction.editReply(progress.join(`\n`));
-			}
-
-			const { gameName, tagLine } = await response.json();
-			const updatedAltIGN = `${gameName}#${tagLine}`;
-
-			// update the database
-			const updatedAltAccount = await prisma.account.update({
-				where: { providerAccountId: puuid },
-				data: { riotIGN: updatedAltIGN }
-			});
-
-			if (updatedAltAccount.riotIGN !== updatedAltIGN) {
-				progress[progress.length - 1] =
-					`> ❌ There was an error updating the databse for \`${altAccount.riotIGN}\`! Please try again later and/or let a member of the tech team know!`;
-				return await interaction.editReply(progress.join(`\n`));
-			}
-
-			progress[progress.length - 1] = `> ✅ Updated alt \`${i + 1}\` of \`${altAccounts.length}\` (\`${altAccount.riotIGN}\` -> \`${updatedAltIGN}\`)`;
-			await interaction.editReply(progress.join(`\n`));
-
+		// get the player's updated IGN from Riot's accountByPuuid endpoint
+		const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
+		if (!response.ok) {
+			progress[progress.length - 1] =
+				`❌ There was a problem checking Riot's API! Please try again later and/or let a member of the tech team know!`;
+			return await interaction.editReply(progress.join(`\n`));
 		}
-	}
-	// --------------------------------------------------------------------------------------------
 
+		const { gameName, tagLine } = await response.json();
+		updatedIGN = `${gameName}#${tagLine}`;
+
+		progress[progress.length - 1] = `✅ Received IGN \`${updatedIGN}\` from Riot!`;
+		await interaction.editReply(progress.join(`\n`));
+		// --------------------------------------------------------------------------------------------
+
+
+		// For each alt account, update the database
+		// --------------------------------------------------------------------------------------------
+		progress.push(`🔍 Looking for your alt accounts...`);
+		await interaction.editReply(progress.join(`\n`));
+
+		// get the total number of alts the user has
+		const altAccounts = player.Accounts.filter(a => a.provider == `riot` && a.providerAccountId !== puuid);
+
+		if (altAccounts.length == 0) {				// NO ALTS
+			progress[progress.length - 1] = `✅ You have no alt accounts registered with VDC!`;
+			await interaction.editReply(progress.join(`\n`));
+
+		} else {									// ALTS
+			progress[progress.length - 1] = `✅ Found \`${altAccounts.length}\` alt accounts registered with VDC!`;
+			await interaction.editReply(progress.join(`\n`));
+
+			// iterate through each alt 
+			for (let i = 0; i < altAccounts.length; i++) {
+				const altAccount = altAccounts[i];
+
+				progress.push(`> 🔃 Updating account with IGN \`${altAccount.riotIGN}\`...`);
+				await interaction.editReply(progress.join(`\n`));
+
+				// get the alt's updated IGN from Riot's accountByPuuid endpoint
+				const puuid = altAccount.providerAccountId;
+				const response = await fetch(`${getAccountByPuuid}/${puuid}?api_key=${process.env.VDC_API_KEY}`);
+				if (!response.ok) {
+					progress[progress.length - 1] =
+						`> ❌ There was a problem checking Riot's API for account \`${altAccount.riotIGN}\`! Please try again later and/or let a member of the tech team know!`;
+					return await interaction.editReply(progress.join(`\n`));
+				}
+
+				const { gameName, tagLine } = await response.json();
+				const updatedAltIGN = `${gameName}#${tagLine}`;
+
+				// update the database
+				const updatedAltAccount = await prisma.account.update({
+					where: { providerAccountId: puuid },
+					data: { riotIGN: updatedAltIGN }
+				});
+
+				if (updatedAltAccount.riotIGN !== updatedAltIGN) {
+					progress[progress.length - 1] =
+						`> ❌ There was an error updating the databse for \`${altAccount.riotIGN}\`! Please try again later and/or let a member of the tech team know!`;
+					return await interaction.editReply(progress.join(`\n`));
+				}
+
+				progress[progress.length - 1] = `> ✅ Updated alt \`${i + 1}\` of \`${altAccounts.length}\` (\`${altAccount.riotIGN}\` -> \`${updatedAltIGN}\`)`;
+				await interaction.editReply(progress.join(`\n`));
+
+			}
+		}
+		// --------------------------------------------------------------------------------------------
+
+
+	}
 
 	// Get our current info about the player & update the database to the most recent ign
 	// --------------------------------------------------------------------------------------------
@@ -270,19 +384,26 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	const ignFromDB = await Player.getIGNby({ discordID: userID });
 
 	/** @type GuildMember */
-	const guildMember = await interaction.guild.members.fetch(userID);
-	const updatedPlayer = await prisma.account.update({
-		where: { providerAccountId: puuid },
-		data: { riotIGN: updatedIGN }
-	});
-	if (updatedPlayer.riotIGN !== updatedIGN) {
-		progress[progress.length - 1] =
-			`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
-		return await interaction.editReply(progress.join(`\n`));
-	}
+	const guildMember = await interaction.guild.members.fetch({ user: userID, force: true });
+	if (skipRiot) {
+		updatedIGN = ignFromDB;
+		progress[progress.length - 1] = `✅ Using your IGN from the database (\`${ignFromDB}\`)`;
+	} else {
+		const updatedPlayer = await prisma.account.update({
+			where: { providerAccountId: puuid },
+			data: { riotIGN: updatedIGN }
+		});
+		if (updatedPlayer.riotIGN !== updatedIGN) {
+			progress[progress.length - 1] =
+				`❌ Looks like there was an error and the database wasn't updated! Please try again later and/or let a member of the tech team know!`;
+			return await interaction.editReply(progress.join(`\n`));
+		}
 
-	progress[progress.length - 1] = `✅ Updating the database to your latest IGN (\`${ignFromDB}\` -> \`${updatedIGN}\`)`;
+		progress[progress.length - 1] = `✅ Updating the database to your latest IGN (\`${ignFromDB}\` -> \`${updatedIGN}\`)`;
+	}
 	await interaction.editReply(progress.join(`\n`));
+
+	const gameName = updatedIGN ? updatedIGN.split(`#`)[0] : discordUsername;
 	// --------------------------------------------------------------------------------------------
 
 
@@ -294,7 +415,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	// check to make sure the bot can update the user's nickname
 	if (!guildMember.manageable) {
 		progress[progress.length - 1] =
-			`❌ The database was synced with Discord & Riot (Username: \`${discordUsername}\`, IGN: \`${updatedIGN}\`), but I can't update you in the server- I have insufficient permissions! You will need to update your roles & nickname manually!`;
+			`❌ I don't have permission to update your roles & nickname... please create a tech ticket. Your database info is up to date (Username: \`${discordUsername}\`, IGN: \`${updatedIGN}\`).`;
 		return await interaction.editReply(progress.join(`\n`));
 	}
 
@@ -607,6 +728,8 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 
 	progress[progress.length - 1] = `✅ Your server nickname has been updated to \`${nickname}\`!`;
 	await interaction.editReply(progress.join(`\n`));
+
+	await offerNicknameDedupe(interaction, slug, nickname);
 	// --------------------------------------------------------------------------------------------
 
 
@@ -626,12 +749,10 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 	progress.push(`🔃 Checking if your pfp/banner is valid...`);
 	await interaction.editReply(progress.join(`\n`));
 
-	const imageLookup = await fetch(player.image)
-	if (!imageLookup.ok) {
+	const guildMemberAvatar = memberAvatarURL(guildMember);
+	if (guildMemberAvatar !== player.image) {
 		progress[progress.length - 1] = `🤔 Seems like you changed your profile picture and we missed it. We'll try to update it.`;
 		await interaction.editReply(progress.join(`\n`));
-
-		const guildMemberAvatar = guildMember.displayAvatarURL({ format: "png", dynamic: true, size: 2048 });
 
 		const user = await prisma.user.update({
 			where: { id: player.id },
@@ -646,8 +767,8 @@ async function update(/** @type ChatInputCommandInteraction */ interaction) {
 		await interaction.editReply(progress.join(`\n`));
 	}
 	
-	const user = await guildMember.user.fetch(); 
-	const guildUserBanner = user.bannerURL({ dynamic: true, size: 2048 });
+	await guildMember.user.fetch();
+	const guildUserBanner = memberBannerURL(guildMember);
 	
 	if (guildUserBanner !== player.banner) {
 		progress[progress.length - 1] = `🤔 Seems like you changed your banner. We'll try to update it.`;
