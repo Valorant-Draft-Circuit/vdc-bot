@@ -32,6 +32,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
                     AGM2: { include: { Accounts: true } },
                     AGM3: { include: { Accounts: true } },
                     AGM4: { include: { Accounts: true } },
+                    AGM5: { include: { Accounts: true } },
                 }
             },
             Player: { include: { PrimaryRiotAccount: true, Accounts: true, Status: true } }
@@ -113,6 +114,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
                 franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
                 franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
                 franchise.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+                franchise.AGM5?.Accounts.find(a => a.provider == `discord`).providerAccountId,
             ].filter(v => v !== undefined);
 
             const dmEmbed = new EmbedBuilder({

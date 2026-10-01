@@ -31,6 +31,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
         franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
         franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
         franchise.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+        franchise.AGM5?.Accounts.find(a => a.provider == `discord`).providerAccountId,
     ].filter(v => v !== undefined);
 
 
@@ -67,6 +68,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             else if (franchise.agm2ID == player.id) agmNumber = 2;
             else if (franchise.agm3ID == player.id) agmNumber = 3;
             else if (franchise.agm4ID == player.id) agmNumber = 4;
+            else if (franchise.agm5ID == player.id) agmNumber = 5;
             else return await interaction.editReply(`This player is not an AGM of this franchise`);
 
             await prisma.franchise.update({ where: { id: franchise.id }, data: { [`agm${agmNumber}ID`]: null } });
@@ -97,7 +99,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
     } else {
         const allGMIDs = (await prisma.franchise.findMany({
             where: { active: true },
-            select: { gmID: true, agm1ID: true, agm2ID: true, agm3ID: true, agm4ID: true }
+            select: { gmID: true, agm1ID: true, agm2ID: true, agm3ID: true, agm4ID: true, agm5ID: true}
         })).map(gms => Object.values(gms)).flat().filter(id => id != null);
 
         if (allGMIDs.includes(player.id)) return await interaction.editReply(`This player is already in franchise management! Please remove them from their current position to add them to their new position!`);
@@ -143,6 +145,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
             else if (franchise.agm2ID == null) openSlot = 2;
             else if (franchise.agm3ID == null) openSlot = 3;
             else if (franchise.agm4ID == null) openSlot = 4;
+            else if (franchise.agm5ID == null) openSlot = 5;
             else return await interaction.editReply(`no open slots`);
 
             await prisma.franchise.update({ where: { id: franchise.id }, data: { [`agm${openSlot}ID`]: player.id } });

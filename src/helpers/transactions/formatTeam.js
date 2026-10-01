@@ -3,6 +3,7 @@ const TIER_LABELS = {
   PROSPECT: `Prospect`,
   APPRENTICE: `Apprentice`,
   EXPERT: `Expert`,
+  LEGEND: `Legend`,
   MYTHIC: `Mythic`,
   MIXED: `Mixed`,
 };

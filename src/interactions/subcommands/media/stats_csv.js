@@ -5,7 +5,7 @@ let increment = 0
 async function statsCsv(/** @type ChatInputCommandInteraction */ interaction, { gameType }) {
     interaction.editReply("Generating the CSV, this may take a minute...");
     const season = await ControlPanel.getSeason();
-    const stats = (await getPlayerStats(Tier.RECRUIT, gameType, season)).concat(await getPlayerStats(Tier.PROSPECT, gameType, season), await getPlayerStats(Tier.APPRENTICE, gameType, season), await getPlayerStats(Tier.EXPERT, gameType, season), await getPlayerStats(Tier.MYTHIC, gameType, season))
+    const stats = (await getPlayerStats(Tier.RECRUIT, gameType, season)).concat(await getPlayerStats(Tier.PROSPECT, gameType, season), await getPlayerStats(Tier.APPRENTICE, gameType, season), await getPlayerStats(Tier.EXPERT, gameType, season), await getPlayerStats(Tier.LEGEND, gameType, season), await getPlayerStats(Tier.MYTHIC, gameType, season))
     /* 
       OK i have a moral obligation to explain what this shit does.
       Basically, Nuke wanted code to generate a CSV file to import into sheets of all the stats of the player through the season.
@@ -41,6 +41,11 @@ async function statsCsv(/** @type ChatInputCommandInteraction */ interaction, { 
                   case mmrcaps.EXPERT.min <= mmr && mmr <= mmrcaps.EXPERT.max:
                       // EXPERT PLAYER
                       index = stats.findIndex((stat) => stat.id === matches.filter(a => a.tier !== 'EXPERT')[0].id)
+                      stats.splice(index,1);
+                      break;
+                  case mmrcaps.LEGEND.min <= mmr && mmr <= mmrcaps.LEGEND.max:
+                      // LEGEND PLAYER
+                      index = stats.findIndex((stat) => stat.id === matches.filter(a => a.tier !== 'LEGEND')[0].id)
                       stats.splice(index,1);
                       break;
                   case mmrcaps.MYTHIC.min <= mmr && mmr <= mmrcaps.MYTHIC.max:
@@ -112,6 +117,7 @@ async function getPlayerStats(tier, gameType, season) {
     },
     _avg: {
       acs: true,
+      performance: true,
       ratingAttack: true,
       ratingDefense: true,
       kast: true,
@@ -228,6 +234,7 @@ async function formatStats(playerStats, gameType, season) {
     matchesPlayed: stats._count.userID,
     rounds: stats.totalRounds,
     acs: stats._avg.acs,
+    performance: stats._avg.performance,
     rating: (stats._avg.ratingAttack + stats._avg.ratingDefense) / 2,
     attackRating: stats._avg.ratingAttack,
     defenseRating: stats._avg.ratingDefense,

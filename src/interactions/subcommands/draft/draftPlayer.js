@@ -25,6 +25,7 @@ const TIER_DRAFT_ENABLE = {
     PROSPECT: false,
     APPRENTICE: false,
     EXPERT: false,
+    LEGEND: false,
     MYTHIC: false,
 }
 

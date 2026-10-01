@@ -32,7 +32,8 @@ const tierSortWeights = {
     PROSPECT: 2,
     APPRENTICE: 3,
     EXPERT: 4,
-    MYTHIC: 5
+    LEGEND: 5,
+    MYTHIC: 6
 };
 
 
@@ -151,6 +152,7 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
 
     // Team Champions
     const mChampion = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `WIN`);
+    const lChampion = accolades.filter(m => m.tier == Tier.LEGEND && m.shorthand == `WIN`);
     const eChampion = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `WIN`);
     const aChampion = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `WIN`);
     const pChampion = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `WIN`);
@@ -158,6 +160,7 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
 
     // FM Creator of Champions
     const mManagement = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `WIN_FM`);
+    const lManagement = accolades.filter(m => m.tier == Tier.LEGEND && m.shorthand == `WIN_FM`);
     const eManagement = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `WIN_FM`);
     const aManagement = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `WIN_FM`);
     const pManagement = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `WIN_FM`);
@@ -165,6 +168,7 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
 
     // Finals Substitutes
     const mSubstitute = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `WIN_SUB`);
+    const lSubstitute = accolades.filter(m => m.tier == Tier.LEGEND && m.shorthand == `WIN_SUB`);
     const eSubstitute = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `WIN_SUB`);
     const aSubstitute = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `WIN_SUB`);
     const pSubstitute = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `WIN_SUB`);
@@ -172,6 +176,7 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
 
     // all stars
     const mAllStar = accolades.filter(m => m.tier == Tier.MYTHIC && m.shorthand == `AST`);
+    const lAllStar = accolades.filter(m => m.tier == Tier.LEGEND && m.shorthand == `AST`);
     const eAllStar = accolades.filter(m => m.tier == Tier.EXPERT && m.shorthand == `AST`);
     const aAllStar = accolades.filter(m => m.tier == Tier.APPRENTICE && m.shorthand == `AST`);
     const pAllStar = accolades.filter(m => m.tier == Tier.PROSPECT && m.shorthand == `AST`);
@@ -210,6 +215,13 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
     if (eSubstitute.length !== 0) eFields.push({ name: `Expert Substitutes`, value: eSubstitute.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true });
     else eFields.push({ name: `\u200B`, value: `\u200B`, inline: true });
 
+    //legend
+    const lFields = [
+        { name: `Legend`, value: lChampion.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
+        { name: `Legend Franchise Management`, value: lManagement.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
+    ];
+    if (lSubstitute.length !== 0) lFields.push({ name: `Legend Substitutes`, value: lSubstitute.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true });
+    else lFields.push({ name: `\u200B`, value: `\u200B`, inline: true });
 
     //mythic
     const mFields = [
@@ -238,6 +250,8 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
                 ...aFields,
 
                 ...eFields,
+
+                ...lFields,
 
                 ...mFields,
 
@@ -301,6 +315,7 @@ async function historySeason(/** @type ChatInputCommandInteraction */ interactio
                 { name: `Apprentice All Stars`, value: aAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
                 { name: `Expert All Stars`, value: eAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
                 { name: `\u200B`, value: `\u200B`, inline: true },
+                { name: `Legend All Stars`, value: lAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
                 { name: `Mythic All Stars`, value: mAllStar.map(ast => `[\`${ast.Player.PrimaryRiotAccount.riotIGN}\`](${`https://tracker.gg/valorant/profile/riot/${encodeURIComponent(ast.Player.PrimaryRiotAccount)}`})`).join(`\n`), inline: true },
 
             ],

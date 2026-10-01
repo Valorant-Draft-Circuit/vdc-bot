@@ -19,6 +19,7 @@ async function loadRebuildContext() {
 			AGM2: { include: searchSelectParams },
 			AGM3: { include: searchSelectParams },
 			AGM4: { include: searchSelectParams },
+			AGM5: { include: searchSelectParams },
 		}
 	})).map(f => {
 		return [
@@ -27,6 +28,7 @@ async function loadRebuildContext() {
 			f.AGM2?.Accounts[0].providerAccountId,
 			f.AGM3?.Accounts[0].providerAccountId,
 			f.AGM4?.Accounts[0].providerAccountId,
+			f.AGM5?.Accounts[0].providerAccountId,
 		]
 	}).flat().filter(v => v !== undefined);
 
@@ -116,6 +118,7 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 					{ AGM2: gmFranchiseSearchParam },
 					{ AGM3: gmFranchiseSearchParam },
 					{ AGM4: gmFranchiseSearchParam },
+					{ AGM5: gmFranchiseSearchParam },
 				]
 			},
 			include: {

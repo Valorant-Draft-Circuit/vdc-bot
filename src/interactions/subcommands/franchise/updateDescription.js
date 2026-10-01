@@ -35,6 +35,7 @@ async function confirmUpdate(interaction) {
 			AGM2: { include: { Accounts: true } },
 			AGM3: { include: { Accounts: true } },
 			AGM4: { include: { Accounts: true } },
+			AGM5: { include: { Accounts: true } },
 		}
 	})).map(f => {
 		return [
@@ -43,6 +44,7 @@ async function confirmUpdate(interaction) {
 			f.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 			f.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 			f.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+			f.AGM5?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 		]
 	}).flat().filter(v => v !== undefined);
 
@@ -68,6 +70,7 @@ async function confirmUpdate(interaction) {
 				{ AGM2: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
 				{ AGM3: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
 				{ AGM4: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
+				{ AGM5: { Accounts: { some: { providerAccountId: interaction.user.id } } } },
 			]
 		},
 		include: { Brand: true }

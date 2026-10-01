@@ -1,7 +1,7 @@
 const { LeagueStatus } = require(`@prisma/client`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 
-const defaultStatuses = [LeagueStatus.PENDING, LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT, LeagueStatus.SIGNED, LeagueStatus.GENERAL_MANAGER];
+const defaultStatuses = [LeagueStatus.PENDING, LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT, LeagueStatus.SIGNED, LeagueStatus.GENERAL_MANAGER, LeagueStatus.MANUAL_REVIEW];
 
 module.exports = {
     name: `player-league-status`,

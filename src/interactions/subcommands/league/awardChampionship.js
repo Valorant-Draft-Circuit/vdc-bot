@@ -53,6 +53,7 @@ async function deriveChampionshipAwards(matchId) {
 			AGM2: { include: { Accounts: true } },
 			AGM3: { include: { Accounts: true } },
 			AGM4: { include: { Accounts: true } },
+			AGM5: { include: { Accounts: true } },
 		},
 	});
 
@@ -61,7 +62,7 @@ async function deriveChampionshipAwards(matchId) {
 		discordID: discordIdFromAccounts(player.Accounts),
 	}));
 
-	const fmMembers = [franchise?.GM, franchise?.AGM1, franchise?.AGM2, franchise?.AGM3, franchise?.AGM4].filter((member) => member != null);
+	const fmMembers = [franchise?.GM, franchise?.AGM1, franchise?.AGM2, franchise?.AGM3, franchise?.AGM4, franchise?.AGM5].filter((member) => member != null);
 	const fmRecipients = fmMembers.map((member) => ({
 		userID: member.id,
 		discordID: discordIdFromAccounts(member.Accounts),

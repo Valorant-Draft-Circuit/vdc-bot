@@ -3,6 +3,7 @@ export const COLORS = {
     PROSPECT: 0xFEC335,
     APPRENTICE: 0x72C357,
     EXPERT: 0x04AEE4,
+    LEGEND: 0xFCB4EE, 
     MYTHIC: 0xA657A6,
     RED: `#DE3845`,
     WHITE: `#DE3845`,

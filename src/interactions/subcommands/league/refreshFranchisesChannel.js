@@ -9,7 +9,8 @@ const tierSortWeights = {
     PROSPECT: 2,
     APPRENTICE: 3,
     EXPERT: 4,
-    MYTHIC: 5
+    LEGEND: 5,
+    MYTHIC: 6
 };
 
 async function refreshFranchisesChannel(/** @type ChatInputCommandInteraction */ interaction) {
@@ -27,6 +28,7 @@ async function refreshFranchisesChannel(/** @type ChatInputCommandInteraction */
             AGM2: { include: { Accounts: true } },
             AGM3: { include: { Accounts: true } },
             AGM4: { include: { Accounts: true } },
+            AGM5: { include: { Accounts: true } },
         }
     });
 
@@ -44,6 +46,7 @@ async function refreshFranchisesChannel(/** @type ChatInputCommandInteraction */
             franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
             franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
             franchise.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+            franchise.AGM5?.Accounts.find(a => a.provider == `discord`).providerAccountId,
         ].filter(v => v !== undefined);
 
         const embedAccentColor = franchise.Brand.colorPrimary ? Number(franchise.Brand.colorPrimary) : 0xE92929;

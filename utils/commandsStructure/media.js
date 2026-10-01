@@ -101,6 +101,7 @@ module.exports = {
                     choices: [
                         { name: `Combine`, value: GameType.COMBINE },
                         { name: 'Regular Season', value: GameType.SEASON },
+                        { name: `Playoffs`, value: GameType.PLAYOFF },
                     ]
                 },
             ]
