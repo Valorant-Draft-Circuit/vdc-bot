@@ -652,6 +652,7 @@ async function validatePlayerTrade(interaction, playerArray, franchiseToReceive)
 		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
 		{ name: Tier.LEGEND, high: legendMMRCap, low: expertMMRCap },
 		{ name: Tier.MYTHIC, high: 999, low: legendMMRCap },
+
 	];
 
 	const playerTierArr = playerDataArray.map((pdr) => {
