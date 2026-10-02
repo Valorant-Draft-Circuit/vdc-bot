@@ -155,6 +155,7 @@ module.exports = {
                         { name: `Prospect`, value: Tier.PROSPECT },
                         { name: `Apprentice`, value: Tier.APPRENTICE },
                         { name: `Expert`, value: Tier.EXPERT },
+                        { name: `Legend`, value: Tier.LEGEND },
                         { name: `Mythic`, value: Tier.MYTHIC },
                     ]
                 }
@@ -249,6 +250,7 @@ module.exports = {
                         { name: `PROSPECT`, value: `PROSPECT` },
                         { name: `APPRENTICE`, value: `APPRENTICE` },
                         { name: `EXPERT`, value: `EXPERT` },
+                        { name: `Legend`, value: `LEGEND` },
                         { name: `MYTHIC`, value: `MYTHIC` },
                         { name: `MIXED`, value: `MIXED` },
                     ]

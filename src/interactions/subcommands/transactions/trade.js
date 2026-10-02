@@ -20,7 +20,8 @@ const tierSortWeights = {
 	PROSPECT: 2,
 	APPRENTICE: 3,
 	EXPERT: 4,
-	MYTHIC: 5
+	LEGEND: 5,
+	MYTHIC: 6
 }
 
 /** Initiate a trade
@@ -641,14 +642,16 @@ async function validatePlayerTrade(interaction, playerArray, franchiseToReceive)
 	const prospectMMRCap = mmrCapResponse.find((r) => r.name === `prospect_mmr_cap_player`).value;
 	const apprenticeMMRCap = mmrCapResponse.find((r) => r.name === `apprentice_mmr_cap_player`).value;
 	const expertMMRCap = mmrCapResponse.find((r) => r.name === `expert_mmr_cap_player`).value;
+	const legendMMRCap = mmrCapResponse.find((r) => r.name === `legend_mmr_cap_player`).value;
 
 	// store all MMR bounds in array and grab the relevant MMR bounds to store in tierMMR
 	const tierMMRBounds = [
 		{ name: Tier.RECRUIT, high: recruitMMRCap, low: 0 },
-		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap },
-		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap },
-		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
-		{ name: Tier.MYTHIC, high: 999, low: expertMMRCap },
+		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap+1  },
+		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap+1 },
+		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap+1 },
+		{ name: Tier.LEGEND, high: legendMMRCap, low: expertMMRCap+1 },
+		{ name: Tier.MYTHIC, high: 999, low: legendMMRCap+1 },
 	];
 
 	const playerTierArr = playerDataArray.map((pdr) => {
@@ -708,14 +711,16 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 	const prospectMMRCap = mmrCapResponse.find((r) => r.name === `prospect_mmr_cap_player`).value;
 	const apprenticeMMRCap = mmrCapResponse.find((r) => r.name === `apprentice_mmr_cap_player`).value;
 	const expertMMRCap = mmrCapResponse.find((r) => r.name === `expert_mmr_cap_player`).value;
+	const legendMMRCap = mmrCapResponse.find((r) => r.name === `legend_mmr_cap_player`).value;
 
 	// store all MMR bounds in array and grab the relevant MMR bounds to store in tierMMR
 	const tierMMRBounds = [
 		{ name: Tier.RECRUIT, high: recruitMMRCap, low: 0 },
-		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap },
-		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap },
-		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
-		{ name: Tier.MYTHIC, high: 999, low: expertMMRCap },
+		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap + 1 },
+		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap + 1 },
+		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap + 1 },
+		{ name: Tier.LEGEND, high: legendMMRCap, low: expertMMRCap + 1 },
+		{ name: Tier.MYTHIC, high: 999, low: legendMMRCap + 1 },
 	];
 
 	const playersToUpdateArray = playerDataArray.map((pdr) => {
@@ -787,6 +792,7 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 					AGM2: { include: { Accounts: true } },
 					AGM3: { include: { Accounts: true } },
 					AGM4: { include: { Accounts: true } },
+					AGM5: { include: { Accounts: true } },
 				}
 			});
 
@@ -799,6 +805,7 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 				fchse.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 				fchse.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 				fchse.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+				fchse.AGM5?.Accounts.find(a => a.provider == `discord`).providerAccountId,
 			].filter(v => v !== undefined);
 
 

@@ -71,6 +71,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
         TIER: {
             // Regular tier roles
             MYTHIC: "967698140612395018",
+            LEGEND: "1553201009654763650",
             EXPERT: "967697939772354600",
             APPRENTICE: "973344710540271666",
             PROSPECT: "966106018796941392",
@@ -78,6 +79,7 @@ export const ROLES = !Boolean(Number(process.env.PROD)) ?
 
             // Free agent tier roles
             MYTHIC_FREE_AGENT: "1028478484349206572",
+            LEGEND_FREE_AGENT: "1555053327694176328",
             EXPERT_FREE_AGENT: "1028478833055240243",
             APPRENTICE_FREE_AGENT: "1028478841611620463",
             PROSPECT_FREE_AGENT: "1028478846753837106",

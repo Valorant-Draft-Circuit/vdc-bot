@@ -9,7 +9,7 @@ const channelNames = [
 	`Bucky`, `Judge`,
 
 	// rifles
-	`Bulldog`, `Guardian`, `Phantom`, `Vandal`,
+	`Bulldog`, `Guardian`, `Phantom`, `Vandal`, `Warden`,
 
 	// snipers
 	`Marshal`, `Outlaw`, `Operator`,

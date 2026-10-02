@@ -118,6 +118,9 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
             case tierLines.EXPERT.min < mmrBase && mmrBase < tierLines.EXPERT.max:
                 await guildMember.roles.add([ROLES.TIER.EXPERT, ROLES.TIER.EXPERT_FREE_AGENT]);
                 break;
+            case tierLines.LEGEND.min < mmrBase && mmrBase < tierLines.LEGEND.max:
+                await guildMember.roles.add([ROLES.TIER.LEGEND, ROLES.TIER.LEGEND_FREE_AGENT]);
+                break;
             case tierLines.MYTHIC.min < mmrBase && mmrBase < tierLines.MYTHIC.max:
                 await guildMember.roles.add([ROLES.TIER.MYTHIC, ROLES.TIER.MYTHIC_FREE_AGENT]);
                 break;
@@ -148,6 +151,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
                         { agm2ID: playerData.id },
                         { agm3ID: playerData.id },
                         { agm4ID: playerData.id },
+                        { agm5ID: playerData.id },
                     ]
                 }
             });
@@ -169,6 +173,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
                         { agm2ID: playerData.id },
                         { agm3ID: playerData.id },
                         { agm4ID: playerData.id }, 
+                        { agm5ID: playerData.id },
                     ]
                 }
             });

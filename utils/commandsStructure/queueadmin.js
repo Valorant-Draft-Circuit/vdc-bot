@@ -7,6 +7,7 @@ const TIER_CHOICES = [
     { name: `Prospect`, value: Tier.PROSPECT },
     { name: `Apprentice`, value: Tier.APPRENTICE },
     { name: `Expert`, value: Tier.EXPERT },
+    { name: `Legend`, value: Tier.LEGEND },
     { name: `Mythic`, value: Tier.MYTHIC },
 ];
 

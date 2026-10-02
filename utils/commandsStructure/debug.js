@@ -39,6 +39,7 @@ module.exports = {
                     required: false,
                     choices: [
                         { name: `Unregistered`, value: LeagueStatus.UNREGISTERED },
+                        { name: `Manual Review`, value: LeagueStatus.MANUAL_REVIEW },
                         { name: `Pending`, value: LeagueStatus.PENDING },
                         { name: `Approved`, value: LeagueStatus.APPROVED },
                         { name: `Draft Eligible`, value: LeagueStatus.DRAFT_ELIGIBLE },
@@ -101,6 +102,7 @@ module.exports = {
                     required: false,
                     choices: [
                         { name: `Unregistered`, value: LeagueStatus.UNREGISTERED },
+                        { name: `Manual Review`, value: LeagueStatus.MANUAL_REVIEW },
                         { name: `Pending`, value: LeagueStatus.PENDING },
                         { name: `Approved`, value: LeagueStatus.APPROVED },
                         { name: `Draft Eligible`, value: LeagueStatus.DRAFT_ELIGIBLE },

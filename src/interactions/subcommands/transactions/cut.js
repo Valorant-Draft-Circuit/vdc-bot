@@ -105,6 +105,9 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 			case Tier.EXPERT:
 				await guildMember.roles.add([ROLES.TIER.EXPERT, ROLES.TIER.EXPERT_FREE_AGENT]);
 				break;
+			case Tier.LEGEND:
+				await guildMember.roles.add([ROLES.TIER.LEGEND, ROLES.TIER.LEGEND_FREE_AGENT]);
+				break;
 			case Tier.MYTHIC:
 				await guildMember.roles.add([ROLES.TIER.MYTHIC, ROLES.TIER.MYTHIC_FREE_AGENT]);
 				break;

@@ -3,7 +3,7 @@ const { Player, ControlPanel } = require(`../../../../prisma`);
 const { ContractStatus } = require(`@prisma/client`);
 const { COLORS } = require(`../../../../utils/enums/colors`);
 
-const TIERS = [`RECRUIT`, `PROSPECT`, `APPRENTICE`, `EXPERT`, `MYTHIC`];
+const TIERS = [`RECRUIT`, `PROSPECT`, `APPRENTICE`, `EXPERT`, `LEGEND`, `MYTHIC`];
 
 async function activeSubs(/** @type ChatInputCommandInteraction */ interaction) {
     const [allSubs, mmrTierLines] = await Promise.all([

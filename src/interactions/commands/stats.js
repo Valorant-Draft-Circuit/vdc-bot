@@ -174,6 +174,9 @@ async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interact
         case tierLines.EXPERT.min < mmr && mmr < tierLines.EXPERT.max:
             embedcolor = COLORS.EXPERT
             break;
+        case tierLines.LEGEND.min < mmr && mmr < tierLines.LEGEND.max:
+            embedcolor = COLORS.LEGEND
+            break;
         case tierLines.MYTHIC.min < mmr && mmr < tierLines.MYTHIC.max:
             embedcolor = COLORS.MYTHIC
             break;
@@ -342,6 +345,7 @@ async function createSubOverview(player) {
     else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.PROSPECT.max) tier = `Prospect`;
     else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.APPRENTICE.max) tier = `Apprentice`;
     else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.EXPERT.max) tier = `Expert`;
+    else if (player.PrimaryRiotAccount.MMR.mmrEffective <= mmrCaps.LEGEND.max) tier = `Legend`;
     else tier = `Mythic`;
 
     const string = `Substitute - ${subtype} - ${tier}`;

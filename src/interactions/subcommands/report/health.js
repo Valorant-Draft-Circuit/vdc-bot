@@ -192,6 +192,11 @@ function getTier(mmr, tierLines) {
         mmr <= tierLines.EXPERT.max
     ) {
         return Tier.EXPERT;
+    } else if ( 									// LEGEND
+        tierLines.LEGEND.min <= mmr &&
+        mmr <= tierLines.LEGEND.max
+    ) {
+        return Tier.LEGEND;
     } else if ( 									// MYTHIC
         tierLines.MYTHIC.min <= mmr &&
         mmr <= tierLines.MYTHIC.max

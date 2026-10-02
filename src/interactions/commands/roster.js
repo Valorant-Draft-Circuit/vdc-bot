@@ -38,6 +38,7 @@ module.exports = {
          franchise.AGM2?.Accounts.find(a => a.provider == `discord`).providerAccountId,
          franchise.AGM3?.Accounts.find(a => a.provider == `discord`).providerAccountId,
          franchise.AGM4?.Accounts.find(a => a.provider == `discord`).providerAccountId,
+         franchise.AGM5?.Accounts.find(a => a.provider == `discord`).providerAccountId,
       ].filter(v => v !== undefined);
 
       const teamMMRCap = (await ControlPanel.getMMRCaps("TEAM"))[team.tier];

@@ -834,6 +834,11 @@ async function getTierRole(player, isSigned) {
 		roles.push(ROLES.TIER.EXPERT);
 		if (!isSigned) roles.push(ROLES.TIER.EXPERT_FREE_AGENT);
 
+	} else if (tierLines.LEGEND.min <= mmrEffective &&
+		mmrEffective <= tierLines.LEGEND.max
+	) {
+		roles.push(ROLES.TIER.LEGEND);
+		if (!isSigned) roles.push(ROLES.TIER.LEGEND_FREE_AGENT);
 	} else if ( 									// MYTHIC
 		tierLines.MYTHIC.min <= mmrEffective &&
 		mmrEffective <= tierLines.MYTHIC.max

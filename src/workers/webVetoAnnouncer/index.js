@@ -23,7 +23,8 @@ const teamInclude = {
                 AGM1: managementInclude,
                 AGM2: managementInclude,
                 AGM3: managementInclude,
-                AGM4: managementInclude
+                AGM4: managementInclude,
+                AGM5: managementInclude
             }
         },
         Roster: { include: { Accounts: true } },
@@ -187,7 +188,7 @@ async function deliverTier(client, tier, matchID, rows, state, actingTeam) {
 function tierRecipientDiscordIds(tier, actingTeam) {
     if (tier == 0) return discordAccountIds([actingTeam.Captain]);
     if (tier == 1) return discordAccountIds(actingTeam.Roster.filter(player => player.id != actingTeam.captain));
-    if (tier == 2) return discordAccountIds([actingTeam.Franchise.AGM1, actingTeam.Franchise.AGM2, actingTeam.Franchise.AGM3, actingTeam.Franchise.AGM4]);
+    if (tier == 2) return discordAccountIds([actingTeam.Franchise.AGM1, actingTeam.Franchise.AGM2, actingTeam.Franchise.AGM3, actingTeam.Franchise.AGM4, actingTeam.Franchise.AGM5]);
     if (tier == 3) return discordAccountIds([actingTeam.Franchise.GM]);
     return [];
 }

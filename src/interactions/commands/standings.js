@@ -10,6 +10,7 @@ const playoffsCutoff = {
     prospect: 8,
     apprentice: 8,
     expert: 8,
+    legend: 8,
     mythic: 6
 };
 
