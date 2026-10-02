@@ -647,11 +647,11 @@ async function validatePlayerTrade(interaction, playerArray, franchiseToReceive)
 	// store all MMR bounds in array and grab the relevant MMR bounds to store in tierMMR
 	const tierMMRBounds = [
 		{ name: Tier.RECRUIT, high: recruitMMRCap, low: 0 },
-		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap+1  },
-		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap+1 },
-		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap+1 },
-		{ name: Tier.LEGEND, high: legendMMRCap, low: expertMMRCap+1 },
-		{ name: Tier.MYTHIC, high: 999, low: legendMMRCap+1 },
+		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap  },
+		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap },
+		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
+		{ name: Tier.LEGEND, high: legendMMRCap, low: expertMMRCap },
+		{ name: Tier.MYTHIC, high: 999, low: legendMMRCap },
 	];
 
 	const playerTierArr = playerDataArray.map((pdr) => {
@@ -716,11 +716,11 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 	// store all MMR bounds in array and grab the relevant MMR bounds to store in tierMMR
 	const tierMMRBounds = [
 		{ name: Tier.RECRUIT, high: recruitMMRCap, low: 0 },
-		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap + 1 },
-		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap + 1 },
-		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap + 1 },
-		{ name: Tier.LEGEND, high: legendMMRCap, low: expertMMRCap + 1 },
-		{ name: Tier.MYTHIC, high: 999, low: legendMMRCap + 1 },
+		{ name: Tier.PROSPECT, high: prospectMMRCap, low: recruitMMRCap },
+		{ name: Tier.APPRENTICE, high: apprenticeMMRCap, low: prospectMMRCap },
+		{ name: Tier.EXPERT, high: expertMMRCap, low: apprenticeMMRCap },
+		{ name: Tier.LEGEND, high: legendMMRCap, low: expertMMRCap },
+		{ name: Tier.MYTHIC, high: 999, low: legendMMRCap },
 	];
 
 	const playersToUpdateArray = playerDataArray.map((pdr) => {
