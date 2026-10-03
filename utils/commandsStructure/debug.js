@@ -228,6 +228,11 @@ module.exports = {
             name: `active-subs`,
             description: `List all active substitutes across every tier.`,
             type: ApplicationCommandOptionType.Subcommand
+        },
+        {
+            name: `mapbans-state`,
+            description: `Show the raw DB state for the mapban in the current channel.`,
+            type: ApplicationCommandOptionType.Subcommand
         }
     ]
 }
