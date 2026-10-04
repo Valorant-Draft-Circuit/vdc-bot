@@ -1,6 +1,5 @@
-const { EmbedBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder } = require(`discord.js`);
 const { Franchise } = require(`../../../../prisma`);
-const { ActionRowBuilder, ButtonBuilder } = require(`@discordjs/builders`);
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 
