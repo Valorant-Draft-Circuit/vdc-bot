@@ -16,6 +16,7 @@ const {
 	matchKeyPattern,
 	queueIdFromMatchKey,
 } = require(`../../../helpers/queue/queueKeys`);
+const { getCurrentChannelCount } = require(`../../../workers/matchmaker/capacity`);
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
 	const actorLabel = `${interaction.user.tag} (${interaction.user.id})`;
@@ -308,6 +309,11 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 			{
 				name: `Display MMR`,
 				value: `${queueConfig.displayMmr}`,
+				inline: true,
+			},
+			{
+				name: `Channel Count`,
+				value: `${await getCurrentChannelCount(client)}/${queueConfig.channelStopThreshold}`,
 				inline: true,
 			},
 			{ name: `Currently Open Queues`, value: openQueuesValue, inline: false },
