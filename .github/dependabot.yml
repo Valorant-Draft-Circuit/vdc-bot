@@ -9,3 +9,8 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: "github-actions" # keeps the pinned action SHAs current
+    directory: "/"
+    schedule:
+      interval: "weekly"

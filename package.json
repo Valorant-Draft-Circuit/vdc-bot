@@ -8,6 +8,7 @@
     "deploy": "npm run cache && npm run start",
 
     "compile": "tsc -p tsconfig.json",
+    "smoke": "node scripts/smoke.js",
     "cache": "node ./cache/cache.js",
     "dev:start": "nodemon --no-warnings --ignore ./cache/ --ignore ./bin/ bot.js",
     "dev:compile": "npm run cache && tsc -w -p tsconfig.json",
@@ -26,6 +27,9 @@
     "url": "https://github.com/Valorant-Draft-Circuit/vdc-bot/issues"
   },
   "homepage": "https://github.com/Valorant-Draft-Circuit/vdc-bot#readme",
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.52",
     "@prisma/client": "^6.15.0",

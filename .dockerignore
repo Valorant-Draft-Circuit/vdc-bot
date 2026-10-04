@@ -6,3 +6,4 @@ README.md
 .git
 .env
 *.md
+cache/*.json
