@@ -1,7 +1,7 @@
 const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
 
 const { Franchise, Player, ControlPanel } = require(`../../../../prisma`);
-const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction, ButtonStyle, ButtonBuilder, ActionRowBuilder, ButtonInteraction, userMention } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ButtonOptions, ROLES } = require(`../../../../utils/enums`);
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
@@ -66,7 +66,7 @@ async function beginOfflineDraft(/** @type ChatInputCommandInteraction */ intera
 
 
     await interaction.editReply({ embeds: [embed], components: [] });
-    return await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => `<@${nddi}>`).join(`, `)}! It's \`${pick.Franchise.name}\`'s turn to draft for for their round \`${pick.round}\`, pick \`${pick.pick}\` slot!`);
+    return await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => userMention(nddi)).join(`, `)}! It's \`${pick.Franchise.name}\`'s turn to draft for for their round \`${pick.round}\`, pick \`${pick.pick}\` slot!`);
 
 }
 
@@ -113,13 +113,13 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
     // console.log(draftedPlayerIDs)
     // console.log(player.id)
 
-    if (!player) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> is not in our database.`);
-    if (draftedPlayerIDs.includes(player.id)) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> (\`${player.name}\`, \`${riotAccount.riotIGN}\`) has already been picked up by another franchise (\`${draftedPlayers.find(dp => dp.userID == player.id).Franchise.name}\`) and cannot be drafted by \`${pick.Franchise.name}\`.`);
+    if (!player) return await interaction.editReply(`The player you're trying to draft, ${userMention(discordID)} is not in our database.`);
+    if (draftedPlayerIDs.includes(player.id)) return await interaction.editReply(`The player you're trying to draft, ${userMention(discordID)} (\`${player.name}\`, \`${riotAccount.riotIGN}\`) has already been picked up by another franchise (\`${draftedPlayers.find(dp => dp.userID == player.id).Franchise.name}\`) and cannot be drafted by \`${pick.Franchise.name}\`.`);
     if (player.primaryRiotAccountID == null) return await interaction.editReply(`This player does not have a primary Riot account set and cannot be drafted.`);
     if (riotAccount?.MMR == null) return await interaction.editReply(`This player does not have an MMR entry and cannot be drafted.`);
     if (riotAccount.MMR.mmrEffective == null) return await interaction.editReply(`This player does not have an \`mmrEffective\` value and cannot be drafted.`);
     if (mmrEffective < tierBounds.min || mmrEffective > tierBounds.max) return await interaction.editReply(`This player's mmr (\`${mmrEffective}\`) does not fall within the tier bounds for \`${tier}\` (\`${tierBounds.min}\` - \`${tierBounds.max}\`) and cannot be drafted in this tier!`);
-    if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft, <@${discordID}> (\`${player.name}\`, \`${riotAccount?.riotIGN}\`) is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
+    if (!draftableLeagueStatuses.includes(player.Status.leagueStatus)) return await interaction.editReply(`The player you're trying to draft, ${userMention(discordID)} (\`${player.name}\`, \`${riotAccount?.riotIGN}\`) is not \`Draft Eligible\` or a \`FREE_AGENT\` and cannot be drafted.`);
 
     // check to make sure the drafter is allowed to draft for this tier
     const drafterDiscordID = interaction.user.id;
@@ -157,7 +157,7 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
             },
             {
                 name: `\u200B`,
-                value: `<@${discordID}>\n\`${discordID}\`\n\`${player.PrimaryRiotAccount.riotIGN}\`\n\`${team.name}\`\n\`${franchise.name}\`\nR: \`${pick.round}\`, P: \`${pick.pick}\`\n\`${mmrEffective}\`\n\n\`${franchise.id}\`\n\`${pick.id}\``,
+                value: `${userMention(discordID)}\n\`${discordID}\`\n\`${player.PrimaryRiotAccount.riotIGN}\`\n\`${team.name}\`\n\`${franchise.name}\`\nR: \`${pick.round}\`, P: \`${pick.pick}\`\n\`${mmrEffective}\`\n\n\`${franchise.id}\`\n\`${pick.id}\``,
                 inline: true
             }
         ],
@@ -206,7 +206,7 @@ async function cancelDraft(/** @type ButtonInteraction */ interaction) {
     // ... create the new embed & edit it to show the cancellation message....
     const embed = interaction.message.embeds[0];
     const embedEdits = new EmbedBuilder(embed);
-    embedEdits.setDescription(`This selection was cancelled by <@${interaction.user.id}>.`);
+    embedEdits.setDescription(`This selection was cancelled by ${userMention(interaction.user.id)}.`);
     embedEdits.setFields([]);
 
     // ... and send it off! (and also remove the buttons)
@@ -266,7 +266,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     // create the base embed
     const embed = new EmbedBuilder({
         author: { name: `VDC ${tier} Draft` },
-        description: `${updatedPick.Franchise.name} has picked up <@${drafteeID}> (\`${draftee.PrimaryRiotAccount.riotIGN}\`) for their round \`${updatedPick.round}\`, pick \`${updatedPick.pick}\` slot!`,
+        description: `${updatedPick.Franchise.name} has picked up ${userMention(drafteeID)} (\`${draftee.PrimaryRiotAccount.riotIGN}\`) for their round \`${updatedPick.round}\`, pick \`${updatedPick.pick}\` slot!`,
         color: COLORS[tier],
         footer: { text: `Draft — ${tier}` }
     });
@@ -310,7 +310,7 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
     if (remaining.length == 0) {
         return await interaction.channel.send(`There are no more draftable players or available draft slots, and so the season ${season} ${tier} draft has concluded!`);
     } else {
-        return await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => `<@${nddi}>`).join(`, `)}! It's \`${nextPick.Franchise.name}\`'s turn to draft for for their round \`${nextPick.round}\`, pick \`${nextPick.pick}\` slot!`);
+        return await interaction.channel.send(`Hey, ${nextDraftersDiscordIDs.map(nddi => userMention(nddi)).join(`, `)}! It's \`${nextPick.Franchise.name}\`'s turn to draft for for their round \`${nextPick.round}\`, pick \`${nextPick.pick}\` slot!`);
     }
 }
 

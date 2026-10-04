@@ -1,4 +1,4 @@
-const { EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder } = require(`discord.js`);
+const { EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder, userMention } = require(`discord.js`);
 const { Franchise } = require(`../../../../prisma`);
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
@@ -30,7 +30,7 @@ async function info(interaction) {
 
     const embed = new EmbedBuilder({
         author: { name: franchiseName, iconURL: `${imagepath}${franchise.Brand.logo}` },
-        description: `**General Manager** : ${gmIDs.map(gm => `<@${gm}>`)}\n**AGMs** : ${agmIDs.map(agm => `<@${agm}>`)}`,
+        description: `**General Manager** : ${gmIDs.map(gm => userMention(gm))}\n**AGMs** : ${agmIDs.map(agm => userMention(agm))}`,
         fields: [
             {
                 name: `\u200B`,

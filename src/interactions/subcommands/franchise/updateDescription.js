@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, channelMention } = require(`discord.js`);
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const fs = require('fs');
 
@@ -161,7 +161,7 @@ async function finalizeUpdate(interaction, slug) {
 		components: [],
 	});
 	return await interaction.editReply({
-		content: `The description for ${franchise.name} has been updated & the <#${CHANNELS.FRANCHISES}> channel has been refreshed! Attached are the old & new descriptions.`,
+		content: `The description for ${franchise.name} has been updated & the ${channelMention(CHANNELS.FRANCHISES)} channel has been refreshed! Attached are the old & new descriptions.`,
 		files: [oldDescPath, newDescPath]
 	});
 }

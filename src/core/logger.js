@@ -1,3 +1,4 @@
+const { time, TimestampStyles, roleMention } = require(`discord.js`);
 const chalk = require(`chalk`);
 
 // console color
@@ -101,7 +102,7 @@ module.exports = class Logger {
     log(level, message, stack, timestamp = Date.now()) {
 
         // date & time
-        const time = new Date(timestamp).toLocaleString("en-US", { timeZone: `CST`, month: `short`, day: `2-digit`, hour: `numeric`, minute: `numeric` });
+        const localTime = new Date(timestamp).toLocaleString("en-US", { timeZone: `CST`, month: `short`, day: `2-digit`, hour: `numeric`, minute: `numeric` });
         const timestampDate = Math.round(Date.now() / 1000);
 
         const levelOut = level.padStart(8, ` `);
@@ -117,11 +118,11 @@ module.exports = class Logger {
         }
 
         // out to console
-        console.log(`${ccolor[level](time)} | ${ccolor[level](levelOut)} : ${message}`);
+        console.log(`${ccolor[level](localTime)} | ${ccolor[level](levelOut)} : ${message}`);
         if (stack) console.log(tidyStack);
 
         // discord logdrain
-        let logmsg = `${ldemote[level]} <t:${timestampDate}:d> <t:${timestampDate}:T> \` ${levelOut} \` : ${level == `ALERT` ? `<@&${ALERT_ROLE_ID}> ` : ``}${message}`;
+        let logmsg = `${ldemote[level]} ${time(timestampDate, TimestampStyles.ShortDate)} ${time(timestampDate, TimestampStyles.MediumTime)} \` ${levelOut} \` : ${level == `ALERT` ? `${roleMention(ALERT_ROLE_ID)} ` : ``}${message}`;
 
         if (stack) logmsg += `\n\`\`\`js\n${tidyStack}\n\`\`\``;
         this.outqueue.push(logmsg);

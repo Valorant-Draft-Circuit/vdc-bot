@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, userMention } = require(`discord.js`);
 const { Team, Player } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { LeagueNavigationOptions } = require(`../../../../utils/enums`);
@@ -14,7 +14,7 @@ function discordIdFromAccounts(accounts) {
 
 function formatRecipients(recipients) {
 	if (recipients.length === 0) return `*none*`;
-	return recipients.map((r) => (r.discordID ? `<@${r.discordID}>` : `\`${r.userID}\``)).join(`, `);
+	return recipients.map((r) => (r.discordID ? userMention(r.discordID) : `\`${r.userID}\``)).join(`, `);
 }
 
 /** Derive everyone owed a championship accolade from a single final's match id.

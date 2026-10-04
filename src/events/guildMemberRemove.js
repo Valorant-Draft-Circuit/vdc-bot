@@ -2,7 +2,7 @@ const { LeagueStatus } = require("@prisma/client");
 const { Player } = require("../../prisma");
 const { prisma } = require("../../prisma/prismadb");
 const { GUILD } = require(`../../utils/enums`);
-const { GuildMember } = require(`discord.js`);
+const { GuildMember, time, TimestampStyles } = require(`discord.js`);
 
 
 module.exports = {
@@ -24,7 +24,7 @@ module.exports = {
 
         const guild = await client.guilds.fetch(member.guild.id);
 
-        logger.memberdrain(`📤 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member left** - __Server__: \`${member.guild.name}\` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \`${member.user.username}\`,  __ID__: \`${member.id}\``);
+        logger.memberdrain(`📤 ${time(Math.round(Date.now() / 1000), TimestampStyles.ShortDate)} ${time(Math.round(Date.now() / 1000), TimestampStyles.MediumTime)} **Member left** - __Server__: \`${member.guild.name}\` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \`${member.user.username}\`,  __ID__: \`${member.id}\``);
 
 
 

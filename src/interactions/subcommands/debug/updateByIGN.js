@@ -1,5 +1,5 @@
 const { Player, Team } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const { ChatInputCommandInteraction, EmbedBuilder, userMention } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 
 
@@ -47,7 +47,7 @@ async function updateByIGN(/** @type ChatInputCommandInteraction */ interaction)
     const embed = new EmbedBuilder({
         author: { name: `Updated User - ${updatedUser.User.name}`, icon_url: updatedUser.User.image },
         description:
-            `\`  Discord Account \` : <@${discordID}>\n` +
+            `\`  Discord Account \` : ${userMention(discordID)}\n` +
             `\` Primary Riot IGN \` : [\`${updatedUser.riotIGN}\`](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(updatedUser.riotIGN)})`
         ,
         color: 0xE92929,

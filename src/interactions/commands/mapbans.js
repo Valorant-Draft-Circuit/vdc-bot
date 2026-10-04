@@ -1,4 +1,4 @@
-const { EmbedBuilder, ChatInputCommandInteraction, ButtonInteraction, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, MessageFlags } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction, ButtonInteraction, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, MessageFlags, time, TimestampStyles, userMention, channelMention } = require(`discord.js`);
 const { ControlPanel, Player } = require(`../../../prisma`);
 const { MatchType, MapBanType, VetoSource } = require(`@prisma/client`);
 const { prisma } = require(`../../../prisma/prismadb`);
@@ -86,7 +86,7 @@ module.exports = {
         });
 
         return await interaction.editReply({
-            content: `Map bans for \`${nextMatch.tier}\`. <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} vs. <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name} (<t:${date}:f>).\n` +
+            content: `Map bans for \`${nextMatch.tier}\`. <${nextMatch.Home.Franchise.Brand.discordEmote}> ${nextMatch.Home.name} vs. <${nextMatch.Away.Franchise.Brand.discordEmote}> ${nextMatch.Away.name} (${time(date, TimestampStyles.LongDateShortTime)}).\n` +
                 `Run them here on Discord, or head to the match page to ban on the website.`,
             components: [venueRow]
         });
@@ -117,7 +117,7 @@ async function beginBotVeto(/** @type ButtonInteraction */ interaction, matchID)
 
     // TIME ---------------------------------------------------------------
     const date = Math.round(Date.parse(nextMatch.dateScheduled) / 1000);
-    const timeStampString = `<t:${date}:f> (<t:${date}:R>)`; // ex: May 28, 2025 8:00 PM (in 5 days)
+    const timeStampString = `${time(date, TimestampStyles.LongDateShortTime)} (${time(date, TimestampStyles.RelativeTime)})`; // ex: May 28, 2025 8:00 PM (in 5 days)
     // --------------------------------------------------------------------
     // ########################################################################################
 
@@ -191,7 +191,7 @@ async function beginBotVeto(/** @type ButtonInteraction */ interaction, matchID)
 
     await newchannel.send({
         content: `It's <${nextEmote}> \`${nextTeam.name}\`'s turn to \`${selectionType}\`!\n` +
-            `-# ||${nextTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
+            `-# ||${nextTeam.Roster.map(p => `${userMention(p.Accounts.find(a => a.provider == `discord`).providerAccountId)}`).join(`, `)}||`,
         components: [mapbansRow]
     });
 
@@ -234,7 +234,7 @@ async function findVetoBlocker(interaction, match) {
     const existingChannel = activebans.find(ab => ab.name == channelName);
 
     // if the channel exists, direct them to it
-    if (existingChannel) return `The mapban for this match (\`${match.tier}\` - <${match.Home.Franchise.Brand.discordEmote}> ${match.Home.name} vs. <${match.Away.Franchise.Brand.discordEmote}> ${match.Away.name}) exists already: <#${existingChannel.id}>`;
+    if (existingChannel) return `The mapban for this match (\`${match.tier}\` - <${match.Home.Franchise.Brand.discordEmote}> ${match.Home.name} vs. <${match.Away.Franchise.Brand.discordEmote}> ${match.Away.name}) exists already: ${channelMention(existingChannel.id)}`;
 
     // if the ban has already begun/completed, direct them to wherever it lives
     if (match.MapBans.length != 0) {

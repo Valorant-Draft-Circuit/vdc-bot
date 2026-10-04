@@ -1,4 +1,4 @@
-require(`dotenv`).config();
+require(`dotenv`).config({ quiet: true });
 
 // MODULE REQUIREMENTS ----------------------------------------------------------------------------
 const fs = require(`fs`);

@@ -1,5 +1,5 @@
 const { Team, Franchise, ControlPanel, Games } = require(`../../../prisma`);
-const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelectMenuBuilder, userMention } = require("discord.js");
 
 const { LeagueStatus, ContractStatus, MatchType } = require("@prisma/client");
 const { prisma } = require("../../../prisma/prismadb");
@@ -83,8 +83,8 @@ module.exports = {
       const embed = new EmbedBuilder({
          author: { name: `${franchise.name} - ${teamName}`, icon_url: `${imagesURL}/${franchise.Brand.logo}` },
          description: [
-            `\`         GM \` : ${gmIDs.map(gm => `<@${gm}>`)}`,
-            `\`       AGMs \` : ${agmIDs.map(agm => `<@${agm}>`)}`,
+            `\`         GM \` : ${gmIDs.map(gm => userMention(gm))}`,
+            `\`       AGMs \` : ${agmIDs.map(agm => userMention(agm))}`,
             `\`       Tier \` : ${team.tier[0].toUpperCase() + team.tier.substring(1).toLowerCase()}`,
             `\`       Data \` : T \` ${team.id} \` | F \` ${franchise.id} \``,
             `${showMMR ? `\`   Team MMR \` : ${teamMMR} / ${teamMMRCap} (Δ${teamMMRCap - teamMMR})` : ``}`,

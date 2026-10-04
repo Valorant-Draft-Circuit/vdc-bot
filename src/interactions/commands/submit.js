@@ -1,7 +1,7 @@
 const { GameType, MatchType } = require(`@prisma/client`);
 const { Games, ControlPanel, Player } = require(`../../../prisma`);
 const { prisma } = require(`../../../prisma/prismadb`);
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, time, TimestampStyles, userMention } = require(`discord.js`);
 const {
    resolveQueueSubmissionContext,
    finalizeQueueCombineSubmission,
@@ -99,7 +99,7 @@ async function submitFromLink(interaction, { url, submittedTier, type }) {
       footer: { text: `Valorant Draft Circuit — Match Result Submissions` }
    });
 
-   logger.matchdrain(`<t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Match submission** - __Tier__: \`${tier}\`, __Type__: \`${type}\`, __Match ID__: [\`${gameID}\`](${url})`);
+   logger.matchdrain(`${time(Math.round(Date.now() / 1000), TimestampStyles.ShortDate)} ${time(Math.round(Date.now() / 1000), TimestampStyles.MediumTime)} **Match submission** - __Tier__: \`${tier}\`, __Type__: \`${type}\`, __Match ID__: [\`${gameID}\`](${url})`);
    logger.log(`VERBOSE`, `Match submission - Tier: \`${tier}\`, Type: \`${type}\`, Match ID: [\`${gameID}\`](${url})`);
    return await interaction.editReply({ embeds: [embed] });
 }
@@ -138,7 +138,7 @@ async function submitCombineFromAutoDetection(interaction) {
    const cancel = new ButtonBuilder({ customId: `submitdetect_cancel`, label: `Cancel`, style: ButtonStyle.Danger });
    const message = await interaction.editReply({ embeds: [buildCombineCandidateEmbed(game, queueContext.tier)], components: [new ActionRowBuilder({ components: [confirm, cancel] })] });
 
-   const ping = await interaction.followUp({ content: `<@${interaction.user.id}> confirm your combine submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
+   const ping = await interaction.followUp({ content: `${userMention(interaction.user.id)} confirm your combine submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
 
    const submissionState = {
       userId: interaction.user.id,
@@ -234,7 +234,7 @@ async function submitScheduledFromAutoDetection(interaction, { type }) {
       return message;
    }
 
-   const ping = await interaction.followUp({ content: `<@${interaction.user.id}> confirm your match submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
+   const ping = await interaction.followUp({ content: `${userMention(interaction.user.id)} confirm your match submission above.`, allowedMentions: { users: [interaction.user.id] } }).catch(() => null);
 
    const submissionState = {
       userId: interaction.user.id,

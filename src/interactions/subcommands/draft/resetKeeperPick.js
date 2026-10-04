@@ -1,3 +1,4 @@
+const { userMention } = require(`discord.js`);
 const { Player, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
@@ -33,11 +34,11 @@ async function resetKeeperPick(interaction, discordID) {
 		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } },
 	});
 
-	logger.log(`VERBOSE`, `<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed as \`${updatedPick.Franchise.name}\`'s keeper pick`)
+	logger.log(`VERBOSE`, `${userMention(discordID)} (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed as \`${updatedPick.Franchise.name}\`'s keeper pick`)
 	if (updatedPick.userID !== null) return await interaction.editReply(`There was an error. The database was not updated`);
 	else {
 		// await refreshDraftBoardChannel(interaction);
-		return await interaction.editReply(`<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed from the R: \`${keeperSearch.round}\`, P: \`${keeperSearch.pick}\` keeper slot.`);
+		return await interaction.editReply(`${userMention(discordID)} (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been removed from the R: \`${keeperSearch.round}\`, P: \`${keeperSearch.pick}\` keeper slot.`);
 	}
 }
 

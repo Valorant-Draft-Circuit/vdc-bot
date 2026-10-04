@@ -1,3 +1,4 @@
+const { userMention } = require(`discord.js`);
 const { Player, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
@@ -42,11 +43,11 @@ async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } },
 	});
 
-	logger.log(`VERBOSE`, `<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick`)
+	logger.log(`VERBOSE`, `${userMention(discordID)} (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick`)
 	if (updatedPick.userID !== player.id) return await interaction.editReply(`There was an error. The database was not updated`);
 	else {
 		// await refreshDraftBoardChannel(interaction);
-		return await interaction.editReply(`<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round \`${pick.round}\`, pick \`${pick.pick}\` (overall pick: \`${overallPickNumber}\`)`)
+		return await interaction.editReply(`${userMention(discordID)} (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round \`${pick.round}\`, pick \`${pick.pick}\` (overall pick: \`${overallPickNumber}\`)`)
 	};
 }
 

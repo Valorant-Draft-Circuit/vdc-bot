@@ -1,4 +1,4 @@
-const { ButtonInteraction, ButtonBuilder, ActionRowBuilder, MessageFlags, ButtonStyle, MediaGalleryBuilder, MediaGalleryItemBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize } = require(`discord.js`);
+const { ButtonInteraction, ButtonBuilder, ActionRowBuilder, MessageFlags, ButtonStyle, MediaGalleryBuilder, MediaGalleryItemBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, time, TimestampStyles, userMention } = require(`discord.js`);
 const { MapBansSide, MapBanType } = require(`@prisma/client`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { Team } = require(`../../../prisma`);
@@ -136,7 +136,7 @@ module.exports = {
             });
 
             const date = Math.round(Date.parse(mapbansResponse.Match.dateScheduled) / 1000);
-            const timeStampString = `<t:${date}:f> (<t:${date}:R>)`;
+            const timeStampString = `${time(date, TimestampStyles.LongDateShortTime)} (${time(date, TimestampStyles.RelativeTime)})`;
 
             const components = [
                 new TextDisplayBuilder({
@@ -207,7 +207,7 @@ module.exports = {
         return await interaction.channel.send({
             content:
                 `It's <${nextTeam.Franchise.Brand.discordEmote}> \`${nextTeam.name}\`'s turn to pick a side for \`${nextSelection.map}\`!\n` +
-                `-# ||${nextTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
+                `-# ||${nextTeam.Roster.map(p => `${userMention(p.Accounts.find(a => a.provider == `discord`).providerAccountId)}`).join(`, `)}||`,
             components: [subrow]
         });
     }
@@ -223,7 +223,7 @@ async function deleteChannel(/** @type ButtonInteraction */ interaction, matchID
 
     // TIME ---------------------------------------------------------------
     const date = Math.round((Date.parse(match.dateScheduled) + ADDITIONAL_TIME) / 1000);
-    const timeStampString = `<t:${date}:f> (<t:${date}:R>)`; // ex: May 28, 2025 8:00 PM (in 5 days)
+    const timeStampString = `${time(date, TimestampStyles.LongDateShortTime)} (${time(date, TimestampStyles.RelativeTime)})`; // ex: May 28, 2025 8:00 PM (in 5 days)
     // --------------------------------------------------------------------
 
     if (!hasMatchPassedPlus1Hour) return await interaction.editReply({ content: `You cannot delete this channel until ${timeStampString}!` });

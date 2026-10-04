@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require(`discord.js`);
+const { EmbedBuilder, userMention } = require(`discord.js`);
 const { COLORS } = require(`../../../utils/enums/colors`);
 
 function buildMatchEmbed(payload, mapInfo, showMmrTotals) {
@@ -79,7 +79,7 @@ function formatTeamRoster(ids, playersById) {
 	return ids
 		.map((id) => {
 			const sid = String(id);
-			const mention = `<@${sid}>`;
+			const mention = userMention(sid);
 			const name = playersById.get(sid);
 			if (!name) return `${mention} (${sid})`;
 			return `${mention} (${name})`;
@@ -114,7 +114,7 @@ function buildPriorityEmbed(payload) {
 	});
 
 	const lines = players.map((p) => {
-		const mention = `<@${p.id}>`;
+		const mention = userMention(p.id);
 		const bucket = String(p.bucket || `?`);
 		const isCompleted = p.completed ? `, Requirements Fulfilled` : ``;
 		const groupIdx = bucketIndex(p.bucket) + (p.completed ? 3 : 0);

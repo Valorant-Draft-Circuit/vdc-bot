@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require(`discord.js`);
+const { EmbedBuilder, userMention, time, TimestampStyles } = require(`discord.js`);
 const { GUILD, CHANNELS } = require(`../../../utils/enums`);
 
 const MOD_COLOR = 0xe92929;
@@ -43,7 +43,7 @@ function buildConfirmationEmbed({ action, targetUser, durationLabel, rules, reas
 /** Mod-log channel announcement */
 function buildLogEmbed({ action, targetID, targetTag, modTag, durationLabel, rules, reason, appealable, extra }) {
 	const lines = [
-		`**Target:** <@${targetID}> (\`${targetTag ?? targetID}\`)`,
+		`**Target:** ${userMention(targetID)} (\`${targetTag ?? targetID}\`)`,
 		`**Moderator:** \`${modTag}\``,
 		durationLabel ? `**Duration:** ${durationLabel}` : null,
 		appealable !== undefined ? `**Appealable:** ${appealable ? `Yes` : `No`}` : null,
@@ -68,7 +68,7 @@ function buildLogEmbed({ action, targetID, targetTag, modTag, durationLabel, rul
 function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires, appealable, mapCount, eligibilityLine }) {
 	const seasonCount = durationLabel?.match(/^(\d+)?seasons?$/)?.[1];
 	const expiryLine = expires
-		? `This expires <t:${Math.round(expires.getTime() / 1000)}:R>.`
+		? `This expires ${time(Math.round(expires.getTime() / 1000), TimestampStyles.RelativeTime)}.`
 		: durationLabel === `permanent` ? `This is permanent.`
 		: durationLabel === `season` ? `This ban lasts through the current season.`
 		: seasonCount ? `This ban lasts for ${seasonCount} seasons, including the current one.` : null;
@@ -111,7 +111,7 @@ function buildDmEmbed({ action, guildName, durationLabel, rules, reason, expires
 function buildMapBanLiftedEmbed({ discordID, liftedMaps }) {
 	return new EmbedBuilder({
 		author: { name: `VDC Moderation` },
-		description: `<@${discordID}>'s map ban has been lifted (\`${liftedMaps}\` remaining map${liftedMaps === 1 ? `` : `s`} appealed/removed) and they are eligible to play again.`,
+		description: `${userMention(discordID)}'s map ban has been lifted (\`${liftedMaps}\` remaining map${liftedMaps === 1 ? `` : `s`} appealed/removed) and they are eligible to play again.`,
 		color: MOD_COLOR,
 		footer: { text: `Moderation - Map Ban Lifted` },
 		timestamp: Date.now(),
@@ -121,7 +121,7 @@ function buildMapBanLiftedEmbed({ discordID, liftedMaps }) {
 function buildMapBanServedEmbed({ discordID, mapsServed }) {
 	return new EmbedBuilder({
 		author: { name: `VDC Moderation` },
-		description: `<@${discordID}> has fully served their map ban (\`${mapsServed}\` map${mapsServed === 1 ? `` : `s`}) and is eligible to play again.`,
+		description: `${userMention(discordID)} has fully served their map ban (\`${mapsServed}\` map${mapsServed === 1 ? `` : `s`}) and is eligible to play again.`,
 		color: MOD_COLOR,
 		footer: { text: `Moderation - Map Ban Served` },
 		timestamp: Date.now(),
@@ -141,7 +141,7 @@ function buildHistoryEmbed({ targetUser, rows, page = 0 }) {
 	const pageRows = rows.slice(clampedPage * HISTORY_PAGE_SIZE, (clampedPage + 1) * HISTORY_PAGE_SIZE);
 
 	const lines = pageRows.map((row) => {
-		const timestamp = `<t:${Math.round(row.date.getTime() / 1000)}:d>`;
+		const timestamp = time(Math.round(row.date.getTime() / 1000), TimestampStyles.ShortDate);
 		const isActive = (row.type === `MUTE` || row.type === `BAN`)
 			&& (row.expires === null || row.expires.getTime() > now);
 		const status = isActive ? ` **[ACTIVE]**` : ``;
@@ -172,16 +172,16 @@ function buildActionDetailEmbed(row) {
 
 	const expiryValue = row.expires === null
 		? (isActive ? `never (permanent or season-scoped)` : `-`)
-		: `<t:${Math.round(row.expires.getTime() / 1000)}:f>`;
+		: time(Math.round(row.expires.getTime() / 1000), TimestampStyles.LongDateShortTime);
 
 	return new EmbedBuilder({
 		author: { name: `VDC Moderation` },
 		title: `Action #${row.id} - ${row.type}${isActive ? ` [ACTIVE]` : ``}`,
 		color: MOD_COLOR,
 		fields: [
-			{ name: `Target`, value: `<@${row.discordID}> (\`${row.discordID}\`)`, inline: true },
+			{ name: `Target`, value: `${userMention(row.discordID)} (\`${row.discordID}\`)`, inline: true },
 			{ name: `Moderator`, value: `\`${row.Moderator?.name ?? row.modID}\``, inline: true },
-			{ name: `Date`, value: `<t:${Math.round(row.date.getTime() / 1000)}:f>`, inline: true },
+			{ name: `Date`, value: time(Math.round(row.date.getTime() / 1000), TimestampStyles.LongDateShortTime), inline: true },
 			{ name: `Expires`, value: expiryValue, inline: true },
 			{ name: `Message`, value: row.message.slice(0, 1024) },
 		],

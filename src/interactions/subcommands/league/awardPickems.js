@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, userMention } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
 const { Player } = require(`../../../../prisma`);
 const { LeagueNavigationOptions } = require(`../../../../utils/enums`);
@@ -13,7 +13,7 @@ function discordIdFromAccounts(accounts) {
 
 function formatRecipients(recipients) {
 	if (recipients.length === 0) return `*none*`;
-	return recipients.map((r) => (r.discordID ? `<@${r.discordID}>` : `\`${r.userID}\``)).join(`, `);
+	return recipients.map((r) => (r.discordID ? userMention(r.discordID) : `\`${r.userID}\``)).join(`, `);
 }
 
 /** Fetch the season's pickem winners from the website and flatten them into

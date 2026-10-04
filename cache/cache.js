@@ -1,7 +1,9 @@
+require(`dotenv`).config({ quiet: true });
+
 const fs = require('fs');
 const { Franchise, ControlPanel, MOD_TOOLS_EPOCH } = require(`../prisma`);
 const { prisma } = require('../prisma/prismadb');
-const { Client, Application } = require('discord.js');
+const { REST, Routes } = require('discord.js');
 
 // this is needed to correctly sort the tiers
 const tierSortWeights = {
@@ -23,7 +25,9 @@ const tierSortWeights = {
     await buildMMRCache();
     await buildCombineCountCache();
     await buildMuteCache();
-    await emoteSync();
+
+    // agent emotes are cosmetic, so a valorant-api.com or Discord failure must not stop the bot from starting
+    await emoteSync().catch((error) => console.log(`Skipped agent emote sync: ${error.message}`));
 })();
 
 // export functions if the bot needs to regenerate cache
@@ -64,16 +68,16 @@ async function generateCache() {
 /** Sync application emotes with discord for agents */
 async function emoteSync() {
 
-    // login to discord with client token
-    const client = new Client({ intents: [] });
-    await client.login(process.env.TOKEN);
+    // application emotes only need REST, so no gateway session (which would also keep this script alive)
+    const rest = new REST().setToken(process.env.TOKEN);
+    const { id: applicationID } = await rest.get(Routes.currentApplication());
 
     // fetch all existing application emotes
-    const existingEmotes = (await client.application.emojis.fetch()).map(e => e.name);
+    const { items } = await rest.get(Routes.applicationEmojis(applicationID));
+    const existingEmotes = items.map(e => e.name);
 
-    // 
     const response = await fetch(`https://valorant-api.com/v1/agents?isPlayableCharacter=true`);
-    if (!response.ok) return console.log(`There was an error fetching agent data!`)
+    if (!response.ok) throw new Error(`valorant-api.com responded with ${response.status}`);
     const activeAgents = await response.json();
 
     // create blank object to store data & sanatize name
@@ -84,15 +88,27 @@ async function emoteSync() {
     // filter agents who already exist in the bot's emote list
     const filteredAgents = Object.keys(agentData).filter((agent) => { return existingEmotes.indexOf(agent) == -1; });
 
-    // for every agent that doesn't exist, 
+    // for every agent that doesn't exist, upload its icon (one bad icon shouldn't block the rest)
     for (let i = 0; i < filteredAgents.length; i++) {
         const agent = agentData[filteredAgents[i]];
-        await client.application.emojis.create({ attachment: agent.icon, name: agent.name });
-        console.log(`Added ${agent.name} as an emote from url: ${agent.icon}`);
+        try {
+            const image = await toDataURI(agent.icon);
+            await rest.post(Routes.applicationEmojis(applicationID), { body: { name: agent.name, image: image } });
+            console.log(`Added ${agent.name} as an emote from url: ${agent.icon}`);
+        } catch (error) {
+            console.log(`Failed to add ${agent.name} as an emote: ${error.message}`);
+        }
     }
+}
 
-    // destroy the client instance
-    client.destroy();
+/** Download an image as the base64 data URI Discord expects for emote uploads */
+async function toDataURI(url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`downloading ${url} responded with ${response.status}`);
+
+    const contentType = response.headers.get(`content-type`) ?? `image/png`;
+    const base64 = Buffer.from(await response.arrayBuffer()).toString(`base64`);
+    return `data:${contentType};base64,${base64}`;
 }
 
 /** Query the database to get MMRs */

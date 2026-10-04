@@ -1,4 +1,4 @@
-const { ChatInputCommandInteraction, } = require(`discord.js`);
+const { ChatInputCommandInteraction, channelMention } = require(`discord.js`);
 const { CHANNELS } = require(`../../../utils/enums`);
 const { generateLottery, awardCompPicks, fulfillFutureTrade, viewTierDraftBoard, setKeeperPick, resetKeeperPick, draftPlayer, releaseOfflineDraftResults, refreshDraftBoardChannel, beginOfflineDraft } = require(`../subcommands/draft`);
 
@@ -72,7 +72,7 @@ module.exports = {
 			}
 			case `refresh-draft-board`: {
 				await refreshDraftBoardChannel(interaction);
-				return await interaction.editReply(`The <#${CHANNELS.DRAFT_BOARD}> channel has been updated!`)
+				return await interaction.editReply(`The ${channelMention(CHANNELS.DRAFT_BOARD)} channel has been updated!`)
 			}
 		}
 	},

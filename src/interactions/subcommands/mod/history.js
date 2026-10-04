@@ -1,4 +1,4 @@
-const { ChatInputCommandInteraction, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { ChatInputCommandInteraction, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, userMention } = require(`discord.js`);
 const { ModLogs } = require(`../../../../prisma`);
 const { ModNavigationOptions } = require(`../../../../utils/enums`);
 const { buildHistoryEmbed, parseHistoryEmbedState, HISTORY_PAGE_SIZE } = require(`../../../helpers/mod/modLogEmbeds`);
@@ -44,7 +44,7 @@ async function page(/** @type ButtonInteraction */ interaction, direction) {
 	const totalPages = Math.max(1, Math.ceil(rows.length / HISTORY_PAGE_SIZE));
 	const newPage = Math.min(Math.max(currentPage + direction, 0), totalPages - 1);
 
-	const targetUser = { toString: () => `<@${targetID}>`, id: targetID };
+	const targetUser = { toString: () => userMention(targetID), id: targetID };
 	await interaction.message.edit(buildHistoryPage(targetUser, rows, newPage));
 	return interaction.deleteReply();
 }

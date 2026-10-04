@@ -1,4 +1,4 @@
-const { EmbedBuilder, ButtonInteraction } = require("discord.js");
+const { EmbedBuilder, ButtonInteraction, roleMention } = require("discord.js");
 
 const { Player } = require(`../../../prisma`);
 const { ROLES, ButtonOptions } = require(`../../../utils/enums`);
@@ -58,7 +58,7 @@ async function confirm(/** @type {ButtonInteraction} */ interaction) {
         const embedEdits = new EmbedBuilder(embed);
 
         logger.log(`VERBOSE`, `The activity check setup is complete! Gave ${sharedMemberIDs.length} member(s) the \`Inactive\` role!`);
-        embedEdits.setDescription(`This operation is complete. ${sharedMemberIDs.length} member(s) were given the <@&${ROLES.LEAGUE.INACTIVE}> role.`);
+        embedEdits.setDescription(`This operation is complete. ${sharedMemberIDs.length} member(s) were given the ${roleMention(ROLES.LEAGUE.INACTIVE)} role.`);
 
         return await interaction.message.edit({ embeds: [embedEdits], components: [] });
     }

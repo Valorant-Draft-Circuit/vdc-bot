@@ -1,4 +1,4 @@
-const { MessageFlags } = require(`discord.js`);
+const { MessageFlags, userMention } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
 const { scoutFollowersKey, scoutFollowingKey } = require(`../../helpers/queue/queueKeys`);
 const { ROLES } = require(`../../../utils/enums/roles`);
@@ -77,7 +77,7 @@ async function follow(interaction) {
     await redis.sadd(followerSet, interaction.user.id);
     await redis.sadd(followingSet, targetUser.id);
 
-    return interaction.editReply({ content: `You're now following <@${targetUser.id}>. You'll be notified by DM when their queue pops.` });
+    return interaction.editReply({ content: `You're now following ${userMention(targetUser.id)}. You'll be notified by DM when their queue pops.` });
 }
 
 async function unfollow(interaction) {
@@ -94,7 +94,7 @@ async function unfollow(interaction) {
     await redis.srem(followerSet, interaction.user.id);
     await redis.srem(followingSet, targetUser.id);
 
-    return interaction.editReply({ content: `You have unfollowed <@${targetUser.id}>.` });
+    return interaction.editReply({ content: `You have unfollowed ${userMention(targetUser.id)}.` });
 }
 
 async function listFollowing(interaction) {
@@ -107,7 +107,7 @@ async function listFollowing(interaction) {
     if (!members.length) return interaction.editReply({ content: `You're not following any players.` });
 
     // Build a simple mention list
-    const lines = members.map((id) => `<@${id}>`);
+    const lines = members.map((id) => userMention(id));
     return interaction.editReply({ content: `You're following the following players:\n${lines.join(`\n`)}` });
 }
 

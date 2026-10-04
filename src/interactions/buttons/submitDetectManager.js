@@ -1,4 +1,4 @@
-const { EmbedBuilder, MessageFlags } = require(`discord.js`);
+const { EmbedBuilder, MessageFlags, time, TimestampStyles } = require(`discord.js`);
 const { GameType } = require(`@prisma/client`);
 const { getRedisClient } = require(`../../core/redis`);
 const { releaseMatchSubmitLock } = require(`../../helpers/submitLock`);
@@ -74,7 +74,7 @@ module.exports = {
 			}
 
 			for (const game of submitted) {
-				logger.matchdrain(`<t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Match submission (auto)** - __Tier__: \`${state.tier}\`, __Type__: \`${state.gameType}\`, __Match ID__: \`${game.game_id}\``);
+				logger.matchdrain(`${time(Math.round(Date.now() / 1000), TimestampStyles.ShortDate)} ${time(Math.round(Date.now() / 1000), TimestampStyles.MediumTime)} **Match submission (auto)** - __Tier__: \`${state.tier}\`, __Type__: \`${state.gameType}\`, __Match ID__: \`${game.game_id}\``);
 			}
 
 			if (state.gameType === GameType.COMBINE && submitted.length) {

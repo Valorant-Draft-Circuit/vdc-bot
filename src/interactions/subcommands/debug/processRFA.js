@@ -1,6 +1,6 @@
 const { LeagueStatus } = require(`@prisma/client`);
 const { Player, Flags } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction } = require(`discord.js`);
+const { ChatInputCommandInteraction, userMention } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES } = require("../../../../utils/enums");
 
@@ -54,7 +54,7 @@ async function processRFA(/** @type ChatInputCommandInteraction */ interaction) 
         ]
     );
 
-    return await interaction.editReply(`The player (<@${discordID}>) has been processed as a \`RESTRICTED FREE AGENT\`. Their league roles in the server have been updated to \`RESTRICTED FREE AGENT\` & \`LEAGUE\`. Their nickname has been updated in the discord server. Their team has been set to \`null\` in the database, as well as their leagueStatus being set to \`RESTRICTED FREE AGENT\`, contractStatus to \`null\` and contractRemaing to \`null\``);
+    return await interaction.editReply(`The player (${userMention(discordID)}) has been processed as a \`RESTRICTED FREE AGENT\`. Their league roles in the server have been updated to \`RESTRICTED FREE AGENT\` & \`LEAGUE\`. Their nickname has been updated in the discord server. Their team has been set to \`null\` in the database, as well as their leagueStatus being set to \`RESTRICTED FREE AGENT\`, contractStatus to \`null\` and contractRemaing to \`null\``);
 }
 
 module.exports = { processRFA };

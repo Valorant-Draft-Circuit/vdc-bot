@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, time, TimestampStyles } = require(`discord.js`);
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
@@ -20,8 +20,9 @@ async function requestReschedule(interaction, teamName, matchday, rescheduledTim
     const validatedTime = rescheduledTime.match(timestampValidator);
     if (validatedTime == null) return await interaction.editReply(`This is an invalid time!`);
 
-    const time = validatedTime[0];
-    const dateTime = (new Date(time * 1000)).toUTCString();
+    // a number, not the matched string: time() only accepts a number or Date and throws on strings
+    const matchTime = Number(validatedTime[0]);
+    const dateTime = (new Date(matchTime * 1000)).toUTCString();
 
     const team = await Team.getBy({ name: teamName });
     const season = await ControlPanel.getSeason();
@@ -61,7 +62,7 @@ async function requestReschedule(interaction, teamName, matchday, rescheduledTim
             },
             {
                 name: `\u200B`,
-                value: `RESCHEDULE\n${match.Home.name} vs. ${match.Away.name}\n${match.tier}\n<t:${time}:f> (<t:${time}:R>)\n${dateTime}\n${match.matchID}`,
+                value: `RESCHEDULE\n${match.Home.name} vs. ${match.Away.name}\n${match.tier}\n${time(matchTime, TimestampStyles.LongDateShortTime)} (${time(matchTime, TimestampStyles.RelativeTime)})\n${dateTime}\n${match.matchID}`,
                 inline: true,
             },
         ],

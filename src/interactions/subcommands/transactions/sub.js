@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, time, TimestampStyles } = require(`discord.js`);
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
@@ -65,7 +65,7 @@ async function requestSub(
 			},
 			{
 				name: `\u200B`,
-				value: `SUB\n${subIn}\n\`${subIn.id}\`\n\`${oldMMR} => ${newMMR} / ${mmrCap}\`\n${team.name}\n${franchise.name}\n<t:${unsubTime}:t> (<t:${unsubTime}:R>)\n${subOut}\n\`${subOut.id}\``,
+				value: `SUB\n${subIn}\n\`${subIn.id}\`\n\`${oldMMR} => ${newMMR} / ${mmrCap}\`\n${team.name}\n${franchise.name}\n${time(unsubTime, TimestampStyles.ShortTime)} (${time(unsubTime, TimestampStyles.RelativeTime)})\n${subOut}\n\`${subOut.id}\``,
 				inline: true,
 			},
 		],

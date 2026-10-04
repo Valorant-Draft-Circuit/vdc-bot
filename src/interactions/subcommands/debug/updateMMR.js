@@ -1,5 +1,5 @@
 const { Player, ControlPanel } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } = require(`discord.js`);
+const { ChatInputCommandInteraction, EmbedBuilder, MessageFlags, userMention } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 const fs = require(`fs`);
 
@@ -34,7 +34,7 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
     const embed = new EmbedBuilder({
         author: { name: `Updated User - ${player.name}`, icon_url: player.image },
         description:
-            `\`  Discord Account \` : <@${discordID}>\n` +
+            `\`  Discord Account \` : ${userMention(discordID)}\n` +
             `\` Primary Riot IGN \` : [\`${player.PrimaryRiotAccount.riotIGN}\`](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.PrimaryRiotAccount.riotIGN)})`
         ,
         color: 0xE92929,

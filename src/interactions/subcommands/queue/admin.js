@@ -1,4 +1,4 @@
-const { MessageFlags, EmbedBuilder } = require(`discord.js`);
+const { MessageFlags, EmbedBuilder, time, TimestampStyles, roleMention } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
 const { ROLES } = require(`../../../../utils/enums/roles`);
 const { CHANNELS } = require(`../../../../utils/enums/channels`);
@@ -282,10 +282,10 @@ function buildTierStateMessage(tiers, isOpen) {
 
 async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 	const status = matchmakerStatus ?? { running: false };
-	const startedAt = status.startedAt ? `<t:${Math.floor(status.startedAt / 1000)}:R>` : `N/A`;
-	const stoppedAt = status.stoppedAt ? `<t:${Math.floor(status.stoppedAt / 1000)}:R>` : `N/A`;
+	const startedAt = status.startedAt ? time(Math.floor(status.startedAt / 1000), TimestampStyles.RelativeTime) : `N/A`;
+	const stoppedAt = status.stoppedAt ? time(Math.floor(status.stoppedAt / 1000), TimestampStyles.RelativeTime) : `N/A`;
 	const stopReason = status.stopReason ? String(status.stopReason) : `N/A`;
-	const warmupEndsAt = status.warmupEndsAt ? `<t:${Math.floor(status.warmupEndsAt / 1000)}:R>` : `N/A`;
+	const warmupEndsAt = status.warmupEndsAt ? time(Math.floor(status.warmupEndsAt / 1000), TimestampStyles.RelativeTime) : `N/A`;
 	const scoutRoleId = String(ROLES?.LEAGUE?.SCOUT || ``);
 
 	const redis = getRedisClient();
@@ -329,7 +329,7 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 			},
 			{
 				name: `Scout Role`,
-				value: scoutRoleId ? `<@&${scoutRoleId}> (${scoutRoleId})` : `*Not configured*`,
+				value: scoutRoleId ? `${roleMention(scoutRoleId)} (${scoutRoleId})` : `*Not configured*`,
 				inline: false,
 			},
 			{
@@ -382,7 +382,7 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 			},
 			{
 				name: `Last Pop`,
-				value: status.lastPopAt ? `<t:${Math.floor(status.lastPopAt / 1000)}:R>` : `N/A`,
+				value: status.lastPopAt ? time(Math.floor(status.lastPopAt / 1000), TimestampStyles.RelativeTime) : `N/A`,
 				inline: true,
 			},
 			{
