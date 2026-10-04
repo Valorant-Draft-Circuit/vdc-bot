@@ -1,3 +1,4 @@
+const { Events } = require(`discord.js`);
 const { startQueueRuntime } = require(`../core/queue/runtime`);
 const { startModExpiry } = require(`../workers/modExpiry`);
 const { startSubExpiry } = require(`../workers/subExpiry`);
@@ -6,14 +7,15 @@ const { startWebVetoAnnouncer } = require(`../workers/webVetoAnnouncer`);
 module.exports = {
 
 	/**
-	 * Emitted whenever a guild member changes - i.e. new role, removed role, nickname.
+	 * Emitted when the client becomes ready to start working. `ready` was renamed to
+	 * `clientReady` in discord.js 14.22 and stops firing under the old name in v15.
 	 * @type {Event}
 	 * @references
-	 * @djs https://discord.js.org/#/docs/discord.js/main/class/Client?scrollTo=e-ready
-	 * @api https://discord.com/developers/docs/topics/gateway-events#ready 
+	 * @djs https://discord.js.org/#/docs/discord.js/main/class/Client?scrollTo=e-clientReady
+	 * @api https://discord.com/developers/docs/topics/gateway-events#ready
 	 */
 
-	name: `ready`,
+	name: Events.ClientReady,
 	once: true,
 
 	async execute(client) {

@@ -45,6 +45,7 @@ const CACHE_STUBS = {
         }
         requireAllModules([`src`, `utils`]);
         await checkNativeModules();
+        await checkDevDmGuard(client);
         await client.destroy();
     } catch (error) {
         fail(`Unexpected error: ${error.stack ?? error}`);
@@ -237,6 +238,45 @@ async function checkNativeModules() {
         fail(`Prisma connected to the placeholder database; DATABASE_URL isolation is broken`);
     } catch (error) {
         if (error.errorCode !== `P1001`) fail(`Prisma engine failed to start: ${error.message}`);
+    }
+}
+
+/** The dev DM guard patches discord.js internals, so prove every DM path still hits it */
+async function checkDevDmGuard(client) {
+    const { User, GuildMember, DMChannel, ChannelType, UserManager, RESTJSONErrorCodes } = require(`discord.js`);
+    const { installDevDmGuard } = require(`../src/core/dmGuard.js`);
+    const originalCreateDM = UserManager.prototype.createDM;
+
+    process.env.PROD = `1`;
+    if (installDevDmGuard() || UserManager.prototype.createDM !== originalCreateDM) fail(`DM guard installed with PROD=1`);
+
+    process.env.PROD = `0`;
+    process.env.DEV_DMS_ENABLED = `true`;
+    if (installDevDmGuard()) fail(`DM guard installed despite DEV_DMS_ENABLED=true`);
+
+    delete process.env.DEV_DMS_ENABLED;
+    if (!installDevDmGuard()) return fail(`DM guard did not install in development`);
+
+    // the client never logs in, so a DM that slips past the guard fails with some other error
+    const userData = { id: `1`, username: `smoke`, discriminator: `0` };
+    const user = new User(client, userData);
+    const member = new GuildMember(client, { user: userData }, { id: `2`, client });
+    const dmChannel = new DMChannel(client, { id: `3`, type: ChannelType.DM, recipients: [userData] });
+
+    const dmPaths = {
+        'user.send()': () => user.send(`smoke`),
+        'member.send()': () => member.send(`smoke`),
+        'client.users.send()': () => client.users.send(userData.id, `smoke`),
+        'DMChannel#send()': () => dmChannel.send(`smoke`),
+    };
+
+    for (const [label, send] of Object.entries(dmPaths)) {
+        try {
+            await send();
+            fail(`DM guard let ${label} through`);
+        } catch (error) {
+            if (error.code !== RESTJSONErrorCodes.CannotSendMessagesToThisUser) fail(`DM guard missed ${label}: ${firstLine(error)}`);
+        }
     }
 }
 

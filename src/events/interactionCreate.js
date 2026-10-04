@@ -1,4 +1,4 @@
-const { Client, BaseInteraction, ChatInputCommandInteraction, ButtonInteraction, UserSelectMenuInteraction, AutocompleteInteraction } = require(`discord.js`);
+const { Client, BaseInteraction, ChatInputCommandInteraction, ButtonInteraction, UserSelectMenuInteraction, AutocompleteInteraction, MessageFlags } = require(`discord.js`);
 
 module.exports = {
 
@@ -67,7 +67,7 @@ async function executeModal(client, interaction) {
     const modalHandler = client.modals.get(modalId);
     if (!modalHandler) {
         logger.log(`WARNING`, `No modal handler found for ${modalId}`);
-        return interaction.reply({ content: `This modal is not supported.`, flags: 64 });
+        return interaction.reply({ content: `This modal is not supported.`, flags: MessageFlags.Ephemeral });
     }
 
     const args = customId.split(`-`).slice(1);

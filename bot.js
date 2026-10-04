@@ -15,6 +15,12 @@ logger.log(`VERBOSE`, `Starting...`);
 // ################################################################################################
 
 
+// BLOCK DMS ON THE DEVELOPMENT BOT ---------------------------------------------------------------
+// dev bots run against prod-synced data; see src/core/dmGuard.js
+require(`./src/core/dmGuard.js`).installDevDmGuard();
+// ################################################################################################
+
+
 // INITALIZE CLIENT -------------------------------------------------------------------------------
 global.client = new BotClient();
 logger.log(`DEBUG`, `Initialized client!`);

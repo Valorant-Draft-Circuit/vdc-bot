@@ -147,7 +147,7 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 
 	});
 
-	return await interaction.editReply({ embeds: [embed], ephemeral: false });
+	return await interaction.editReply({ embeds: [embed] });
 }
 
 // grabs everyone's fresh IGNs from riot and swaps the new primary name into the nickname
