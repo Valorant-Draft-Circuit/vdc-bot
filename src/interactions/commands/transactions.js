@@ -8,7 +8,7 @@ module.exports = {
 		// defer as early as possible
 		await interaction.deferReply();
 
-		const { _subcommand, _hoistedOptions } = interaction.options;
+		const subcommand = interaction.options.getSubcommand();
 
 		/*	Programmer Notes:
 		 * 		You'll notice that the switch case statements below
@@ -17,100 +17,100 @@ module.exports = {
 		 * 		block is treated as a single block instead of each case
 		 * 		statement being treated as a unique block.
 		 * 
-		 * 		This is required because the `_hoistedOptions` can be
-		 * 		different for each subcommand and the order of them are
-		 * 		not the same, so the first input may be "player" for one
-		 * 		command and something else for another command.
+		 * 		This is required because each case declares its own
+		 * 		consts and several share a name (e.g. `player`), which
+		 * 		would collide if every case shared the switch's single
+		 * 		block.
 		 */
-		switch (_subcommand) {
+		switch (subcommand) {
 			case `cut`: {
 				// Player whose contract to cut
-				const player = _hoistedOptions[0];
+				const player = interaction.options.get(`user`);
 				return cut.cut(interaction, player);
 			}
 
 			case `sign`: {
 				// Player to sign & team to sign to
-				const player = _hoistedOptions[0];
-				const team = _hoistedOptions[1].value;
-				const contractLength = _hoistedOptions[2].value;
+				const player = interaction.options.get(`user`);
+				const team = interaction.options.getString(`team`);
+				const contractLength = interaction.options.getString(`length`);
 				return sign.sign(interaction, player, team, contractLength);
 			}
 
 			case `update-tier`: {
 				// Player to update & tier to update to
-				const player = _hoistedOptions[0];
-				const tier = _hoistedOptions[1].value;
+				const player = interaction.options.get(`player`);
+				const tier = interaction.options.getString(`tier`);
 
 				return updateTier.updateTier(interaction, player, tier);
 			}
 
 			case `renew`: {
 				// Player whose contract to renew
-				const player = _hoistedOptions[0];
+				const player = interaction.options.get(`user`);
 				return renew.renew(interaction, player);
 			}
 
 			case `expire`: {
 				// Player whose contract to expire
-				const player = _hoistedOptions[0];
+				const player = interaction.options.get(`user`);
 				return expire.expire(interaction, player);
 			}
 
 			case `sub`: {
 				// player to sub
-				const subIn = _hoistedOptions[0].member;
-				const subOut = _hoistedOptions[1].member;
+				const subIn = interaction.options.getMember(`substitute`);
+				const subOut = interaction.options.getMember(`for`);
 				return sub.sub(interaction, subIn, subOut)
 			}
 
 			case `unsub`: {
 				// player to unsub
-				const unsubPlayer = _hoistedOptions[0].member;
+				const unsubPlayer = interaction.options.getMember(`user`);
 				return unsub.unsub(interaction, unsubPlayer);
 			}
 
 			case `ir`: {
 				// player to IR
-				const player = _hoistedOptions[0];
+				const player = interaction.options.get(`user`);
 				return ir.ir(interaction, player);
 			}
 
 			case `captain`: {
 				// player to set as captain
-				const player = _hoistedOptions[0];
+				const player = interaction.options.get(`user`);
 				return captain.captain(interaction, player);
 			}
 
 			case `retire`: {
 				// Player to retire
-				const player = _hoistedOptions[0];
+				const player = interaction.options.get(`retire`);
 				return retire.retire(interaction, player);
 			}
 
 			case `trade`: {
 				// Franchises between which the trade happens
-				const franchise1 = _hoistedOptions[0].value;
-				const franchise2 = _hoistedOptions[1].value;
+				const franchise1 = interaction.options.getString(`franchise-1`);
+				const franchise2 = interaction.options.getString(`franchise-2`);
 				return trade.trade(interaction, franchise1, franchise2);
 			}
 
 			case `reschedule`: {
 				// match to reschedule
-				const teamName = _hoistedOptions[0].value;
-				const matchday = _hoistedOptions[1].value;
-				const rescheduleDate = _hoistedOptions[2].value;
+				const teamName = interaction.options.getString(`team`);
+				const matchday = interaction.options.getInteger(`matchday`);
+				const rescheduleDate = interaction.options.getString(`date`);
 				return reschedule.reschedule(interaction, teamName, matchday, rescheduleDate);
 			}
 
 			case `schedule-playoff`: {
 				// Schedule a new playoff match
-				const homeTeam = _hoistedOptions[0].value;
-				const awayTeam = _hoistedOptions[1].value;
-				const tier = _hoistedOptions[2].value;
-				const matchType = _hoistedOptions[3].value;
-				const matchday = _hoistedOptions[4].value;
-				const date = _hoistedOptions[5].value;
+				const homeTeam = interaction.options.getString(`home-team`);
+				const awayTeam = interaction.options.getString(`away-team`);
+				const tier = interaction.options.getString(`tier`);
+				const matchType = interaction.options.getString(`match-type`);
+				const matchday = interaction.options.getInteger(`matchday`);
+				const date = interaction.options.getString(`date`);
 				return schedulePlayoff.schedulePlayoff(interaction, homeTeam, awayTeam, tier, matchType, matchday, date);
 			}
 

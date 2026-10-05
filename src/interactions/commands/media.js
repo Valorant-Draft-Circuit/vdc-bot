@@ -7,7 +7,7 @@ module.exports = {
 		// defer as early as possible
 		await interaction.deferReply();
 
-		const { _subcommand, _hoistedOptions } = interaction.options;
+		const subcommand = interaction.options.getSubcommand();
 
 		/*	Programmer Notes:
 		 * 		You'll notice that the switch case statements below
@@ -16,28 +16,28 @@ module.exports = {
 		 * 		block is treated as a single block instead of each case
 		 * 		statement being treated as a unique block.
 		 * 
-		 * 		This is required because the `_hoistedOptions` can be
-		 * 		different for each subcommand and the order of them are
-		 * 		not the same, so the first input may be "player" for one
-		 * 		command and something else for another command.
+		 * 		This is required because each case declares its own
+		 * 		consts and several share a name (e.g. `homeTeam`), which
+		 * 		would collide if every case shared the switch's single
+		 * 		block.
 		 */
-		switch (_subcommand) {
+		switch (subcommand) {
 			case `generate-season-thumbnail`: {
 				// Player whose contract to cut
-				const homeTeam = _hoistedOptions[0].value;
-				const awayTeam = _hoistedOptions[1].value;
-				const day = _hoistedOptions[2].value;
-				const time = _hoistedOptions[3] ? _hoistedOptions[3].value : `9:00 EST / 6:00 PST`;
+				const homeTeam = interaction.options.getString(`home-team`);
+				const awayTeam = interaction.options.getString(`away-team`);
+				const day = interaction.options.getNumber(`day`);
+				const time = interaction.options.getString(`time`) ?? `9:00 EST / 6:00 PST`;
 
 				return generateSeasonThumbnail(interaction, homeTeam, awayTeam, day, time)
 			}
 			case `generate-playoffs-images`: {
 				// Player whose contract to cut
-				const homeTeam = _hoistedOptions[0].value;
-				const awayTeam = _hoistedOptions[1].value;
-				const imagetype = _hoistedOptions[2].value;
-				const matchtype = _hoistedOptions[3].value;
-				const time = _hoistedOptions[4] ? _hoistedOptions[3].value : `7:00 EST / 4:00 PST`;
+				const homeTeam = interaction.options.getString(`home-team`);
+				const awayTeam = interaction.options.getString(`away-team`);
+				const imagetype = interaction.options.getString(`image-type`);
+				const matchtype = interaction.options.getString(`match-type`);
+				const time = interaction.options.getString(`time`) ?? `7:00 EST / 4:00 PST`;
 
 				return generatePlayoffsImages(interaction, {
 					homeName: homeTeam,
@@ -49,7 +49,7 @@ module.exports = {
 				})
 			}
 			case `stats-csv`: {
-				const gameType = _hoistedOptions[0].value;
+				const gameType = interaction.options.getString(`match-type`);
 				return statsCsv(interaction, {
 					gameType: gameType,
 				});

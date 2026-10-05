@@ -19,9 +19,9 @@ module.exports = {
 	async execute(/** @type ChatInputCommandInteraction */ interaction) {
 		await interaction.deferReply();
 
-		const { _subcommand, hoistedOptions } = interaction.options;
+		const subcommand = interaction.options.getSubcommand();
 
-		switch (_subcommand) {
+		switch (subcommand) {
 			case `user`:
 				return await user(interaction);
 			case `update`: {
@@ -37,13 +37,13 @@ module.exports = {
 };
 
 async function user(/** @type ChatInputCommandInteraction */ interaction) {
-	const discordID = interaction.options._hoistedOptions[0].value;
+	const discordID = interaction.options.getUser(`user`).id;
 
 	const player = await Player.getBy({ discordID: discordID });
 	if (player == null) return await interaction.editReply(`This player (${userMention(discordID)}) does not exist in our database!`);
 
 	// if there is a tagged user, use that, otherwise use the interaction author
-	const guildMember = interaction.options._hoistedOptions.length > 0 ? interaction.guild.members.cache.get(interaction.options._hoistedOptions[0].value) : interaction.member;
+	const guildMember = discordID ? interaction.guild.members.cache.get(discordID) : interaction.member;
 	const guildUser = await guildMember.user.fetch();
 	const guildNickname = guildMember.nickname ? guildMember.nickname : guildMember.user.username;
 	const guildUserAvatar = guildUser.displayAvatarURL({ format: "png", dynamic: true, size: 2048 });

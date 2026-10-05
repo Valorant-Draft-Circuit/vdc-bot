@@ -3,8 +3,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 // const { CHANNELS } = require("../../../../utils/enums/channels");
 
 async function resetMapBan(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _hoistedOptions } = interaction.options;
-    const matchID = _hoistedOptions[0].value;
+    const matchID = interaction.options.getInteger(`match-id`);
 
     //TODO: Check if the command is being run in a mapban channel then autofill matchID?  Made some boilerplate for this below
 

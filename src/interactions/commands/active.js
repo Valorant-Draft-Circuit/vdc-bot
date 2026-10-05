@@ -49,7 +49,7 @@ async function removeInactiveRole(/** @type ChatInputCommandInteraction */ inter
     const guildMember = await interaction.guild.members.fetch(interaction.member.id);
 
     // remove the inactive role
-    if (guildMember._roles.includes(ROLES.LEAGUE.INACTIVE)) {
+    if (guildMember.roles.cache.has(ROLES.LEAGUE.INACTIVE)) {
         logger.log(`VERBOSE`, `User ${guildMember} (\`${guildMember.user.username}\`, \`${guildMember.id}\`) has successfully ran the activity check`);
         await guildMember.roles.remove(ROLES.LEAGUE.INACTIVE);
         return await interaction.editReply(`You have completed the activity check and been marked as an active player! Good luck in your matches!`);

@@ -23,9 +23,7 @@ const getAllIndexes = (arr, val) => {
  * @param {String} team 
  */
 async function confirmUpdate(interaction) {
-	const { _hoistedOptions } = interaction.options;
-
-	const attachment = _hoistedOptions[0].attachment
+	const attachment = interaction.options.getAttachment(`description`)
 	if (!attachment.name.endsWith(`.txt`)) return await interaction.editReply(`Please only upload \`*.txt\` files. \`${attachment.name}\` is not a text file.`);
 
 	const gmids = (await prisma.franchise.findMany({

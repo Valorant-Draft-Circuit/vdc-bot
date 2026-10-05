@@ -25,8 +25,8 @@ const newFranchises = [`Catpocalypse`, `808 Angels`, `Natural 20`, `Grizzlies`];
 
 async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
 
-    const userRoles = interaction.member._roles;
-    if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
+    const userRoles = interaction.member.roles.cache;
+    if (!userRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
 
     // get current season from the database
     const season = await ControlPanel.getSeason();

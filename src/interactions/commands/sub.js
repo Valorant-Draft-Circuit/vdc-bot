@@ -14,8 +14,8 @@ module.exports = {
         const showMMR = await ControlPanel.getMMRDisplayState();
         const mmrTierLines = await ControlPanel.getMMRCaps(`PLAYER`);
 
-        const tier = interaction.options._hoistedOptions[0].value;
-        const mmrMax = interaction.options._hoistedOptions[1]?.value;
+        const tier = interaction.options.getString(`tier`);
+        const mmrMax = interaction.options.getNumber(`max-mmr`);
 
         const capMin = mmrTierLines[tier].min;
         const capMax = mmrMax && showMMR && mmrMax <= mmrTierLines[tier].max ? mmrMax : mmrTierLines[tier].max;

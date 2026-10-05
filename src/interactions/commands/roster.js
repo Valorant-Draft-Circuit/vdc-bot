@@ -19,10 +19,8 @@ module.exports = {
       const showMMR = await ControlPanel.getMMRDisplayState();
 
 
-      const { _hoistedOptions } = interaction.options;
-
       // get data from DB
-      const teamName = _hoistedOptions[0].value;
+      const teamName = interaction.options.getString(`team`);
 
       const [team, teamRoster, franchise, season] = await Promise.all([
          Team.getBy({ name: teamName }),

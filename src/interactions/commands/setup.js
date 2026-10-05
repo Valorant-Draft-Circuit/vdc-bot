@@ -13,8 +13,8 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
-        const { _subcommand } = interaction.options;
-        switch (_subcommand) {
+        const subcommand = interaction.options.getSubcommand();
+        switch (subcommand) {
             case `activity-check`:
                 return await activityCheck(interaction);
             default:

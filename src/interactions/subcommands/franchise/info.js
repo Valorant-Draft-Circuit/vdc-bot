@@ -5,8 +5,7 @@ const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-
 
 async function info(interaction) {
 
-    const { _hoistedOptions } = interaction.options;
-    const franchiseName = _hoistedOptions[0].value;
+    const franchiseName = interaction.options.getString(`franchise`);
 
     const franchise = await Franchise.getBy({ name: franchiseName });
     const franchiseTeams = await Franchise.getTeams({ name: franchiseName });

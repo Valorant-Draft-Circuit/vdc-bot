@@ -87,7 +87,7 @@ async function deriveChampionshipAwards(matchId) {
  * @param {ChatInputCommandInteraction} interaction
  */
 async function requestAwardFinal(interaction) {
-	const matchId = interaction.options._hoistedOptions.find((option) => option.name === `match-id`).value;
+	const matchId = interaction.options.getInteger(`match-id`);
 
 	const derived = await deriveChampionshipAwards(matchId);
 	if (derived.error != null) return await interaction.editReply(derived.error);

@@ -49,7 +49,7 @@ async function confirm(/** @type {ButtonInteraction} */ interaction) {
      */
     const addInactiveRole = async (userID) => {
         const guildMember = await interaction.guild.members.fetch(userID);
-        if (!guildMember._roles.includes(ROLES.LEAGUE.INACTIVE)) return await guildMember.roles.add(ROLES.LEAGUE.INACTIVE);
+        if (!guildMember.roles.cache.has(ROLES.LEAGUE.INACTIVE)) return await guildMember.roles.add(ROLES.LEAGUE.INACTIVE);
     };
 
     /** Callback function to update the embed once the entire queue is finished processing */

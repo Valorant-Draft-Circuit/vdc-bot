@@ -123,10 +123,10 @@ async function draftPlayer(/** @type ChatInputCommandInteraction */ interaction,
 
     // check to make sure the drafter is allowed to draft for this tier
     const drafterDiscordID = interaction.user.id;
-    const drafterRoles = interaction.member._roles;
+    const drafterRoles = interaction.member.roles.cache;
     const drafter = await Player.getBy({ discordID: drafterDiscordID });
     const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID, pick.Franchise.agm4ID].filter(id => id !== null);
-    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot draft for this pick.`);
+    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot draft for this pick.`);
 
     const franchise = await Franchise.getBy({ id: pick.franchise })
     const team = franchise.Teams.find(t => t.tier == tier);
@@ -195,10 +195,10 @@ async function cancelDraft(/** @type ButtonInteraction */ interaction) {
 
     // check to make sure the drafter is allowed to draft for this tier (if they aren't they can't cancel)
     const drafterDiscordID = interaction.user.id;
-    const drafterRoles = interaction.member._roles;
+    const drafterRoles = interaction.member.roles.cache;
     const drafter = await Player.getBy({ discordID: drafterDiscordID });
     const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID, pick.Franchise.agm4ID].filter(id => id !== null);
-    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot cancel this pick.`);
+    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and cannot cancel this pick.`);
 
     // delete the reply...
     await interaction.deleteReply();
@@ -233,10 +233,10 @@ async function executeDraft(/** @type ButtonInteraction */ interaction) {
 
     // check to make sure the drafter is allowed to draft for this tier  (if they aren't they can't confirm)
     const drafterDiscordID = interaction.user.id;
-    const drafterRoles = interaction.member._roles;
+    const drafterRoles = interaction.member.roles.cache;
     const drafter = await Player.getBy({ discordID: drafterDiscordID });
     const allowedDrafters = [pick.Franchise.gmID, pick.Franchise.agm1ID, pick.Franchise.agm2ID, pick.Franchise.agm3ID, pick.Franchise.agm4ID].filter(id => id !== null);
-    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and so you cannot confirm this draft pick.`);
+    if (!allowedDrafters.includes(drafter.id) && !drafterRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply(`You are not a GM/AGM of \`${pick.Franchise.name}\` or an admin and so you cannot confirm this draft pick.`);
 
     const nextDrafters = [nextPick.Franchise.gmID, nextPick.Franchise.agm1ID, nextPick.Franchise.agm2ID, nextPick.Franchise.agm3ID, nextPick.Franchise.agm4ID]
         .filter(id => id !== null)

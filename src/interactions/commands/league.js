@@ -10,9 +10,9 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
-        const { _subcommand } = interaction.options;
+        const subcommand = interaction.options.getSubcommand();
 
-        switch (_subcommand) {
+        switch (subcommand) {
             case `update-franchise-management`:
                 return await updateFranchiseManagement(interaction);
             case `refresh-franchises-channel`:

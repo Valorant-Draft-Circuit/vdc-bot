@@ -49,7 +49,7 @@ async function derivePickemAwards(season) {
  * @param {ChatInputCommandInteraction} interaction
  */
 async function requestAwardPickems(interaction) {
-	const season = interaction.options._hoistedOptions.find((option) => option.name === `season`).value;
+	const season = interaction.options.getInteger(`season`);
 
 	const derived = await derivePickemAwards(season);
 	if (derived.error != null) return await interaction.editReply(derived.error);

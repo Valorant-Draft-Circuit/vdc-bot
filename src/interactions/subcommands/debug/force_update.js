@@ -4,16 +4,15 @@ const { prisma } = require("../../../../prisma/prismadb");
 
 
 async function forceUpdate(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _subcommand, _hoistedOptions } = interaction.options;
-
-    const player = await Player.getBy({ discordID: _hoistedOptions[0].user.id });
-    const debugUser = _hoistedOptions[0].user;
+    const player = await Player.getBy({ discordID: interaction.options.getUser(`player`).id });
+    const debugUser = interaction.options.getUser(`player`);
     if (player == null) return await interaction.editReply(`This player (${debugUser}, \`${debugUser.username}\`, \`${debugUser.id}\`) does not exist in our database!`);
 
-    const leagueStatus = _hoistedOptions.find(o => o.name === `league-status`);
-    const contractStatus = _hoistedOptions.find(o => o.name === `contract-status`);
-    const contractRemaining = _hoistedOptions.find(o => o.name === `contract-remaining`);
-    const team = _hoistedOptions.find(o => o.name === `team`);
+    // get() returns null for omitted options, but the checks below compare against undefined
+    const leagueStatus = interaction.options.get(`league-status`) ?? undefined;
+    const contractStatus = interaction.options.get(`contract-status`) ?? undefined;
+    const contractRemaining = interaction.options.get(`contract-remaining`) ?? undefined;
+    const team = interaction.options.get(`team`) ?? undefined;
 
     const updatedDataObject = { User: { update: { data: { team: null, Status: { update: {} } } } } };
     if (leagueStatus !== undefined) updatedDataObject.User.update.data.Status.update.leagueStatus = leagueStatus.value;

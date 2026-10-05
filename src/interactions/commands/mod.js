@@ -12,13 +12,13 @@ module.exports = {
 			return interaction.editReply(`You don't have the Mod or Admin role and cannot use this command!`);
 		}
 
-		const { _subcommand } = interaction.options;
+		const subcommand = interaction.options.getSubcommand();
 		const targetUser = interaction.options.getUser(`user`);
 		const reason = interaction.options.getString(`reason`) ?? `No reason provided.`;
 		const rules = interaction.options.getString(`rules`);
 		const appealable = interaction.options.getBoolean(`appealable`) ?? true;
 
-		switch (_subcommand) {
+		switch (subcommand) {
 			case `note`:
 				return note.request(interaction, targetUser, reason);
 			case `warn`:

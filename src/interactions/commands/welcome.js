@@ -21,10 +21,9 @@ module.exports = {
         await interaction.deferReply();
 
         // destrcture options & store relevant information
-        switch (interaction.options._subcommand) {
+        switch (interaction.options.getSubcommand()) {
             case `single`:
-                const { _hoistedOptions } = interaction.options;
-                const playerDiscordID = _hoistedOptions[0].value;
+                const playerDiscordID = interaction.options.getUser(`player`).id;
 
                 return await singleWelcome(interaction, playerDiscordID);
             case `bulk`:

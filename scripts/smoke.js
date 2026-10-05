@@ -44,6 +44,8 @@ const CACHE_STUBS = {
             validateCommandStructures(client);
         }
         requireAllModules([`src`, `utils`]);
+        validateOptionLookups();
+        checkNoPrivateFields();
         await checkNativeModules();
         await checkDevDmGuard(client);
         await client.destroy();
@@ -219,6 +221,68 @@ function requireAllModules(directories) {
                 fail(`${path.relative(ROOT, file)} threw on load: ${firstLine(error)}`);
             }
         }
+    }
+}
+
+/**
+ * A misspelled option name or a getter of the wrong type only fails when someone runs the command,
+ * so check every literal `options.getX(name)` against the commands whose code can reach it
+ */
+function validateOptionLookups() {
+    const { ApplicationCommandOptionType: T } = require(`discord.js`);
+    const accepts = {
+        getString: [T.String], getInteger: [T.Integer], getNumber: [T.Number], getBoolean: [T.Boolean],
+        getUser: [T.User, T.Mentionable], getMember: [T.User, T.Mentionable], getRole: [T.Role, T.Mentionable],
+        getMentionable: [T.Mentionable], getChannel: [T.Channel], getAttachment: [T.Attachment], get: null,
+    };
+
+    // command name -> option name -> option types (across all of its subcommands)
+    const optionTypes = {};
+    for (const file of jsFiles(`utils/commandsStructure`)) {
+        const structure = require(path.join(ROOT, `utils/commandsStructure`, file));
+        const options = optionTypes[structure.name] = {};
+        const collect = (item) => (item.options ?? []).forEach((option) => {
+            if (option.type === T.Subcommand || option.type === T.SubcommandGroup) return collect(option);
+            (options[option.name] ??= new Set()).add(option.type);
+        });
+        collect(structure);
+    }
+
+    // follow each command handler's relative requires to learn which commands can reach which files
+    const reachedBy = new Map();
+    const follow = (file, command) => {
+        if (!file.startsWith(path.join(ROOT, `src`)) || reachedBy.get(file)?.has(command)) return;
+        reachedBy.set(file, (reachedBy.get(file) ?? new Set()).add(command));
+        for (const [, spec] of fs.readFileSync(file, `utf8`).matchAll(/require\(\s*[`'"](\.{1,2}\/[^`'"]+)[`'"]\s*\)/g)) {
+            try { follow(require.resolve(path.resolve(path.dirname(file), spec)), command); } catch { /* not a js module */ }
+        }
+    };
+    for (const file of jsFiles(`src/interactions/commands`)) {
+        follow(path.join(ROOT, `src/interactions/commands`, file), require(path.join(ROOT, `src/interactions/commands`, file)).name);
+    }
+
+    for (const [file, commands] of reachedBy) {
+        const source = fs.readFileSync(file, `utf8`);
+        for (const match of source.matchAll(/\.options\.(get[A-Za-z]*)\(\s*[`'"]([^`'"]+)[`'"]/g)) {
+            const [, getter, name] = match;
+            if (!(getter in accepts)) continue;
+
+            const where = `${path.relative(ROOT, file)}:${source.slice(0, match.index).split(`\n`).length}`;
+            const types = [...commands].flatMap((command) => [...(optionTypes[command]?.[name] ?? [])]);
+            if (!types.length) fail(`${where}: ${getter}(\`${name}\`) but /${[...commands].join(`, /`)} has no option named \`${name}\``);
+            else if (accepts[getter] && !types.some((type) => accepts[getter].includes(type))) fail(`${where}: ${getter}(\`${name}\`) does not accept option type ${types.map((type) => T[type]).join(`/`)}`);
+        }
+    }
+}
+
+/** discord.js internals change without notice; use the public API (options.getX, getSubcommand, roles.cache) */
+function checkNoPrivateFields() {
+    for (const file of walk(path.join(ROOT, `src`))) {
+        fs.readFileSync(file, `utf8`).split(/\r?\n/).forEach((line, index) => {
+            if (/^\s*(\/\/|\*)/.test(line)) return;
+            const match = /(?:\.|\{\s*|,\s*)(_hoistedOptions|_subcommand|_group|_roles)\b/.exec(line);
+            if (match) fail(`${path.relative(ROOT, file)}:${index + 1}: uses private discord.js field \`${match[1]}\``);
+        });
     }
 }
 

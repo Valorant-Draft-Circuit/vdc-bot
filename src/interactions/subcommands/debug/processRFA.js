@@ -8,8 +8,7 @@ const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[
 
 
 async function processRFA(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _hoistedOptions } = interaction.options;
-    const discordID = _hoistedOptions[0].value;
+    const discordID = interaction.options.getUser(`player`).id;
 
     const player = await Player.getBy({ discordID: discordID });
     const playerIGN = await Player.getIGNby({ discordID: discordID });

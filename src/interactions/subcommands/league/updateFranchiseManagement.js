@@ -11,13 +11,11 @@ const devTransactionsChannel = `1300688313988022272`;
 
 
 async function updateFranchiseManagement(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _hoistedOptions } = interaction.options;
-
     // command params
-    const operation = _hoistedOptions.find(o => o.name == `operation`).value;
-    const franchiseName = _hoistedOptions.find(o => o.name == `franchise`).value;
-    const type = _hoistedOptions.find(o => o.name == `type`).value;
-    const guildMember = _hoistedOptions.find(o => o.name == `player`).member;
+    const operation = interaction.options.getString(`operation`);
+    const franchiseName = interaction.options.getString(`franchise`);
+    const type = interaction.options.getString(`type`);
+    const guildMember = interaction.options.getMember(`player`);
 
     // check player
     const player = await Player.getBy({ discordID: guildMember.user.id });

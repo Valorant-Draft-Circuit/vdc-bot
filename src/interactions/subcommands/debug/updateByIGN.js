@@ -4,14 +4,13 @@ const { prisma } = require("../../../../prisma/prismadb");
 
 
 async function updateByIGN(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _subcommand, _hoistedOptions } = interaction.options;
-
-    const ign = _hoistedOptions[0].value;
-    const leagueStatus = _hoistedOptions.find(o => o.name === `league-status`);
-    const contractStatus = _hoistedOptions.find(o => o.name === `contract-status`);
-    const contractRemaining = _hoistedOptions.find(o => o.name === `contract-remaining`);
-    const team = _hoistedOptions.find(o => o.name === `team`);
-    const teamNull = _hoistedOptions.find(o => o.name === `set-team-null`);
+    const ign = interaction.options.getString(`ign`);
+    // get() returns null for omitted options, but the checks below compare against undefined
+    const leagueStatus = interaction.options.get(`league-status`) ?? undefined;
+    const contractStatus = interaction.options.get(`contract-status`) ?? undefined;
+    const contractRemaining = interaction.options.get(`contract-remaining`) ?? undefined;
+    const team = interaction.options.get(`team`) ?? undefined;
+    const teamNull = interaction.options.get(`set-team-null`) ?? undefined;
 
     const player = await Player.getBy({ ign: ign });
     if (player == null) return await interaction.editReply(`There's no player in the database with the IGN \`${ign}\`!`);

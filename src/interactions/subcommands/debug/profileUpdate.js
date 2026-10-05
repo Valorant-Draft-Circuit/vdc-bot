@@ -8,7 +8,7 @@ const getAccountByPuuid = `https://americas.api.riotgames.com/riot/account/v1/ac
 
 
 async function profileUpdate(/** @type ChatInputCommandInteraction */ interaction) {
-	const userID = interaction.options._hoistedOptions[0].value;
+	const userID = interaction.options.getUser(`player`).id;
 
 	/** @type GuildMember */
 	const guildMember = await interaction.guild.members.fetch(userID);
