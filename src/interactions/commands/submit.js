@@ -86,12 +86,12 @@ async function submitFromLink(interaction, { url, submittedTier, type }) {
       color: 0xE92929,
       fields: [
          {
-            name: `​`,
+            name: ``,
             value: `Tier:\nType:\nMatch ID:${combineFinalized ? `\nQueue:` : ``}`,
             inline: true
          },
          {
-            name: `​`,
+            name: ``,
             value: `${tier}\n${type}\n[\`${gameID}\`](${url})${combineFinalized ? `\nMarked for deletion + players unlocked` : ``}`,
             inline: true
          }
