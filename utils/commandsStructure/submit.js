@@ -9,7 +9,7 @@ module.exports = {
     options: [
         {
             name: `url`,
-            description: `Optional tracker.gg match link. Leave empty to auto-detect your recent match games`,
+            description: `tracker.gg match link. Required for combines; leave empty to auto-detect a scheduled match`,
             type: ApplicationCommandOptionType.String,
             required: false,
         },

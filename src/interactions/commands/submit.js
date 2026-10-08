@@ -104,8 +104,10 @@ async function submitFromLink(interaction, { url, submittedTier, type }) {
    return await interaction.editReply({ embeds: [embed] });
 }
 
+const COMBINE_LINK_REQUIRED_MESSAGE = `Combine games must be submitted with a tracker.gg link: \`/submit url:<link>\`. The tier is filled in from your queue match.`;
+
 async function submitFromAutoDetection(interaction, { type }) {
-   if (type === GameType.COMBINE) return await submitCombineFromAutoDetection(interaction);
+   if (type === GameType.COMBINE) return await interaction.editReply({ content: COMBINE_LINK_REQUIRED_MESSAGE });
    return await submitScheduledFromAutoDetection(interaction, { type });
 }
 
