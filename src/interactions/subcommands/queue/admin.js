@@ -2,21 +2,28 @@ const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
 const { ROLES } = require(`../../../../utils/enums/roles`);
 const { CHANNELS } = require(`../../../../utils/enums/channels`);
-const { getRedisClient } = require(`../../../core/redis`);
+const { getRedisClient, runLua } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
+const { getQueueMatchContext, finalizeQueueCombineSubmission } = require(`../../../core/queue/matchLifecycle`);
 const {
+	LEAGUE_STATE_KEY,
+	EVENTS_STREAM_KEY,
 	TIERS_SET_KEY,
 	tierOpenKey,
 	tierQueueKey,
 	tierQueueKeys,
 	playerKey,
 	playerRecentKey,
+	playerSuspendedKey,
 	matchKey,
 	matchKeyPattern,
 	queueIdFromMatchKey,
 } = require(`../../../helpers/queue/queueKeys`);
 const { getCurrentChannelCount } = require(`../../../workers/matchmaker/capacity`);
+
+const TRACKER_MATCH_URL = `https://tracker.gg/valorant/match/`;
+const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
 	const actorLabel = `${interaction.user.tag} (${interaction.user.id})`;
@@ -196,6 +203,35 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			}
 
 			return;
+		}
+
+		case `complete-match`: {
+			const queueId = interaction.options.getString(`queue_id`, true);
+			const url = interaction.options.getString(`url`);
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const result = await completeMatch(interaction, queueId, url, actorLabel);
+			return interaction.editReply({ content: result });
+		}
+
+		case `suspend`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const target = interaction.options.getUser(`player`, true);
+			const hours = interaction.options.getInteger(`hours`);
+			const reason = interaction.options.getString(`reason`);
+			const result = await suspendPlayer(target, { hours, reason }, interaction.user.id, actorLabel);
+			return interaction.editReply({ content: result });
+		}
+
+		case `unsuspend`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const target = interaction.options.getUser(`player`, true);
+			const removed = await getRedisClient().del(playerSuspendedKey(target.id));
+			if (!removed) {
+				return interaction.editReply({ content: `<@${target.id}> is not suspended from the queue.` });
+			}
+
+			logger.log(`ALERT`, `Queue admin unsuspend executed by ${actorLabel} for ${target.tag} (${target.id})`);
+			return interaction.editReply({ content: `Lifted the queue suspension for <@${target.id}>.` });
 		}
 
 		case `reset`: {
@@ -444,6 +480,75 @@ async function killMatch(client, queueId, actorLabel) {
 		message: `Match \`${queueId}\` was killed and players were reset.`,
 		matchRecord: parsed,
 	};
+}
+
+/** Runs the queue cleanup /submit normally does, for matches whose submit didn't trigger it. */
+async function completeMatch(interaction, queueId, url, actorLabel) {
+	if (url && !validMatchRegex.test(url)) {
+		return `That doesn't look like a valid tracker.gg match URL. Nothing was changed.`;
+	}
+
+	const queueContext = await getQueueMatchContext(queueId);
+	if (!queueContext) {
+		return `Match \`${queueId}\` was not found.`;
+	}
+	// finalize increments every player's gameCount, so running it twice would double count
+	if (queueContext.matchData.status === `completed`) {
+		return `Match \`${queueId}\` is already completed. Nothing was changed.`;
+	}
+
+	const completed = await finalizeQueueCombineSubmission({
+		guild: interaction.guild,
+		userId: interaction.user.id,
+		queueContext,
+		gameID: url ? url.replace(TRACKER_MATCH_URL, ``) : ``,
+		url,
+	});
+	if (!completed) {
+		return `Failed to complete match \`${queueId}\`. Check the logs for details.`;
+	}
+
+	logger.log(
+		`WARNING`,
+		`Queue admin complete-match executed by ${actorLabel} for match ${queueId} — players unlocked: ${queueContext.players.length}`,
+	);
+
+	return `Match \`${queueId}\` was marked completed. ${queueContext.players.length} player(s) were unlocked and credited with a game, and the match channels were removed.`;
+}
+
+async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {
+	const redis = getRedisClient();
+	const now = Date.now();
+	const suspensionKey = playerSuspendedKey(target.id);
+	const payload = JSON.stringify({ reason: reason ?? null, suspendedBy: actorId, suspendedAt: now });
+
+	// Set the suspension before dequeueing so a join racing this command is rejected by join.lua.
+	if (hours) await redis.set(suspensionKey, payload, `EX`, hours * 3600);
+	else await redis.set(suspensionKey, payload);
+
+	// leave.lua atomically pulls a queued player out of every list, and refuses without changes
+	// when they are in a match, which lets that match play out.
+	const leave = parseJSONSafe(await runLua(`leave`, {
+		keys: [playerKey(target.id), EVENTS_STREAM_KEY, LEAGUE_STATE_KEY],
+		args: [target.id, String(now)],
+	})) ?? {};
+
+	const duration = hours
+		? `for ${hours} hour(s), ending <t:${Math.floor((now + hours * 3600000) / 1000)}:R>`
+		: `until they are unsuspended`;
+	const lines = [`Suspended <@${target.id}> from the queue ${duration}.`];
+	if (reason) lines.push(`• Reason: ${reason}`);
+	if (leave.ok) lines.push(`• Removed them from the ${leave.tier} queue.`);
+	if (leave.error === `IN_MATCH`) {
+		lines.push(`• They're in match \`${leave.details?.queueId ?? `unknown`}\`, which will continue. They can't queue again after it ends.`);
+	}
+
+	logger.log(
+		`ALERT`,
+		`Queue admin suspend executed by ${actorLabel} for ${target.tag} (${target.id}) ${hours ? `for ${hours}h` : `indefinitely`}${reason ? ` — reason: ${reason}` : ``}`,
+	);
+
+	return lines.join(`\n`);
 }
 
 async function resetQueues(client, actorLabel) {

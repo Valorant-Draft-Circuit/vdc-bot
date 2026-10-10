@@ -73,6 +73,64 @@ module.exports = {
             ],
         },
         {
+            name: `complete-match`,
+            description: `Force complete a match (unlock players, count the game, clean up channels) when submit didn't.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `queue_id`,
+                    description: `Internal queue identifier (Queue ID).`,
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                },
+                {
+                    name: `url`,
+                    description: `Optional: tracker.gg link of the submitted game, stored on the match record.`,
+                    type: ApplicationCommandOptionType.String,
+                    required: false,
+                },
+            ],
+        },
+        {
+            name: `suspend`,
+            description: `Suspend a player from the queue. An active match is allowed to finish.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `player`,
+                    description: `The player to suspend.`,
+                    type: ApplicationCommandOptionType.User,
+                    required: true,
+                },
+                {
+                    name: `hours`,
+                    description: `Optional: how long the suspension lasts. Leave empty to suspend until unsuspended.`,
+                    type: ApplicationCommandOptionType.Integer,
+                    required: false,
+                    min_value: 1,
+                },
+                {
+                    name: `reason`,
+                    description: `Optional: reason for the suspension.`,
+                    type: ApplicationCommandOptionType.String,
+                    required: false,
+                },
+            ],
+        },
+        {
+            name: `unsuspend`,
+            description: `Lift a player's queue suspension.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `player`,
+                    description: `The player to unsuspend.`,
+                    type: ApplicationCommandOptionType.User,
+                    required: true,
+                },
+            ],
+        },
+        {
             name: `reload-config`,
             description: `Reload queue configuration from Control Panel.`,
             type: ApplicationCommandOptionType.Subcommand,

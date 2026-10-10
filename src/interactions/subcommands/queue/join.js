@@ -172,6 +172,12 @@ function mapJoinErrorToMessage(payload, tier) {
 			return `You're currently in a match (${payload.details?.queueId ?? `unknown`}).`;
 		case `PLAYER_LOCKED`:
 			return `You're locked from queueing until staff unlocks you.`;
+		case `PLAYER_SUSPENDED`: {
+			const until = Number(payload.details?.suspendedUntil);
+			return until
+				? `You're suspended from the queue. Your suspension ends <t:${Math.floor(until / 1000)}:R>.`
+				: `You're suspended from the queue. Please create a ticket if you believe this is an error.`;
+		}
 		case `ON_COOLDOWN`:
 			return `You're on cooldown. Try again once it expires.`;
 		case `DUPLICATE_IN_QUEUE`:

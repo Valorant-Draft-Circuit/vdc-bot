@@ -61,7 +61,8 @@ async function finalizeQueueCombineSubmission({ guild, userId, queueContext, gam
 		const pipeline = redis.pipeline();
 
 		pipeline.hset(queueMatchKey, `status`, `completed`);
-		pipeline.hset(queueMatchKey, `trackerUrl`, url);
+		// url is optional when an admin force-completes a match via /queueadmin complete-match
+		if (url) pipeline.hset(queueMatchKey, `trackerUrl`, url);
 		pipeline.hset(queueMatchKey, `endedAt`, String(Date.now()));
 
 		const affected = new Set(players.filter(Boolean));
@@ -107,7 +108,7 @@ async function finalizeQueueCombineSubmission({ guild, userId, queueContext, gam
 				`*`,
 				`type`, `match_completed`,
 				`queueId`, String(queueId),
-				`gameID`, String(gameID),
+				`gameID`, String(gameID ?? ``),
 				`tier`, String(tier ?? ``),
 				`initiatedBy`, String(userId),
 				`timestamp`, String(Date.now()),

@@ -31,6 +31,11 @@ function playerRecentKey(discordId) {
 	return `${playerKey(discordId)}:recent`;
 }
 
+// Kept separate from the player hash, which expires and gets reset to idle when a match ends.
+function playerSuspendedKey(discordId) {
+	return `${playerKey(discordId)}:suspended`;
+}
+
 function matchKey(queueId) {
 	return `${MATCH_KEY_PREFIX}${queueId}`;
 }
@@ -65,6 +70,7 @@ module.exports = {
 	tierOpenKey,
 	playerKey,
 	playerRecentKey,
+	playerSuspendedKey,
 	matchKey,
 	matchKeyPattern,
 	queueIdFromMatchKey,

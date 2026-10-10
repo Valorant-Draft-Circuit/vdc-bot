@@ -156,6 +156,16 @@ elseif status == "locked" then
 	return failure("PLAYER_LOCKED")
 end
 
+-- Queue suspension lives in its own key (set by /queueadmin suspend); PTTL is -1 when indefinite.
+local suspendedTtl = tonumber(redis.call("PTTL", playerKey .. ":suspended"))
+if suspendedTtl ~= nil and suspendedTtl ~= -2 then
+	local suspendedUntil = nil
+	if suspendedTtl > 0 then
+		suspendedUntil = now + suspendedTtl
+	end
+	return failure("PLAYER_SUSPENDED", { suspendedUntil = suspendedUntil })
+end
+
 local existingCooldown = tonumber(playerData.cooldownUntil)
 if existingCooldown ~= nil and existingCooldown > now then
 	return failure("ON_COOLDOWN", { cooldownUntil = existingCooldown })
