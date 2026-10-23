@@ -7,6 +7,7 @@ KEYS
   1 -> vdc:player:{userId}
   2 -> vdc:events
   3 -> vdc:league_state
+  4 -> vdc:tiers (optional; lets a player whose hash isn't queued clear a leftover list entry)
 
 ARGV
   1 -> userId
@@ -48,8 +49,28 @@ local now = tonumber(ARGV[2])
 local playerKey = KEYS[1]
 local playerData = parseHash(redis.call("HGETALL", playerKey))
 
-if next(playerData) == nil then
-	return failure("NOT_QUEUED")
+-- Remove the user from every priority list of a tier, including the :completed siblings.
+local function removeFromTier(tierName)
+	local removed = 0
+	for _, bucket in ipairs({ "DE", "FA", "RFA", "SIGNED" }) do
+		local key = "vdc:tier:" .. tierName .. ":queue:" .. bucket
+		removed = removed + redis.call("LREM", key, 0, userId) + redis.call("LREM", key .. ":completed", 0, userId)
+	end
+	return removed
+end
+
+local function emitLeave(tier, priority)
+	local eventsKey = KEYS[2]
+	if eventsKey == nil or eventsKey == "" then
+		return nil
+	end
+	return redis.call("XADD", eventsKey, "*",
+		"type", "queue_leave",
+		"userId", userId,
+		"tier", tier,
+		"priority", priority,
+		"timestamp", tostring(now or 0)
+	)
 end
 
 local status = playerData.status and string.lower(playerData.status)
@@ -59,7 +80,27 @@ end
 
 -- Allow players who are either actively queued or in the "completed" list to leave.
 if status ~= "queued" and status ~= "completed" then
-	return failure("NOT_QUEUED")
+	-- Not queued per their hash (or the hash is gone), but a leftover list entry would still make
+	-- join refuse them and the matchmaker pick them, so sweep it out of every tier.
+	local tiersKey = KEYS[4]
+	local sweptTier = nil
+	if tiersKey ~= nil and tiersKey ~= "" then
+		for _, tierName in ipairs(redis.call("SMEMBERS", tiersKey)) do
+			if removeFromTier(tierName) > 0 then
+				sweptTier = tierName
+			end
+		end
+	end
+	if sweptTier == nil then
+		return failure("NOT_QUEUED")
+	end
+
+	return success({
+		userId = userId,
+		tier = sweptTier,
+		priority = "",
+		eventId = emitLeave(sweptTier, ""),
+	})
 end
 
 local tier = playerData.tier
@@ -70,52 +111,15 @@ if tier == nil or tier == "" then
 	return failure("TIER_UNKNOWN")
 end
 
--- Determine which queue list(s) to remove the user from.
--- Prefer the explicit priority bucket if present; otherwise attempt all known
--- priority lists (including their :completed siblings) for the player's tier.
-local function safeLRem(key, value)
-	if key ~= nil and key ~= "" then
-		pcall(function()
-			redis.call("LREM", key, 0, value)
-		end)
-	end
-end
-
-local priorityUpper = (priority ~= nil and priority ~= "") and string.upper(tostring(priority)) or ""
-if priorityUpper ~= "" then
-	local target = "vdc:tier:" .. tier .. ":queue:" .. priorityUpper
-	safeLRem(target, userId)
-	-- Also remove from completed sibling just in case the player was moved there
-	safeLRem(target .. ":completed", userId)
-else
-	-- Unknown priority: try removing from all known buckets for the tier.
-	local buckets = { "DE", "FA", "RFA", "SIGNED" }
-	for _, b in ipairs(buckets) do
-		local k = "vdc:tier:" .. tier .. ":queue:" .. b
-		safeLRem(k, userId)
-		safeLRem(k .. ":completed", userId)
-	end
-end
+removeFromTier(tier)
 
 redis.call("HSET", playerKey, "status", "idle")
 redis.call("HDEL", playerKey, "queuePriority", "queueJoinedAt")
 redis.call("PEXPIRE", playerKey, 43200000)
 
-local eventsKey = KEYS[2]
-local eventId = nil
-if eventsKey ~= nil and eventsKey ~= "" then
-	eventId = redis.call("XADD", eventsKey, "*",
-		"type", "queue_leave",
-		"userId", userId,
-		"tier", tier,
-		"priority", priority,
-		"timestamp", tostring(now or 0)
-	)
-end
-
 return success({
 	userId = userId,
 	tier = tier,
 	priority = priority,
-	eventId = eventId,
+	eventId = emitLeave(tier, priority),
 })

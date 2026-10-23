@@ -180,8 +180,6 @@ function mapJoinErrorToMessage(payload, tier) {
 		}
 		case `ON_COOLDOWN`:
 			return `You're on cooldown. Try again once it expires.`;
-		case `DUPLICATE_IN_QUEUE`:
-			return `You are already listed in the queue. If this persists, contact an admin.`;
 		default:
 			return `Queue join failed (${code}). Please try again shortly.`;
 	}

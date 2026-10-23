@@ -1,11 +1,10 @@
-const { getRedisClient } = require(`../redis`);
+const { getRedisClient, runLua } = require(`../redis`);
 const { getQueueConfig } = require(`./queueconfig`);
 const { deleteMatchChannels } = require(`./matchChannels`);
 const {
 	EVENTS_STREAM_KEY,
 	matchKey,
 	playerKey,
-	playerRecentKey,
 } = require(`../../helpers/queue/queueKeys`);
 
 async function resolveCurrentQueueId(userId) {
@@ -53,45 +52,78 @@ async function resolveQueueSubmissionContext(userId) {
 	return context;
 }
 
+/**
+ * Fallback for a submitter who isn't bound to the match (a sub, or someone outside the lobby):
+ * the queue match most of the game's players are bound to.
+ * @param {string[]} userIds Discord IDs of the players in the submitted game
+ */
+async function resolveQueueContextFromPlayers(userIds) {
+	if (!userIds.length) return null;
+
+	const redis = getRedisClient();
+	const pipeline = redis.pipeline();
+	for (const userId of userIds) pipeline.hmget(playerKey(userId), `status`, `currentQueueId`);
+	const results = await pipeline.exec();
+
+	const votes = new Map();
+	for (const [error, fields] of results) {
+		if (error || !fields) continue;
+		const [status, queueId] = fields;
+		if (String(status) === `in_match` && queueId) votes.set(String(queueId), (votes.get(String(queueId)) ?? 0) + 1);
+	}
+
+	const [queueId] = [...votes.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+	if (!queueId) return null;
+
+	const context = await getQueueMatchContext(queueId);
+	if (!context) return null;
+
+	// most of the lobby has to be in the game, so a stray link can't close someone else's match
+	const overlap = context.players.filter((id) => userIds.includes(id)).length;
+	return overlap * 2 > context.players.length ? context : null;
+}
+
+/**
+ * Release a queue match's players via release_match.lua, which only touches players still bound to it.
+ * @param {string} queueId
+ * @param {`complete` | `cancel` | `requeue`} mode
+ * @returns {Promise<{ ok: boolean, error?: string, released: string[], skipped: string[] }>}
+ */
+async function releaseQueueMatch(queueId, mode, { url = ``, recentTtlSeconds = 0 } = {}) {
+	const response = await runLua(`release_match`, {
+		keys: [matchKey(queueId)],
+		args: [String(queueId), mode, String(Date.now()), url ?? ``, String(recentTtlSeconds)],
+	});
+	const payload = typeof response === `string` ? JSON.parse(response) : (response ?? {});
+
+	// cjson encodes empty arrays as {}
+	const released = Array.isArray(payload.released) ? payload.released : [];
+	const skipped = Array.isArray(payload.skipped) ? payload.skipped : [];
+	if (skipped.length) {
+		logger.log(`WARNING`, `Queue match ${queueId} ${mode}: left ${skipped.length} player(s) alone who had already moved on: ${skipped.join(`, `)}`);
+	}
+
+	return { ...payload, released, skipped };
+}
+
 async function finalizeQueueCombineSubmission({ guild, userId, queueContext, gameID, url }) {
 	const redis = getRedisClient();
-	const { queueId, queueMatchKey, matchData, tier, players } = queueContext;
+	const { queueId, matchData, tier, players } = queueContext;
 
 	try {
-		const pipeline = redis.pipeline();
-
-		pipeline.hset(queueMatchKey, `status`, `completed`);
-		// url is optional when an admin force-completes a match via /queueadmin complete-match
-		if (url) pipeline.hset(queueMatchKey, `trackerUrl`, url);
-		pipeline.hset(queueMatchKey, `endedAt`, String(Date.now()));
-
-		const affected = new Set(players.filter(Boolean));
-		for (const playerId of affected) {
-			const key = playerKey(playerId);
-			pipeline.hset(key, `status`, `idle`);
-			pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-			pipeline.hincrby(key, `gameCount`, 1);
+		const cfg = await getQueueConfig().catch((err) => {
+			logger.log(`WARNING`, `Failed to load queue config for recent-set anti-rematch updates for ${queueId}`, err);
+			return null;
+		});
+		const result = await releaseQueueMatch(queueId, `complete`, {
+			url,
+			recentTtlSeconds: Number(cfg?.recentSetTtlSeconds ?? 180) || 0,
+		});
+		// ALREADY_COMPLETED means another submit got there first; it handled the cleanup below
+		if (!result.ok) {
+			logger.log(`WARNING`, `Skipped finalizing queue match ${queueId} for game ${gameID}: ${result.error}`);
+			return false;
 		}
-
-		try {
-			const cfg = await getQueueConfig();
-			const recentTtlSeconds = Number(cfg?.recentSetTtlSeconds ?? 180) || 0;
-			if (recentTtlSeconds > 0) {
-				const affectedArr = Array.from(affected);
-				for (const playerId of affectedArr) {
-					const recentKey = playerRecentKey(playerId);
-					for (const otherId of affectedArr) {
-						if (!otherId || otherId === playerId) continue;
-						pipeline.sadd(recentKey, otherId);
-					}
-					pipeline.expire(recentKey, recentTtlSeconds);
-				}
-			}
-		} catch (err) {
-			logger.log(`WARNING`, `Failed to apply recent-set anti-rematch updates for ${queueId}`, err);
-		}
-
-		await pipeline.exec();
 
 		try {
 			const descriptor = parseJsonObject(matchData.channelIdsJSON);
@@ -127,26 +159,11 @@ async function finalizeQueueCombineSubmission({ guild, userId, queueContext, gam
 
 async function cancelQueueMatch({ guild, queueContext, initiatedBy, yesCount = 0, noCount = 0, yesVoters = [] }) {
 	const redis = getRedisClient();
-	const { queueId, queueMatchKey, matchData, players } = queueContext;
-	const affected = new Set(players.filter(Boolean));
+	const { queueId, matchData, players } = queueContext;
 
-	const pipeline = redis.pipeline();
-	for (const playerId of affected) {
-		const key = playerKey(playerId);
-		pipeline.hset(key, `status`, `idle`);
-		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(playerRecentKey(playerId));
-		pipeline.pexpire(key, 43200000);
-	}
-
-	pipeline.del(
-		queueMatchKey,
-		`${queueMatchKey}:cancel_votes_yes`,
-		`${queueMatchKey}:cancel_votes_no`,
-		`${queueMatchKey}:cancel_active`,
-		`${queueMatchKey}:cancel_message_id`,
-	);
-	await pipeline.exec();
+	// MATCH_NOT_FOUND means a concurrent cancel or kill already released it and cleaned up
+	const result = await releaseQueueMatch(queueId, `cancel`);
+	if (!result.ok) return false;
 
 	try {
 		const tier = matchData.tier ?? ``;
@@ -175,6 +192,35 @@ async function cancelQueueMatch({ guild, queueContext, initiatedBy, yesCount = 0
 	} catch (err) {
 		logger.log(`WARNING`, `Failed to cleanup channels for cancelled match ${queueId}`, err);
 	}
+	return true;
+}
+
+/**
+ * Undo a match whose lobby couldn't be set up: its players go back to the front of the queue.
+ * @param {string} queueId
+ * @param {string} reason
+ */
+async function requeueQueueMatch(queueId, reason) {
+	const result = await releaseQueueMatch(queueId, `requeue`);
+	if (!result.ok) return result;
+
+	try {
+		await getRedisClient().xadd(
+			EVENTS_STREAM_KEY,
+			`*`,
+			`type`, `match_canceled`,
+			`queueId`, String(queueId),
+			`tier`, String(result.tier ?? ``),
+			`timestamp`, String(Date.now()),
+			`initiatedBy`, `system`,
+			`reason`, String(reason ?? ``),
+			`players`, JSON.stringify(result.released),
+		);
+	} catch (err) {
+		logger.log(`WARNING`, `Failed to emit match_canceled event for requeued match ${queueId}`, err);
+	}
+
+	return result;
 }
 
 function parseJsonArray(payload) {
@@ -202,6 +248,9 @@ module.exports = {
 	getQueueMatchContext,
 	isUserBoundToQueueMatch,
 	resolveQueueSubmissionContext,
+	resolveQueueContextFromPlayers,
+	releaseQueueMatch,
 	finalizeQueueCombineSubmission,
 	cancelQueueMatch,
+	requeueQueueMatch,
 };

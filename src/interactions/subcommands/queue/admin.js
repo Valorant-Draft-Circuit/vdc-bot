@@ -5,7 +5,7 @@ const { CHANNELS } = require(`../../../../utils/enums/channels`);
 const { getRedisClient, runLua } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
-const { getQueueMatchContext, finalizeQueueCombineSubmission } = require(`../../../core/queue/matchLifecycle`);
+const { getQueueMatchContext, finalizeQueueCombineSubmission, releaseQueueMatch } = require(`../../../core/queue/matchLifecycle`);
 const {
 	LEAGUE_STATE_KEY,
 	EVENTS_STREAM_KEY,
@@ -457,27 +457,21 @@ async function killMatch(client, queueId, actorLabel) {
 	}
 
 	const parsed = parseMatchRecord(matchData);
-	const players = new Set([...(parsed.teamA ?? []), ...(parsed.teamB ?? [])]);
-	const pipeline = redis.pipeline();
-
-	for (const playerId of players) {
-		const key = playerKey(playerId);
-		pipeline.hset(key, `status`, `idle`);
-		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(playerRecentKey(playerId));
-		pipeline.pexpire(key, 43200000);
+	// only players still bound to this match are reset, so killing an old match can't pull
+	// anyone out of the queue or a newer match
+	const result = await releaseQueueMatch(queueId, `cancel`);
+	if (!result.ok) {
+		return { message: `Match \`${queueId}\` was not found.` };
 	}
-
-	pipeline.del(queueMatchKey, `${queueMatchKey}:cancel_votes_yes`, `${queueMatchKey}:cancel_votes_no`);
-	await pipeline.exec();
 
 	logger.log(
 		`ALERT`,
-		`Queue admin kill executed by ${actorLabel} for match ${queueId} — affected players: ${players.size}`,
+		`Queue admin kill executed by ${actorLabel} for match ${queueId} — players reset: ${result.released.length}, already moved on: ${result.skipped.length}`,
 	);
 
+	const movedOn = result.skipped.length ? ` ${result.skipped.length} player(s) had already moved on and were left alone.` : ``;
 	return {
-		message: `Match \`${queueId}\` was killed and players were reset.`,
+		message: `Match \`${queueId}\` was killed and ${result.released.length} player(s) were reset.${movedOn}`,
 		matchRecord: parsed,
 	};
 }
@@ -529,7 +523,7 @@ async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {
 	// leave.lua atomically pulls a queued player out of every list, and refuses without changes
 	// when they are in a match, which lets that match play out.
 	const leave = parseJSONSafe(await runLua(`leave`, {
-		keys: [playerKey(target.id), EVENTS_STREAM_KEY, LEAGUE_STATE_KEY],
+		keys: [playerKey(target.id), EVENTS_STREAM_KEY, LEAGUE_STATE_KEY, TIERS_SET_KEY],
 		args: [target.id, String(now)],
 	})) ?? {};
 
@@ -572,7 +566,8 @@ async function resetQueues(client, actorLabel) {
 		}
 	}
 
-	const matchKeys = await scanKeys(redis, matchKeyPattern());
+	// the cancel-vote keys share the vdc:match: prefix; HGETALL on them threw WRONGTYPE mid-reset
+	const matchKeys = await scanKeys(redis, matchKeyPattern(), `hash`);
 	let matchesCleared = 0;
 
 	for (const key of matchKeys) {
@@ -669,12 +664,13 @@ function parseJSONSafe(payload) {
 	}
 }
 
-async function scanKeys(redis, pattern) {
+async function scanKeys(redis, pattern, type = null) {
 	let cursor = `0`;
 	const keys = [];
+	const typeFilter = type ? [`TYPE`, type] : [];
 
 	do {
-		const [nextCursor, results] = await redis.scan(cursor, `MATCH`, pattern, `COUNT`, 250);
+		const [nextCursor, results] = await redis.scan(cursor, `MATCH`, pattern, ...typeFilter, `COUNT`, 250);
 		cursor = nextCursor;
 		keys.push(...results);
 	} while (cursor !== `0`);
@@ -683,34 +679,43 @@ async function scanKeys(redis, pattern) {
 }
 
 async function clearTierQueues(redis, tiers) {
-	const pipeline = redis.pipeline();
 	const affectedUsers = new Set();
+	const listKeys = tiers.flatMap((tier) => tierQueueKeys(tier, { includeCompleted: true }));
 
-	for (const tier of tiers) {
-		const listKeys = tierQueueKeys(tier, { includeCompleted: true });
-
-		for (const key of listKeys) {
-			const members = await redis.lrange(key, 0, -1);
-			members.forEach((id) => id && affectedUsers.add(id));
-			pipeline.del(key);
-		}
+	for (const key of listKeys) {
+		const members = await redis.lrange(key, 0, -1);
+		members.forEach((id) => id && affectedUsers.add(id));
 	}
 
 	if (affectedUsers.size === 0) {
 		return;
 	}
 
+	// The matchmaker keeps popping closed tiers until their lists are empty, so someone read above
+	// may be in a match by now. leave.lua only dequeues players who are still queued; blindly
+	// setting everyone idle used to unbind those players from the match they were just put in.
+	const now = String(Date.now());
+	const closing = new Set(tiers.map(String));
+	let dequeued = 0;
 	for (const userId of affectedUsers) {
-		const key = playerKey(userId);
-		pipeline.hset(key, `status`, `idle`);
-		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(playerRecentKey(userId));
+		// a leftover entry for someone queued in another tier must not dequeue them there
+		const queuedTier = await redis.hget(playerKey(userId), `tier`);
+		if (queuedTier && !closing.has(queuedTier)) continue;
+		const leave = await runLua(`leave`, {
+			keys: [playerKey(userId), EVENTS_STREAM_KEY, LEAGUE_STATE_KEY, TIERS_SET_KEY],
+			args: [userId, now],
+		}).catch((error) => logger.log(`WARNING`, `Failed to dequeue ${userId} while closing tiers`, error));
+		if (parseJSONSafe(leave)?.ok) dequeued += 1;
 	}
 
+	// join refuses closed tiers, so anything still listed is a leftover entry
+	const pipeline = redis.pipeline();
+	pipeline.del(...listKeys);
+	for (const userId of affectedUsers) pipeline.del(playerRecentKey(userId));
 	await pipeline.exec();
 	logger.log(
 		`INFO`,
-		`Queue admin close removed ${affectedUsers.size} queued player(s) after closing tiers [${tiers.join(`, `)}]`,
+		`Queue admin close removed ${dequeued} queued player(s) after closing tiers [${tiers.join(`, `)}]`,
 	);
 }
 
