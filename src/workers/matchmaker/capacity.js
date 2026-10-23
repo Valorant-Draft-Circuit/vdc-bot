@@ -1,4 +1,5 @@
 const { DEFAULT_CHANNEL_STOP_THRESHOLD } = require(`./constants`);
+const { ChannelType } = require(`discord.js`);
 
 const CHANNEL_COUNT_REFRESH_MS = 30000;
 const lastChannelRefreshAtByGuild = new Map();
@@ -56,6 +57,37 @@ async function ensureChannelCapacityForPops(client, config, controls) {
 	return false;
 }
 
+async function getCurrentChannelCount(client) {
+	const preferredGuildId = process.env.SERVER_ID ? String(process.env.SERVER_ID) : null;
+
+	let guild = null;
+	if (preferredGuildId) {
+		guild =
+			client.guilds.cache.get(preferredGuildId) ??
+			(await client.guilds.fetch(preferredGuildId).catch(() => null));
+	}
+
+	if (!guild) {
+		guild = client.guilds.cache.first() ?? null;
+	}
+
+	if (!guild) return 0;
+
+	// const liveChannels = await guild.channels.fetch();
+
+    // // 2. Filter out all thread types (threads have their own independent 1,000 cap)
+    // const capCountingChannels = liveChannels.filter(channel => 
+    //     channel.type !== ChannelType.PublicThread && 
+    //     channel.type !== ChannelType.PrivateThread && 
+    //     channel.type !== ChannelType.AnnouncementThread
+    // );
+
+	// return capCountingChannels.size;
+
+	return guild.channels.cache.size;
+}
+
 module.exports = {
 	ensureChannelCapacityForPops,
+	getCurrentChannelCount,
 };

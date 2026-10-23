@@ -6,6 +6,7 @@ const {
 	getQueueMatchContext,
 	isUserBoundToQueueMatch,
 	cancelQueueMatch,
+	deleteQueueMatchChannels,
 } = require(`../../core/queue/matchLifecycle`);
 
 module.exports = {
@@ -81,8 +82,7 @@ async function handleCancel(interaction) {
 	const percent = players.length ? Math.round((votes / players.length) * 100) : 0;
 
 	if (percent >= thresholdPercent) {
-		await cancelQueueMatch({
-			guild: interaction.guild,
+		const cancelled = await cancelQueueMatch({
 			queueContext,
 			initiatedBy: interaction.user.id,
 			yesCount: votes,
@@ -91,7 +91,11 @@ async function handleCancel(interaction) {
 		});
 
 		logger.log(`WARNING`, `Match ${queueId} cancelled by vote (votes: ${votes}/${players.length})`);
-		return interaction.editReply({ content: `Match ${queueId} has been cancelled (votes: ${votes}/${players.length}). Players have been unlocked and channels removed.` });
+		try {
+			return await interaction.editReply({ content: `Match ${queueId} has been cancelled (votes: ${votes}/${players.length}). Players have been unlocked and channels removed.` });
+		} finally {
+			if (cancelled) await deleteQueueMatchChannels(interaction.guild, queueContext);
+		}
 	}
 
 	// If we reach here, no auto-cancel yet. Start a formal vote message if one isn't active.
