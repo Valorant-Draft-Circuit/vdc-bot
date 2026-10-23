@@ -16,9 +16,14 @@ function buildMatchComponents(queueId) {
 		.setLabel(`Submit Match Link`)
 		.setStyle(ButtonStyle.Primary);
 
+	const pingMissing = new ButtonBuilder()
+		.setCustomId(`queueManager_pingMissing-${queueId}`)
+		.setLabel(`Ping Players Not In Voice`)
+		.setStyle(ButtonStyle.Secondary);
+
 	return [
 		new ActionRowBuilder({
-			components: [joinAttackers, joinDefenders, submitResult],
+			components: [joinAttackers, joinDefenders, submitResult, pingMissing],
 		}),
 	];
 }
