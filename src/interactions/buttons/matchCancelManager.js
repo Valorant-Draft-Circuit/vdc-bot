@@ -5,6 +5,7 @@ const {
     getQueueMatchContext,
     isUserBoundToQueueMatch,
     cancelQueueMatch,
+    deleteQueueMatchChannels,
 } = require(`../../core/queue/matchLifecycle`);
 
 module.exports = {
@@ -104,8 +105,7 @@ module.exports = {
             } catch (err) {
                 yesVoters = [];
             }
-            await cancelQueueMatch({
-				guild: interaction.guild,
+            const cancelled = await cancelQueueMatch({
 				queueContext,
 				initiatedBy: interaction.user.id,
 				yesCount,
@@ -128,8 +128,11 @@ module.exports = {
             }
 
             logger.log(`WARNING`, `Match ${queueId} cancelled by vote (votes: ${yesCount}/${total})`);
-            interaction.reply({ content: `Vote passed (${yesCount}/${total}, ${percent}%). Match has been cancelled.`, flags: MessageFlags.Ephemeral });
-			return;
+            try {
+                return await interaction.reply({ content: `Vote passed (${yesCount}/${total}, ${percent}%). Match has been cancelled.`, flags: MessageFlags.Ephemeral });
+            } finally {
+                if (cancelled) await deleteQueueMatchChannels(interaction.guild, queueContext);
+            }
         }
 
         return interaction.reply({ content: `Your vote has been recorded. Current: ${yesCount} yes / ${noCount} no (${percent}% yes).`, flags: MessageFlags.Ephemeral });

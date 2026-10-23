@@ -5,7 +5,7 @@ const { CHANNELS } = require(`../../../../utils/enums/channels`);
 const { getRedisClient, runLua } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
-const { getQueueMatchContext, finalizeQueueCombineSubmission, releaseQueueMatch } = require(`../../../core/queue/matchLifecycle`);
+const { getQueueMatchContext, finalizeQueueCombineSubmission, releaseQueueMatch, deleteQueueMatchChannels } = require(`../../../core/queue/matchLifecycle`);
 const {
 	LEAGUE_STATE_KEY,
 	EVENTS_STREAM_KEY,
@@ -210,7 +210,11 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			const url = interaction.options.getString(`url`);
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const result = await completeMatch(interaction, queueId, url, actorLabel);
-			return interaction.editReply({ content: result });
+			try {
+				return await interaction.editReply({ content: result.message });
+			} finally {
+				if (result.queueContext) await deleteQueueMatchChannels(interaction.guild, result.queueContext);
+			}
 		}
 
 		case `suspend`: {
@@ -479,27 +483,26 @@ async function killMatch(client, queueId, actorLabel) {
 /** Runs the queue cleanup /submit normally does, for matches whose submit didn't trigger it. */
 async function completeMatch(interaction, queueId, url, actorLabel) {
 	if (url && !validMatchRegex.test(url)) {
-		return `That doesn't look like a valid tracker.gg match URL. Nothing was changed.`;
+		return { message: `That doesn't look like a valid tracker.gg match URL. Nothing was changed.` };
 	}
 
 	const queueContext = await getQueueMatchContext(queueId);
 	if (!queueContext) {
-		return `Match \`${queueId}\` was not found.`;
+		return { message: `Match \`${queueId}\` was not found.` };
 	}
 	// finalize increments every player's gameCount, so running it twice would double count
 	if (queueContext.matchData.status === `completed`) {
-		return `Match \`${queueId}\` is already completed. Nothing was changed.`;
+		return { message: `Match \`${queueId}\` is already completed. Nothing was changed.` };
 	}
 
 	const completed = await finalizeQueueCombineSubmission({
-		guild: interaction.guild,
 		userId: interaction.user.id,
 		queueContext,
 		gameID: url ? url.replace(TRACKER_MATCH_URL, ``) : ``,
 		url,
 	});
 	if (!completed) {
-		return `Failed to complete match \`${queueId}\`. Check the logs for details.`;
+		return { message: `Failed to complete match \`${queueId}\`. Check the logs for details.` };
 	}
 
 	logger.log(
@@ -507,7 +510,10 @@ async function completeMatch(interaction, queueId, url, actorLabel) {
 		`Queue admin complete-match executed by ${actorLabel} for match ${queueId} — players unlocked: ${queueContext.players.length}`,
 	);
 
-	return `Match \`${queueId}\` was marked completed. ${queueContext.players.length} player(s) were unlocked and credited with a game, and the match channels were removed.`;
+	return {
+		message: `Match \`${queueId}\` was marked completed. ${queueContext.players.length} player(s) were unlocked and credited with a game, and the match channels were removed.`,
+		queueContext,
+	};
 }
 
 async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {

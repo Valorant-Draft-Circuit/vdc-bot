@@ -106,9 +106,10 @@ async function releaseQueueMatch(queueId, mode, { url = ``, recentTtlSeconds = 0
 	return { ...payload, released, skipped };
 }
 
-async function finalizeQueueCombineSubmission({ guild, userId, queueContext, gameID, url }) {
+/** Marks the match completed and unlocks its players. Callers delete the channels with deleteQueueMatchChannels. */
+async function finalizeQueueCombineSubmission({ userId, queueContext, gameID, url }) {
 	const redis = getRedisClient();
-	const { queueId, matchData, tier, players } = queueContext;
+	const { queueId, tier, players } = queueContext;
 
 	try {
 		const cfg = await getQueueConfig().catch((err) => {
@@ -123,15 +124,6 @@ async function finalizeQueueCombineSubmission({ guild, userId, queueContext, gam
 		if (!result.ok) {
 			logger.log(`WARNING`, `Skipped finalizing queue match ${queueId} for game ${gameID}: ${result.error}`);
 			return false;
-		}
-
-		try {
-			const descriptor = parseJsonObject(matchData.channelIdsJSON);
-			if (descriptor && guild) {
-				await deleteMatchChannels(guild, descriptor);
-			}
-		} catch (err) {
-			logger.log(`WARNING`, `Failed to cleanup channels for submitted match ${queueId}`, err);
 		}
 
 		try {
@@ -157,7 +149,8 @@ async function finalizeQueueCombineSubmission({ guild, userId, queueContext, gam
 	}
 }
 
-async function cancelQueueMatch({ guild, queueContext, initiatedBy, yesCount = 0, noCount = 0, yesVoters = [] }) {
+/** Deletes the match and unlocks its players. Callers delete the channels with deleteQueueMatchChannels. */
+async function cancelQueueMatch({ queueContext, initiatedBy, yesCount = 0, noCount = 0, yesVoters = [] }) {
 	const redis = getRedisClient();
 	const { queueId, matchData, players } = queueContext;
 
@@ -184,15 +177,22 @@ async function cancelQueueMatch({ guild, queueContext, initiatedBy, yesCount = 0
 		logger.log(`WARNING`, `Failed to emit match_canceled event for ${queueId}`, err);
 	}
 
-	try {
-		const descriptor = parseJsonObject(matchData.channelIdsJSON);
-		if (descriptor && guild) {
-			await deleteMatchChannels(guild, descriptor);
-		}
-	} catch (err) {
-		logger.log(`WARNING`, `Failed to cleanup channels for cancelled match ${queueId}`, err);
-	}
 	return true;
+}
+
+/**
+ * Delete a queue match's channels. Call it after replying to the command that closed the match: when
+ * that command is run in the lobby's chat, deleting first makes the reply fail with Unknown Message.
+ */
+async function deleteQueueMatchChannels(guild, queueContext) {
+	const descriptor = parseJsonObject(queueContext.matchData?.channelIdsJSON);
+	if (!descriptor || !guild) return;
+
+	try {
+		await deleteMatchChannels(guild, descriptor);
+	} catch (err) {
+		logger.log(`WARNING`, `Failed to cleanup channels for match ${queueContext.queueId}`, err);
+	}
 }
 
 /**
@@ -252,5 +252,6 @@ module.exports = {
 	releaseQueueMatch,
 	finalizeQueueCombineSubmission,
 	cancelQueueMatch,
+	deleteQueueMatchChannels,
 	requeueQueueMatch,
 };
