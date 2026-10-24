@@ -212,8 +212,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0(@opentelemetry/api@1.10.0)
       '@prisma/client':
-        specifier: ^6.15.0
-        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+        specifier: ^7.10.1
+        version: 7.10.1(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       '@prisma/instrumentation':
         specifier: 6.19.3
         version: 6.19.3(@opentelemetry/api@1.10.0)(supports-color@5.5.0)
@@ -459,12 +459,15 @@ packages:
     resolution: {integrity: sha512-eSYWTm620tTk45EKSedaUL8MFYI8hW164hIXsgIHyxu3VobUB3fFCu5t0hQby6OoWRPsG1KkKUG2M5UadiLiVg==}
     engines: {node: '>=14'}
 
-  '@prisma/client@6.19.3':
-    resolution: {integrity: sha512-mKq3jQFhjvko5LTJFHGilsuQs+W+T3Gm451NzuTDGQxwCzwXHYnIu2zGkRoW+Exq3Rob7yp2MfzSrdIiZVhrBg==}
-    engines: {node: '>=18.18'}
+  '@prisma/client-runtime-utils@7.10.1':
+    resolution: {integrity: sha512-AzoATVIgmO3lcZfM443+9SI7+cyLMW2+Psw4op8WQHpHvHCX//CKxv8fwhiL0yGWF8DjdQrFewxrZo5McBdB8g==}
+
+  '@prisma/client@7.10.1':
+    resolution: {integrity: sha512-5tgAbFGh//zVOC6WPNVgziOErJHYkUE+wmqCwbIyq6IrTXUYtv9y2iBFGh/Owo99Mx0+cr0j1FOrxkYBMuyhaQ==}
+    engines: {node: ^20.19 || ^22.12 || >=24.0}
     peerDependencies:
       prisma: '*'
-      typescript: '>=5.1.0'
+      typescript: '>=5.4.0'
     peerDependenciesMeta:
       prisma:
         optional: true
@@ -1099,7 +1102,11 @@ snapshots:
 
   '@opentelemetry/semantic-conventions@1.43.0': {}
 
-  '@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)':
+  '@prisma/client-runtime-utils@7.10.1': {}
+
+  '@prisma/client@7.10.1(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)':
+    dependencies:
+      '@prisma/client-runtime-utils': 7.10.1
     optionalDependencies:
       prisma: 6.19.3(typescript@5.9.3)
       typescript: 5.9.3

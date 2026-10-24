@@ -52,7 +52,7 @@
     "@opentelemetry/sdk-logs": "3.0.0",
     "@opentelemetry/sdk-metrics": "3.0.0",
     "@opentelemetry/sdk-trace": "3.0.0",
-    "@prisma/client": "^6.15.0",
+    "@prisma/client": "^7.10.1",
     "@prisma/instrumentation": "6.19.3",
     "chalk": "^4.1.2",
     "discord.js": "^14.27.0",
