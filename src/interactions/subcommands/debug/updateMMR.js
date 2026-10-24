@@ -1,5 +1,5 @@
 const { Player, ControlPanel } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } = require(`discord.js`);
+const { ChatInputCommandInteraction, EmbedBuilder, MessageFlags, userMention } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 const fs = require(`fs`);
 
@@ -12,14 +12,12 @@ const flavorResponses = [
 ];
 
 async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _subcommand, _hoistedOptions } = interaction.options;
-
     const i = Math.floor(Math.random() * flavorResponses.length);
 
-    const guildMember = _hoistedOptions[0].user;
-    const newMMR = _hoistedOptions[1].value;
+    const guildMember = interaction.options.getUser(`player`);
+    const newMMR = interaction.options.getNumber(`new-mmr`);
 
-    const player = await Player.getBy({ discordID: _hoistedOptions[0].user.id });
+    const player = await Player.getBy({ discordID: guildMember.id });
 	if (player == null) return await interaction.editReply(`This player (${guildMember}, \`${guildMember.username}\`, \`${guildMember.id}\`) does not exist in our database!`);
 
     const mmrEntry = player.PrimaryRiotAccount.MMR;
@@ -34,7 +32,7 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
     const embed = new EmbedBuilder({
         author: { name: `Updated User - ${player.name}`, icon_url: player.image },
         description:
-            `\`  Discord Account \` : <@${discordID}>\n` +
+            `\`  Discord Account \` : ${userMention(discordID)}\n` +
             `\` Primary Riot IGN \` : [\`${player.PrimaryRiotAccount.riotIGN}\`](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(player.PrimaryRiotAccount.riotIGN)})`
         ,
         color: 0xE92929,

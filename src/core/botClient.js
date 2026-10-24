@@ -101,7 +101,7 @@ module.exports = class BotClient extends Client {
 
     /**
      * Registers all slash commands with the server
-     * @param {Client} readyClient the initialized client (called from `ready` event)
+     * @param {Client} readyClient the initialized client (called from `clientReady` event)
      * @param {String} directory path to application commands structure files
      */
     registerSlashCommands(readyClient, directory) {

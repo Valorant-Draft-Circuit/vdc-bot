@@ -1,4 +1,4 @@
-const { ChatInputCommandInteraction, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require(`discord.js`);
+const { ChatInputCommandInteraction, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, time, TimestampStyles } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 
 const trackerMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
@@ -32,7 +32,7 @@ async function debugGame(/** @type ChatInputCommandInteraction */ interaction) {
 		title: `Broken game submission`,
 		description: [
 			`**Game ID:** [\`${gameID}\`](<${link}>)`,
-			`**Tier:** \`${game.tier}\` | **Type:** \`${game.gameType}\` | **Played:** <t:${Math.round(game.datePlayed.getTime() / 1000)}:f>`,
+			`**Tier:** \`${game.tier}\` | **Type:** \`${game.gameType}\` | **Played:** ${time(Math.round(game.datePlayed.getTime() / 1000), TimestampStyles.LongDateShortTime)}`,
 			`**PlayerStats rows:** \`${statsCount}\`/\`${EXPECTED_PLAYER_STATS}\``,
 			``,
 			`Deleting removes the Games row and its \`${statsCount}\` PlayerStats row${statsCount === 1 ? `` : `s`}, then resubmit with:`,

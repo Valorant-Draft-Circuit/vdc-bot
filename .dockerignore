@@ -6,3 +6,5 @@ README.md
 .git
 .env
 *.md
+cache/*
+!cache/cache.js

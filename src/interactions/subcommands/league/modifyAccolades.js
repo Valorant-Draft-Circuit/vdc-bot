@@ -4,15 +4,13 @@ const { prisma } = require("../../../../prisma/prismadb");
 const { decodeAccoladeData } = require("../../../helpers/league/accolades");
 
 async function modifyAccolades(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _hoistedOptions } = interaction.options;
-
     // command params
-    const operation = _hoistedOptions.find(o => o.name == `operation`).value;
-    const shorthand = _hoistedOptions.find(o => o.name == `accolade`).value;
-    const season = _hoistedOptions.find(o => o.name == `season`).value;
-    const tier = _hoistedOptions.find(o => o.name == `tier`).value;
+    const operation = interaction.options.getString(`operation`);
+    const shorthand = interaction.options.getString(`accolade`);
+    const season = interaction.options.getNumber(`season`);
+    const tier = interaction.options.getString(`tier`);
     /** @type {GuildMember} */
-    const guildMember = _hoistedOptions.find(o => o.name == `player`).member;
+    const guildMember = interaction.options.getMember(`player`);
 
     console.log(operation, shorthand, season, tier);
 

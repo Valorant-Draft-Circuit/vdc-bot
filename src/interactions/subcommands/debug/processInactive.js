@@ -1,6 +1,6 @@
 const { LeagueStatus } = require(`@prisma/client`);
 const { Player, Flags } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction } = require(`discord.js`);
+const { ChatInputCommandInteraction, userMention } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES } = require("../../../../utils/enums");
 
@@ -8,8 +8,7 @@ const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[
 
 
 async function processInactive(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _hoistedOptions } = interaction.options;
-    const discordID = _hoistedOptions[0].value;
+    const discordID = interaction.options.getUser(`player`).id;
 
     const player = await Player.getBy({ discordID: discordID });
     const playerIGN = await Player.getIGNby({ discordID: discordID });
@@ -54,7 +53,7 @@ async function processInactive(/** @type ChatInputCommandInteraction */ interact
         ]
     );
 
-    return await interaction.editReply(`The player (<@${discordID}>) has been processed as inactive. Their league & tier roles have been removed and their nickname has been updated in the discord server. Their team has been set to \`null\` in the database, as well as their leagueStatus being set to \`UNREGISTERED\`, contractStatus to \`null\` and contractRemaing to \`null\``);
+    return await interaction.editReply(`The player (${userMention(discordID)}) has been processed as inactive. Their league & tier roles have been removed and their nickname has been updated in the discord server. Their team has been set to \`null\` in the database, as well as their leagueStatus being set to \`UNREGISTERED\`, contractStatus to \`null\` and contractRemaing to \`null\``);
 }
 
 module.exports = { processInactive };

@@ -2,7 +2,7 @@ const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { Player, Transaction, Flags, ControlPanel, Roles } = require("../../../prisma");
 const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES } = require(`../../../utils/enums`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const { ChatInputCommandInteraction, EmbedBuilder, userMention } = require(`discord.js`);
 const fs = require(`fs`);
 
 const validStatusesToDE = [
@@ -21,10 +21,9 @@ module.exports = {
         await interaction.deferReply();
 
         // destrcture options & store relevant information
-        switch (interaction.options._subcommand) {
+        switch (interaction.options.getSubcommand()) {
             case `single`:
-                const { _hoistedOptions } = interaction.options;
-                const playerDiscordID = _hoistedOptions[0].value;
+                const playerDiscordID = interaction.options.getUser(`player`).id;
 
                 return await singleWelcome(interaction, playerDiscordID);
             case `bulk`:
@@ -61,11 +60,11 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
                 }
             });
             return await replyFunction({
-                content: `I can't find <@${discordID}> (dID : \`${discordID}\`)- they may have left the discord server! Attempting to set them to \`UNREGISTERED\``
+                content: `I can't find ${userMention(discordID)} (dID : \`${discordID}\`)- they may have left the discord server! Attempting to set them to \`UNREGISTERED\``
             });
         } else {
             return await replyFunction({
-                content: `I can't find <@${discordID}> (dID : \`${discordID}\`)- they may have left the discord server & they aren't in our database!`
+                content: `I can't find ${userMention(discordID)} (dID : \`${discordID}\`)- they may have left the discord server & they aren't in our database!`
             });
         }
     }

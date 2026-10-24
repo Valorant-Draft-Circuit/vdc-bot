@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, time, TimestampStyles } = require(`discord.js`);
 const { ChatInputCommandInteraction } = require(`discord.js`);
 
 const { Team, ControlPanel } = require(`../../../../prisma`);
@@ -16,8 +16,9 @@ async function schedulePlayoff(interaction, homeTeamName, awayTeamName, tier, ma
 	const validatedTime = dateString.match(timestampValidator);
 	if (validatedTime == null) return await interaction.editReply(`This is an invalid time!`);
 
-	const time = validatedTime[0];
-	const dateTime = new Date(time * 1000).toUTCString();
+	// a number, not the matched string: time() only accepts a number or Date and throws on strings
+	const matchTime = Number(validatedTime[0]);
+	const dateTime = new Date(matchTime * 1000).toUTCString();
 
 	// Get teams
 	const homeTeam = await Team.getBy({ name: homeTeamName });
@@ -55,12 +56,12 @@ async function schedulePlayoff(interaction, homeTeamName, awayTeamName, tier, ma
 			},
 			{
 				name: `\u200B`,
-				value: `SCHEDULE PLAYOFF\n${tierUpper}\n${matchTypeUpper}\n${homeTeam.name}\n${awayTeam.name}\n${matchday}\n<t:${time}:f> (<t:${time}:R>)\n${season}`,
+				value: `SCHEDULE PLAYOFF\n${tierUpper}\n${matchTypeUpper}\n${homeTeam.name}\n${awayTeam.name}\n${matchday}\n${time(matchTime, TimestampStyles.LongDateShortTime)} (${time(matchTime, TimestampStyles.RelativeTime)})\n${season}`,
 				inline: true,
 			},
 			{
 				name: `\u200B`,
-				value: `${homeTeam.id}|${awayTeam.id}|${new Date(time * 1000).toISOString()}|${matchday}`,
+				value: `${homeTeam.id}|${awayTeam.id}|${new Date(matchTime * 1000).toISOString()}|${matchday}`,
 				inline: false,
 			},
 		],
@@ -152,7 +153,7 @@ async function confirmSchedulePlayoff(interaction) {
 		// Create announcement embed
 		const announcement = new EmbedBuilder({
 			author: { name: `VDC Transactions Manager` },
-			description: `The playoff match between <${newMatch.Home.Franchise.Brand.discordEmote}> ${newMatch.Home.name} & <${newMatch.Away.Franchise.Brand.discordEmote}> ${newMatch.Away.name} has been scheduled for <t:${timestamp}:F>`,
+			description: `The playoff match between <${newMatch.Home.Franchise.Brand.discordEmote}> ${newMatch.Home.name} & <${newMatch.Away.Franchise.Brand.discordEmote}> ${newMatch.Away.name} has been scheduled for ${time(timestamp, TimestampStyles.FullDateShortTime)}`,
 			color: 0xe92929,
 			footer: { text: `Transactions — Playoff Schedule` },
 			timestamp: Date.now(),

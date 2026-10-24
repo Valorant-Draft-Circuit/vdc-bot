@@ -2,7 +2,7 @@ const fs = require(`fs`);
 const { LeagueStatus, ContractStatus, MatchType } = require(`@prisma/client`);
 
 const { Player, Team, ControlPanel } = require(`../../../../prisma`);
-const { EmbedBuilder, ChatInputCommandInteraction, } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction, channelMention, roleMention, time, TimestampStyles } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ROLES } = require(`../../../../utils/enums`)
 
@@ -25,8 +25,8 @@ const newFranchises = [`Catpocalypse`, `808 Angels`, `Natural 20`, `Grizzlies`];
 
 async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
 
-    const userRoles = interaction.member._roles;
-    if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
+    const userRoles = interaction.member.roles.cache;
+    if (!userRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
 
     // get current season from the database
     const season = await ControlPanel.getSeason();
@@ -392,18 +392,18 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
 
     // POST THE RESULTS
-    await interaction.editReply({ content: `Posting results in <#${CHANNELS.ANNOUNCEMENTS.FM}>...` });
-    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in <#${CHANNELS.ANNOUNCEMENTS.FM}>...`);
+    await interaction.editReply({ content: `Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...` });
+    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...`);
 
     const delay /** in MS */ = 15 * 1000;
 
     const gmAccouncements = await interaction.guild.channels.fetch(CHANNELS.ANNOUNCEMENTS.FM);
-    await gmAccouncements.send({ content: `### Hey <@&${ROLES.OPERATIONS.GM}>/<@&${ROLES.OPERATIONS.AGM}> - The \`${tier}\` Draft Lottery is beginning!` });
+    await gmAccouncements.send({ content: `### Hey ${roleMention(ROLES.OPERATIONS.GM)}/${roleMention(ROLES.OPERATIONS.AGM)} - The \`${tier}\` Draft Lottery is beginning!` });
     for (let i = 0; i < teamOrder.length; i++) {
         const team = draftTeams.find(t => t.name == teamOrder[i].value);
 
         const msg = await gmAccouncements.send({
-            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (<t:${(Math.round(Date.now() / 1000)) + (delay / 1000)}:R>)`
+            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (${time((Math.round(Date.now() / 1000)) + (delay / 1000), TimestampStyles.RelativeTime)})`
         });
 
         await new Promise(resolve => setTimeout(resolve, delay));

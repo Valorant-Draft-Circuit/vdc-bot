@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ChatInputCommandInteraction, MessageFlags } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ChatInputCommandInteraction, MessageFlags, roleMention } = require("discord.js");
 const { ButtonStyle } = require(`discord.js`)
 
 const { Player } = require("../../../prisma");
@@ -13,8 +13,8 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
-        const { _subcommand } = interaction.options;
-        switch (_subcommand) {
+        const subcommand = interaction.options.getSubcommand();
+        switch (subcommand) {
             case `activity-check`:
                 return await activityCheck(interaction);
             default:
@@ -52,17 +52,17 @@ async function activityCheck(interaction) {
 
     // create the warnings portion of the embed message
     const warningMessage = `**Warning(s)**\n` +
-        `\` ${String(inLeagueNotDatabase.length).padStart(3, ` `)} \` : # of users w/ <@&${ROLES.LEAGUE.LEAGUE}> role & NOT in database\n` +
-        `\` ${String(inDatabaseNotLeague.length).padStart(3, ` `)} \` : # of users w/o <@&${ROLES.LEAGUE.LEAGUE}> role but ARE in database\n` +
-        `\` ${String(inactiveRoleMemberIDs.length).padStart(3, ` `)} \` : # of users who already have the <@&${ROLES.LEAGUE.INACTIVE}> role\n` +
-        `\` ${String(inLeagueANDInactiveANDInDatabase.length).padStart(3, ` `)} \` : # of users w/ <@&${ROLES.LEAGUE.LEAGUE}> & <@&${ROLES.LEAGUE.INACTIVE}> roles & ARE in database\n`;
+        `\` ${String(inLeagueNotDatabase.length).padStart(3, ` `)} \` : # of users w/ ${roleMention(ROLES.LEAGUE.LEAGUE)} role & NOT in database\n` +
+        `\` ${String(inDatabaseNotLeague.length).padStart(3, ` `)} \` : # of users w/o ${roleMention(ROLES.LEAGUE.LEAGUE)} role but ARE in database\n` +
+        `\` ${String(inactiveRoleMemberIDs.length).padStart(3, ` `)} \` : # of users who already have the ${roleMention(ROLES.LEAGUE.INACTIVE)} role\n` +
+        `\` ${String(inLeagueANDInactiveANDInDatabase.length).padStart(3, ` `)} \` : # of users w/ ${roleMention(ROLES.LEAGUE.LEAGUE)} & ${roleMention(ROLES.LEAGUE.INACTIVE)} roles & ARE in database\n`;
 
     const expectedRuntime = Math.round((MS_PER_API_CALL * sharedMemberIDs.length / 10)) / 100;
 
     // create the base embed
     const embed = new EmbedBuilder({
         author: { name: `VDC Activity Check` },
-        description: `__Operation Overview:__\nAre you certain you want to begin the activity check? This will give ${sharedMemberIDs.length} member(s) the <@&${ROLES.LEAGUE.INACTIVE}> role. This operation should take approximately ${expectedRuntime} second(s).`,
+        description: `__Operation Overview:__\nAre you certain you want to begin the activity check? This will give ${sharedMemberIDs.length} member(s) the ${roleMention(ROLES.LEAGUE.INACTIVE)} role. This operation should take approximately ${expectedRuntime} second(s).`,
         color: 0xE92929,
         fields: [{ name: `\u200B`, value: warningMessage, }],
         footer: { text: `Setup — Activity Check` }

@@ -4,8 +4,8 @@ const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
 const { ROLES } = require("../../../../utils/enums");
 
 async function fulfillFutureTrade(interaction, round, tier, franchiseFromName, franchiseToName) {
-	const userRoles = interaction.member._roles;
-	if (!(userRoles.includes(ROLES.OPERATIONS.ADMIN) || userRoles.includes(ROLES.OPERATIONS.TRANSACTIONS))) return await interaction.editReply({ content: `You don't have the Admin or Transactions role and cannot use this command!` });
+	const userRoles = interaction.member.roles.cache;
+	if (!(userRoles.has(ROLES.OPERATIONS.ADMIN) || userRoles.has(ROLES.OPERATIONS.TRANSACTIONS))) return await interaction.editReply({ content: `You don't have the Admin or Transactions role and cannot use this command!` });
 
 	if (franchiseFromName === franchiseToName) return await interaction.editReply(`A franchise cannot give a future trade to themselves!`);
 

@@ -1,4 +1,4 @@
-const { MessageFlags } = require(`discord.js`);
+const { MessageFlags, time, TimestampStyles } = require(`discord.js`);
 const { resolvePlayerQueueContext, resolvePriorityBucket } = require(`../../../helpers/queue/queueState`);
 const { getRedisClient, runLua } = require(`../../../core/redis`);
 const {
@@ -11,6 +11,7 @@ const {
 	playerKey,
 } = require(`../../../helpers/queue/queueKeys`);
 const { ROLES } = require(`../../../../utils/enums`);
+const { queueEvent } = require(`../../../core/queue/events`);
 
 //TODO: Move these roles to enums
 const INACTIVE_ROLE_ID = `1060750208746668132`;
@@ -19,13 +20,19 @@ const PRIORITY_BUCKETS = new Set([`DE`, `FA`, `RFA`, `SIGNED`]);
 async function joinQueue(interaction, queueConfig) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+	// every refusal is a queue event, so "why can't I join?" can be answered from Grafana
+	const reject = (reason, content, tier) => {
+		queueEvent(`queue_join_rejected`, { userId: interaction.user.id, tier, reason });
+		return interaction.editReply({ content });
+	};
+
 	if (interaction.member.roles.cache.has(INACTIVE_ROLE_ID) || interaction.member.roles.cache.has(ROLES.LEAGUE.MUTED)) {
-		return interaction.editReply({ content: `You are not allowed to join the queue.` });
+		return reject(`ROLE_BLOCKED`, `You are not allowed to join the queue.`);
 	}
 
 	const availabilityMessage = await evaluateQueueAvailability(queueConfig);
 	if (availabilityMessage) {
-		return interaction.editReply({ content: availabilityMessage });
+		return reject(`QUEUES_DISABLED`, availabilityMessage);
 	}
 
 	let context;
@@ -37,9 +44,7 @@ async function joinQueue(interaction, queueConfig) {
 			`Queue join failed while resolving player context`,
 			`${interaction.user.tag} (${interaction.user.id}) :: ${error?.message || error}`,
 		);
-		return interaction.editReply({
-			content: mapContextErrorToMessage(error),
-		});
+		return reject(String(error?.message || error), mapContextErrorToMessage(error));
 	}
 
 	if (!context.mmr || context.mmr === 0) {
@@ -48,17 +53,13 @@ async function joinQueue(interaction, queueConfig) {
 			`Queue join failed due to invalid MMR`,
 			`${interaction.user.tag} (${interaction.user.id}) :: MMR: ${context.mmr}`,
 		);
-		return interaction.editReply({
-			content: `Your MMR appears to be invalid. Please create a ticket to resolve this issue.`,
-		});
+		return reject(`INVALID_MMR`, `Your MMR appears to be invalid. Please create a ticket to resolve this issue.`, context.tier);
 	}
 
 	if (queueConfig.perTierFlags) {
 		const configured = queueConfig.perTierFlags[context.tier];
 		if (configured === false) {
-			return interaction.editReply({
-				content: `The ${context.tier} queue is currently closed by configuration.`,
-			});
+			return reject(`TIER_CLOSED_BY_CONFIG`, `The ${context.tier} queue is currently closed by configuration.`, context.tier);
 		}
 	}
 
@@ -66,9 +67,7 @@ async function joinQueue(interaction, queueConfig) {
 	try {
 		priorityBucket = resolvePriorityBucket(context.leagueStatus);
 	} catch (error) {
-		return interaction.editReply({
-			content: mapContextErrorToMessage(error),
-		});
+		return reject(String(error?.message || error), mapContextErrorToMessage(error), context.tier);
 	}
 
 	const redis = getRedisClient();
@@ -96,11 +95,17 @@ async function joinQueue(interaction, queueConfig) {
 		const payload = parseLuaJson(response);
 
 		if (!payload.ok) {
-			return interaction.editReply({
-				content: mapJoinErrorToMessage(payload, context.tier),
-			});
+			return reject(payload.error ?? `UNKNOWN`, mapJoinErrorToMessage(payload, context.tier), context.tier);
 		}
 
+		queueEvent(`queue_join`, {
+			userId: interaction.user.id,
+			tier: context.tier,
+			bucket: priorityBucket,
+			completed: completedSibling,
+			leagueStatus: context.leagueStatus,
+			mmr: context.mmr,
+		});
 		await redis.sadd(TIERS_SET_KEY, context.tier);
 
 		let tierQueueCount = `unknown`;
@@ -175,7 +180,7 @@ function mapJoinErrorToMessage(payload, tier) {
 		case `PLAYER_SUSPENDED`: {
 			const until = Number(payload.details?.suspendedUntil);
 			return until
-				? `You're suspended from the queue. Your suspension ends <t:${Math.floor(until / 1000)}:R>.`
+				? `You're suspended from the queue. Your suspension ends ${time(Math.floor(until / 1000), TimestampStyles.RelativeTime)}.`
 				: `You're suspended from the queue. Please create a ticket if you believe this is an error.`;
 		}
 		case `ON_COOLDOWN`:

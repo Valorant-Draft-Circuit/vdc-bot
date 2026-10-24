@@ -1,3 +1,4 @@
+const { userMention, channelMention } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
 const { createMatchChannels, deleteMatchChannels } = require(`../../core/queue/matchChannels`);
 const { requeueQueueMatch } = require(`../../core/queue/matchLifecycle`);
@@ -73,7 +74,7 @@ async function dispatchMatch(client, payload, config) {
 		priorityEmbed = buildPriorityEmbed(payload);
 		embedData = embed.toJSON();
 		const components = buildMatchComponents(payload.queueId);
-		const mentionLine = playerIds.map((id) => `<@${id}>`).join(` `);
+		const mentionLine = playerIds.map((id) => userMention(id)).join(` `);
 
 		const sentMessage = await textChannel.send({
 			content: mentionLine,
@@ -108,7 +109,7 @@ async function dispatchMatch(client, payload, config) {
 		if (scoutChannel) {
 			await scoutChannel
 				.send({
-					content: `A new match has been started in <#${channelDescriptor.textChannelId}>`,
+					content: `A new match has been started in ${channelMention(channelDescriptor.textChannelId)}`,
 					embeds: [embed],
 				})
 				.catch((error) => logger.log(`WARNING`, `Failed to send scout channel post`, error));

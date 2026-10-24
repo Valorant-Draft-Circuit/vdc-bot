@@ -1,4 +1,4 @@
-const { EmbedBuilder, GuildMember, ChatInputCommandInteraction, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, GuildMember, ChatInputCommandInteraction, ButtonBuilder, ActionRowBuilder, ButtonStyle, userMention } = require(`discord.js`);
 const { Player, Franchise, ControlPanel, Roles } = require(`../../../prisma`);
 const { prisma } = require(`../../../prisma/prismadb`);
 const { LeagueStatus, ContractStatus } = require("@prisma/client");
@@ -19,9 +19,9 @@ module.exports = {
 	async execute(/** @type ChatInputCommandInteraction */ interaction) {
 		await interaction.deferReply();
 
-		const { _subcommand, hoistedOptions } = interaction.options;
+		const subcommand = interaction.options.getSubcommand();
 
-		switch (_subcommand) {
+		switch (subcommand) {
 			case `user`:
 				return await user(interaction);
 			case `update`: {
@@ -37,13 +37,13 @@ module.exports = {
 };
 
 async function user(/** @type ChatInputCommandInteraction */ interaction) {
-	const discordID = interaction.options._hoistedOptions[0].value;
+	const discordID = interaction.options.getUser(`user`).id;
 
 	const player = await Player.getBy({ discordID: discordID });
-	if (player == null) return await interaction.editReply(`This player (<@${discordID}>) does not exist in our database!`);
+	if (player == null) return await interaction.editReply(`This player (${userMention(discordID)}) does not exist in our database!`);
 
 	// if there is a tagged user, use that, otherwise use the interaction author
-	const guildMember = interaction.options._hoistedOptions.length > 0 ? interaction.guild.members.cache.get(interaction.options._hoistedOptions[0].value) : interaction.member;
+	const guildMember = discordID ? interaction.guild.members.cache.get(discordID) : interaction.member;
 	const guildUser = await guildMember.user.fetch();
 	const guildNickname = guildMember.nickname ? guildMember.nickname : guildMember.user.username;
 	const guildUserAvatar = guildUser.displayAvatarURL({ format: "png", dynamic: true, size: 2048 });
@@ -116,7 +116,7 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 		description:
 			`**Discord ID:** ${guildUser.id}\n` +
 			`**Username:** ${guildUser.username}\n` +
-			`**User Tag:** <@!${guildUser.id}>\n` +
+			`**User Tag:** ${userMention(guildUser.id)}\n` +
 			`${presenceStatus}\n` +
 			`**Roles**: \`${player.roles}\`\n**Flags**: \`${player.flags}\`\n\n` +
 			`**Server Roles:** ${serverRoles}`,
@@ -147,7 +147,7 @@ async function user(/** @type ChatInputCommandInteraction */ interaction) {
 
 	});
 
-	return await interaction.editReply({ embeds: [embed], ephemeral: false });
+	return await interaction.editReply({ embeds: [embed] });
 }
 
 // grabs everyone's fresh IGNs from riot and swaps the new primary name into the nickname
@@ -229,7 +229,7 @@ async function offerNicknameDedupe(interaction, slug, nickname) {
 	const confirm = new ButtonBuilder({ customId: `nickdedupe_confirm`, label: `Dedupe it`, style: ButtonStyle.Success });
 	const keep = new ButtonBuilder({ customId: `nickdedupe_keep`, label: `Keep as is`, style: ButtonStyle.Secondary });
 	await interaction.followUp({
-		content: `<@${interaction.user.id}> your nickname repeats your franchise tag. Want \`${nickname}\` deduped to \`${dedupedNickname}\`?`,
+		content: `${userMention(interaction.user.id)} your nickname repeats your franchise tag. Want \`${nickname}\` deduped to \`${dedupedNickname}\`?`,
 		components: [new ActionRowBuilder({ components: [confirm, keep] })],
 		allowedMentions: { users: [interaction.user.id] },
 	}).catch(() => null);

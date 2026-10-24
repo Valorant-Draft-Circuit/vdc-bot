@@ -19,11 +19,10 @@ module.exports = {
         await interaction.deferReply();
 
         const user = interaction.user;
-        const { _hoistedOptions } = interaction.options;
 
         // console.log(_hoistedOptions)
-        const reportRequest = _hoistedOptions.find(o => o.name === `type`).value;
-        const args = _hoistedOptions.find(o => o.name === `args`)?.value;
+        const reportRequest = interaction.options.getString(`type`);
+        const args = interaction.options.getString(`args`);
 
         // console.log(args);
         let extention = `r`;

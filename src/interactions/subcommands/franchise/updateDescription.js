@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, channelMention } = require(`discord.js`);
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 const fs = require('fs');
 
@@ -23,9 +23,7 @@ const getAllIndexes = (arr, val) => {
  * @param {String} team 
  */
 async function confirmUpdate(interaction) {
-	const { _hoistedOptions } = interaction.options;
-
-	const attachment = _hoistedOptions[0].attachment
+	const attachment = interaction.options.getAttachment(`description`)
 	if (!attachment.name.endsWith(`.txt`)) return await interaction.editReply(`Please only upload \`*.txt\` files. \`${attachment.name}\` is not a text file.`);
 
 	const gmids = (await prisma.franchise.findMany({
@@ -161,7 +159,7 @@ async function finalizeUpdate(interaction, slug) {
 		components: [],
 	});
 	return await interaction.editReply({
-		content: `The description for ${franchise.name} has been updated & the <#${CHANNELS.FRANCHISES}> channel has been refreshed! Attached are the old & new descriptions.`,
+		content: `The description for ${franchise.name} has been updated & the ${channelMention(CHANNELS.FRANCHISES)} channel has been refreshed! Attached are the old & new descriptions.`,
 		files: [oldDescPath, newDescPath]
 	});
 }

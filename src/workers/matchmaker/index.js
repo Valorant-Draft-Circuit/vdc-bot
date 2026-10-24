@@ -15,6 +15,8 @@ const { resolveWarmupEndsAt, buildWarmupState } = require(`./warmup`);
 const { deriveTiersFromCache, parseLuaJson, runSafely } = require(`./util`);
 const { ensureChannelCapacityForPops } = require(`./capacity`);
 const { dispatchMatch } = require(`./dispatch`);
+const { withSpan } = require(`../../core/telemetry`);
+const { recordMatchCreated } = require(`../../core/queue/events`);
 
 // after a lobby setup fails (players requeued), give the tier a break so a persistent failure
 // doesn't rebuild and tear down the same match every tick
@@ -31,6 +33,8 @@ let stopReason = null;
 let stopSource = null;
 let warmupEndsAt = null;
 let lastPopAt = null;
+// ticks that ran to the end; the metrics heartbeat, so a stuck or failing loop shows up as a flat line
+let completedTicks = 0;
 
 function isQueueSystemEnabledFromEnv() {
 	return (/true/i).test(process.env.QUEUE_SYSTEM_ENABLED);
@@ -52,7 +56,10 @@ async function startMatchmaker(client, options = {}) {
 
 	const intervalMs = Math.max(2000, Number(options.intervalMs ?? 2000));
 	currentIntervalMs = intervalMs;
-	const tick = () => runSafely(() => processAllTiers(client));
+	const tick = () => runSafely(async () => {
+		await processAllTiers(client);
+		completedTicks += 1;
+	});
 
 	intervalHandle = setInterval(tick, intervalMs);
 	intervalHandle.unref?.();
@@ -112,6 +119,7 @@ function getMatchmakerStatus() {
 		warmupRemainingSeconds,
 		lastPopAt,
 		inFlightTiers: inFlightTiers.size,
+		completedTicks,
 	};
 }
 
@@ -215,7 +223,12 @@ async function attemptMatchForTier(client, tier, config) {
 		}
 
 		lastTierError.delete(tier);
-		const dispatched = await dispatchMatch(client, payload, config);
+		// the tick runs every 2s, so only a popped match gets a trace: channels, posts, DMs
+		const dispatchAttributes = { 'vdc.queue.tier': tier, 'vdc.queue.id': String(payload.queueId), 'vdc.queue.players': payload.players?.length ?? 0 };
+		const dispatched = await withSpan(`matchmaker dispatch`, dispatchAttributes, () => {
+			recordMatchCreated(payload);
+			return dispatchMatch(client, payload, config);
+		});
 		if (!dispatched) {
 			tierBackoffUntil.set(tier, Date.now() + DISPATCH_FAILURE_BACKOFF_MS);
 			return false;

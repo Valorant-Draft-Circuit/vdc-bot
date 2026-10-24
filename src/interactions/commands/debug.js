@@ -10,18 +10,18 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
-        const { _subcommand } = interaction.options;
-        if (_subcommand === `user`) return debugUser(interaction);
-        if (_subcommand === `force-update`) return forceUpdate(interaction);
-        if (_subcommand === `process-inactive`) return processInactive(interaction);
-        if (_subcommand === `update-mmr`) return updateMMR(interaction);
-        if (_subcommand === `update-by-ign`) return updateByIGN(interaction);
-        if (_subcommand === `profile-update`) return profileUpdate(interaction);
-        if (_subcommand === `refresh-cache`) return refreshCache(interaction);
-        if (_subcommand === `profile-update-server`) return profileUpdateServer(interaction);
-        if (_subcommand === 'offseason-reset') return offseasonReset(interaction);
-        if (_subcommand === 'reset-mapban') return resetMapBan(interaction);
-        if (_subcommand === 'active-subs') return activeSubs(interaction);
-        if (_subcommand === 'game') return debugGame(interaction);
+        const subcommand = interaction.options.getSubcommand();
+        if (subcommand === `user`) return debugUser(interaction);
+        if (subcommand === `force-update`) return forceUpdate(interaction);
+        if (subcommand === `process-inactive`) return processInactive(interaction);
+        if (subcommand === `update-mmr`) return updateMMR(interaction);
+        if (subcommand === `update-by-ign`) return updateByIGN(interaction);
+        if (subcommand === `profile-update`) return profileUpdate(interaction);
+        if (subcommand === `refresh-cache`) return refreshCache(interaction);
+        if (subcommand === `profile-update-server`) return profileUpdateServer(interaction);
+        if (subcommand === 'offseason-reset') return offseasonReset(interaction);
+        if (subcommand === 'reset-mapban') return resetMapBan(interaction);
+        if (subcommand === 'active-subs') return activeSubs(interaction);
+        if (subcommand === 'game') return debugGame(interaction);
         }
 };

@@ -10,7 +10,7 @@ module.exports = {
 	 * @param {string} action `confirm` or `keep`
 	 */
 	async execute(interaction, action = ``) {
-		const invokerId = interaction.message.interactionMetadata?.user?.id ?? interaction.message.interaction?.user?.id;
+		const invokerId = interaction.message.interactionMetadata?.user?.id;
 		if (!invokerId || interaction.user.id !== invokerId) {
 			return interaction.reply({ content: `Only the person who ran \`/profile update\` can respond to this.`, flags: MessageFlags.Ephemeral });
 		}

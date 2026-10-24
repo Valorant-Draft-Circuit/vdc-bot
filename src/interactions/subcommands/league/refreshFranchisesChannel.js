@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, userMention } = require("discord.js");
 
 const { CHANNELS } = require("../../../../utils/enums");
 const { prisma } = require("../../../../prisma/prismadb");
@@ -55,7 +55,7 @@ async function refreshFranchisesChannel(/** @type ChatInputCommandInteraction */
             author: { name: franchise.name, iconURL: `${imagepath}${franchise.Brand.logo}` },
             title: franchise.name,
             url: `https://vdc.gg/franchises/${franchise.slug}`,
-            description: `**General Manager** : ${gmIDs.map(gm => `<@${gm}>`)}\n**AGMs** : ${agmIDs.map(agm => `<@${agm}>`)}`,
+            description: `**General Manager** : ${gmIDs.map(gm => userMention(gm))}\n**AGMs** : ${agmIDs.map(agm => userMention(agm))}`,
             // description: `**General Manager** : ${gmIDs.map(gm => `<@${gm}>`)}\n**AGMs** : ${agmIDs.map(agm => `<@${agm}>`)}\n${pst}`,
             // image: `${imagepath}/${franchise.Brand.logo}`,
             // fields: [

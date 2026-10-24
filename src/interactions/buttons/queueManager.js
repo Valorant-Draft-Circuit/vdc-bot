@@ -1,4 +1,4 @@
-const { MessageFlags } = require(`discord.js`);
+const { MessageFlags, userMention, channelMention } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
 const { getQueueMatchContext } = require(`../../core/queue/matchLifecycle`);
 const { matchKey } = require(`../../helpers/queue/queueKeys`);
@@ -102,7 +102,7 @@ async function pingPlayersNotInVoice(interaction, queueId) {
 		return interaction.reply({ content: `This lobby was pinged recently. Try again in a minute.`, flags: MessageFlags.Ephemeral });
 	}
 
-	const lines = missing.map((id) => `<@${id}> ${teamChannel.get(id) ? `→ <#${teamChannel.get(id)}>` : ``}`.trim());
+	const lines = missing.map((id) => `${userMention(id)} ${teamChannel.get(id) ? `→ ${channelMention(teamChannel.get(id))}` : ``}`.trim());
 	return interaction.reply({
 		content: `${interaction.user} is waiting on you in voice:\n${lines.join(`\n`)}`,
 		allowedMentions: { users: missing },

@@ -1,4 +1,4 @@
-const { MessageFlags, EmbedBuilder } = require(`discord.js`);
+const { MessageFlags, EmbedBuilder, time, TimestampStyles, roleMention, userMention } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
 const { Player } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
@@ -8,6 +8,7 @@ const { getRedisClient, runLua } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
 const { getQueueMatchContext, finalizeQueueCombineSubmission, releaseQueueMatch, deleteQueueMatchChannels } = require(`../../../core/queue/matchLifecycle`);
+const { queueEvent } = require(`../../../core/queue/events`);
 const {
 	LEAGUE_STATE_KEY,
 	EVENTS_STREAM_KEY,
@@ -48,6 +49,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			}
 
 			await setTierState(tiers, true, interaction.client);
+			queueEvent(`tiers_opened`, { tiers, by: actorLabel });
 			logger.log(`INFO`, `Queue admin open executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, true) });
 		}
@@ -61,6 +63,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			}
 
 			await setTierState(tiers, false, interaction.client);
+			queueEvent(`tiers_closed`, { tiers, by: actorLabel });
 			logger.log(`INFO`, `Queue admin close executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, false) });
 		}
@@ -235,11 +238,12 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			const target = interaction.options.getUser(`player`, true);
 			const removed = await getRedisClient().del(playerSuspendedKey(target.id));
 			if (!removed) {
-				return interaction.editReply({ content: `<@${target.id}> is not suspended from the queue.` });
+				return interaction.editReply({ content: `${userMention(target.id)} is not suspended from the queue.` });
 			}
 
+			queueEvent(`player_unsuspended`, { userId: target.id, by: actorLabel });
 			logger.log(`ALERT`, `Queue admin unsuspend executed by ${actorLabel} for ${target.tag} (${target.id})`);
-			return interaction.editReply({ content: `Lifted the queue suspension for <@${target.id}>.` });
+			return interaction.editReply({ content: `Lifted the queue suspension for ${userMention(target.id)}.` });
 		}
 
 		case `update-mmr`: {
@@ -335,10 +339,10 @@ function buildTierStateMessage(tiers, isOpen) {
 
 async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 	const status = matchmakerStatus ?? { running: false };
-	const startedAt = status.startedAt ? `<t:${Math.floor(status.startedAt / 1000)}:R>` : `N/A`;
-	const stoppedAt = status.stoppedAt ? `<t:${Math.floor(status.stoppedAt / 1000)}:R>` : `N/A`;
+	const startedAt = status.startedAt ? time(Math.floor(status.startedAt / 1000), TimestampStyles.RelativeTime) : `N/A`;
+	const stoppedAt = status.stoppedAt ? time(Math.floor(status.stoppedAt / 1000), TimestampStyles.RelativeTime) : `N/A`;
 	const stopReason = status.stopReason ? String(status.stopReason) : `N/A`;
-	const warmupEndsAt = status.warmupEndsAt ? `<t:${Math.floor(status.warmupEndsAt / 1000)}:R>` : `N/A`;
+	const warmupEndsAt = status.warmupEndsAt ? time(Math.floor(status.warmupEndsAt / 1000), TimestampStyles.RelativeTime) : `N/A`;
 	const scoutRoleId = String(ROLES?.LEAGUE?.SCOUT || ``);
 
 	const redis = getRedisClient();
@@ -387,7 +391,7 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 			},
 			{
 				name: `Scout Role`,
-				value: scoutRoleId ? `<@&${scoutRoleId}> (${scoutRoleId})` : `*Not configured*`,
+				value: scoutRoleId ? `${roleMention(scoutRoleId)} (${scoutRoleId})` : `*Not configured*`,
 				inline: false,
 			},
 			{
@@ -440,7 +444,7 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 			},
 			{
 				name: `Last Pop`,
-				value: status.lastPopAt ? `<t:${Math.floor(status.lastPopAt / 1000)}:R>` : `N/A`,
+				value: status.lastPopAt ? time(Math.floor(status.lastPopAt / 1000), TimestampStyles.RelativeTime) : `N/A`,
 				inline: true,
 			},
 			{
@@ -475,7 +479,7 @@ async function killMatch(client, queueId, actorLabel) {
 	const parsed = parseMatchRecord(matchData);
 	// only players still bound to this match are reset, so killing an old match can't pull
 	// anyone out of the queue or a newer match
-	const result = await releaseQueueMatch(queueId, `cancel`);
+	const result = await releaseQueueMatch(queueId, `cancel`, { by: actorLabel, reason: `kill` });
 	if (!result.ok) {
 		return { message: `Match \`${queueId}\` was not found.` };
 	}
@@ -546,9 +550,10 @@ async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {
 	})) ?? {};
 
 	const duration = hours
-		? `for ${hours} hour(s), ending <t:${Math.floor((now + hours * 3600000) / 1000)}:R>`
+		? `for ${hours} hour(s), ending ${time(Math.floor((now + hours * 3600000) / 1000), TimestampStyles.RelativeTime)}`
 		: `until they are unsuspended`;
-	const lines = [`Suspended <@${target.id}> from the queue ${duration}.`];
+	queueEvent(`player_suspended`, { userId: target.id, by: actorLabel, hours, reason, removedFrom: leave.ok ? leave.tier : null, inMatch: leave.details?.queueId });
+	const lines = [`Suspended ${userMention(target.id)} from the queue ${duration}.`];
 	if (reason) lines.push(`• Reason: ${reason}`);
 	if (leave.ok) lines.push(`• Removed them from the ${leave.tier} queue.`);
 	if (leave.error === `IN_MATCH`) {
@@ -576,7 +581,7 @@ async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
 	const player = await Player.getBy({ discordID: target.id });
 	const mmrEntry = player?.PrimaryRiotAccount?.MMR;
 	if (!mmrEntry) {
-		return `<@${target.id}> has no MMR record (no player profile or primary Riot account), so nothing was changed.`;
+		return `${userMention(target.id)} has no MMR record (no player profile or primary Riot account), so nothing was changed.`;
 	}
 
 	const oldMmr = mmrEntry.mmrEffective;
@@ -593,7 +598,7 @@ async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
 	})) ?? {};
 
 	const oldTier = oldMmr == null ? null : deriveTierFromMmr(Number(oldMmr));
-	const lines = [`Updated <@${target.id}>'s MMR: \`${oldMmr ?? `none`}\` → \`${newMmr}\` (${oldTier ?? `?`} → ${newTier}).`];
+	const lines = [`Updated ${userMention(target.id)}'s MMR: \`${oldMmr ?? `none`}\` → \`${newMmr}\` (${oldTier ?? `?`} → ${newTier}).`];
 	switch (outcome.state) {
 		case `in_match`:
 			lines.push(`• They're in match \`${outcome.queueId}\`. It keeps its tier and can be submitted normally. The new MMR applies from their next \`/queue join\`.`);
@@ -611,6 +616,7 @@ async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
 			lines.push(`• They're not queued. The new MMR applies from their next \`/queue join\`.`);
 	}
 
+	queueEvent(`player_mmr_updated`, { userId: target.id, by: actorLabel, oldMmr, newMmr, tier: newTier, outcome: outcome.state ?? `unknown`, movedFrom: outcome.from });
 	logger.log(`INFO`, `Queue admin update-mmr executed by ${actorLabel} for ${target.tag} (${target.id}): ${oldMmr} -> ${newMmr} (${outcome.state ?? `unknown`})`);
 	return lines.join(`\n`);
 }
@@ -673,6 +679,7 @@ async function resetQueues(client, actorLabel) {
 		await pipeline.exec();
 	}
 
+	queueEvent(`queues_reset`, { by: actorLabel, tiers, queuesCleared, matchesCleared, players: [...affectedUsers] });
 	logger.log(
 		`ALERT`,
 		`Queue admin reset executed by ${actorLabel} — queues cleared: ${queuesCleared}, matches cleared: ${matchesCleared}, players reset: ${affectedUsers.size}`,

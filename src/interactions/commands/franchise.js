@@ -12,9 +12,9 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
 
-        const { _subcommand } = interaction.options;
+        const subcommand = interaction.options.getSubcommand();
 
-        switch (_subcommand) {
+        switch (subcommand) {
             case `info`: {
                 // get info about a franchise
                 return await info(interaction)

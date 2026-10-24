@@ -1,6 +1,7 @@
 const { MessageFlags } = require(`discord.js`);
 const { runLua } = require(`../../../core/redis`);
 const { LEAGUE_STATE_KEY, EVENTS_STREAM_KEY, TIERS_SET_KEY, playerKey } = require(`../../../helpers/queue/queueKeys`);
+const { queueEvent } = require(`../../../core/queue/events`);
 
 async function leaveQueue(interaction) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -18,6 +19,7 @@ async function leaveQueue(interaction) {
 			});
 		}
 
+		queueEvent(`queue_leave`, { userId: interaction.user.id, tier: payload.tier, by: interaction.user.id });
 		return interaction.editReply({
 			content: `You have been removed from the ${payload.tier ?? `queue`} queue.`,
 		});

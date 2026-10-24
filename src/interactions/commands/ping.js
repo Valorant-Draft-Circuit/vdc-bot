@@ -2,6 +2,8 @@ const { ChatInputCommandInteraction } = require(`discord.js`);
 const { prisma } = require("../../../prisma/prismadb");
 const { performance } = require('node:perf_hooks');
 
+const REPO_URL = `https://github.com/Valorant-Draft-Circuit/vdc-bot`;
+
 module.exports = {
 
     name: `ping`,
@@ -37,8 +39,12 @@ module.exports = {
         const sslCipher = (cipherValue === '') ? 'N/A' : cipherValue;
         const sslVersion = (versionValue === '') ? 'N/A' : versionValue;
 
+        // the commit CI built this image from (also its sha- image tag); local builds don't have one
+        const commit = process.env.GIT_SHA;
+        const build = commit ? `[\`${commit.slice(0, 7)}\`](<${REPO_URL}/commit/${commit}>)` : `local build (no commit)`;
+
         await interaction.editReply({
-            content: `Pong!\n📡 Discord latency: ${discordLatency}ms - time from command received to reply saved.\n🗄️ DB latency: ${dbLatency}ms - Prisma query time to the database.\n⏱️ Code+API time: ${codeLatency}ms - total command execution time.\n🔒 SSL Cypher: \`${sslCipher}\`\n🔑 SSL Version: \`${sslVersion}\``
+            content: `Pong!\n📡 Discord latency: ${discordLatency}ms - time from command received to reply saved.\n🗄️ DB latency: ${dbLatency}ms - Prisma query time to the database.\n⏱️ Code+API time: ${codeLatency}ms - total command execution time.\n🔒 SSL Cypher: \`${sslCipher}\`\n🔑 SSL Version: \`${sslVersion}\`\n🏷️ Version: ${build}`
         });
 
 

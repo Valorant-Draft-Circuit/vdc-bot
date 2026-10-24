@@ -16,13 +16,13 @@ module.exports = {
         // return interaction.reply({ content: `This isn't ready for season 6 yet!` });
         await interaction.deferReply();
 
-        const { _subcommand, _hoistedOptions } = interaction.options;
-        switch (_subcommand) {
+        const subcommand = interaction.options.getSubcommand();
+        switch (subcommand) {
             case `match`:
-                const matchURL = _hoistedOptions[0].value;
+                const matchURL = interaction.options.getString(`url`);
                 return await sendMatchStats(interaction, matchURL);
             case `player`:
-                const guildMember = _hoistedOptions[0].member;
+                const guildMember = interaction.options.getMember(`player`);
                 return await sendPlayerStats(interaction, guildMember);
 
             default:
@@ -72,8 +72,7 @@ async function sendMatchStats(/** @type ChatInputCommandInteraction */ interacti
 async function sendPlayerStats(/** @type ChatInputCommandInteraction */ interaction, /** @type GuildMember */ guildMember) {
 
     const currentSeason = await ControlPanel.getSeason();
-    const options = interaction.options._hoistedOptions;
-    const season = options[1] ? options[1].value : currentSeason;
+    const season = interaction.options.getInteger(`season`) ?? currentSeason;
 
     if (season > currentSeason) return await interaction.editReply(`Season ${season} hasn't happened yet!`);
 

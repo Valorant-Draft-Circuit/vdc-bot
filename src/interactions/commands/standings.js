@@ -21,11 +21,9 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply();
 
-        const options = interaction.options._hoistedOptions;
-
-        const tier = options[0].value;
+        const tier = interaction.options.getString(`tier`);
         const currentSeason = await ControlPanel.getSeason()
-        const season = options[1] ? options[1].value : currentSeason;
+        const season = interaction.options.getInteger(`season`) ?? currentSeason;
         if (season > currentSeason) return await interaction.editReply(`Season ${season} hasn't happened yet!`);
         if (season < 6) return await interaction.editReply(`We don't have standings saved for seasons prior to season 6 :(`);
 

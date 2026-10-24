@@ -28,7 +28,7 @@ Scan through our existing issues to find one that interests you. You can narrow 
 - Using the command line:
   - [Fork the repo](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo#fork-an-example-repository) so that you can make your changes without affecting the original project until you're ready to merge them.
 
-2. Install or update to **Node.js**, at the version specified in `.node-version`. For more information, reach out to someone on the tech team!
+2. Install or update to **Node.js**, at the version specified in `.node-version`, and install [**pnpm**](https://pnpm.io/installation) (`npm install -g pnpm`). Then run `pnpm install` — don't use `npm install`, the committed `pnpm-lock.yaml` pins every dependency. Use `pnpm run <script>` for package scripts (`pnpm deploy` and `pnpm cache` are built-in pnpm commands, not our scripts). For more information, reach out to someone on the tech team!
 
 3. Create a working branch and start with your changes!
 

@@ -1,4 +1,10 @@
-require(`dotenv`).config();
+require(`dotenv`).config({ quiet: true });
+
+// TELEMETRY --------------------------------------------------------------------------------------
+// before every other require, so its instrumentations hook discord.js, ioredis & prisma as they load
+const { shutdownTelemetry, serviceVersion } = require(`./src/core/telemetry.js`);
+// ################################################################################################
+
 
 // MODULE REQUIREMENTS ----------------------------------------------------------------------------
 const fs = require(`fs`);
@@ -11,7 +17,13 @@ const BotClient = require(`./src/core/botClient.js`);
 global.logger = new Logger();
 
 console.clear();
-logger.log(`VERBOSE`, `Starting...`);
+logger.log(`VERBOSE`, `Starting${serviceVersion ? ` version ${serviceVersion}` : ``}...`);
+// ################################################################################################
+
+
+// BLOCK DMS ON THE DEVELOPMENT BOT ---------------------------------------------------------------
+// dev bots run against prod-synced data; see src/core/dmGuard.js
+require(`./src/core/dmGuard.js`).installDevDmGuard();
 // ################################################################################################
 
 
@@ -24,8 +36,18 @@ logger.log(`DEBUG`, `Initialized client!`);
 // CREATE WATCHERS/LISTENERS ----------------------------------------------------------------------
 // catch exceptions and log to console
 process.on(`uncaughtException`, (err) => {
-    return logger.log(`ERROR`, err.cause, err.stack);
+    return logger.log(`ERROR`, `Uncaught exception: ${err?.name}: ${err?.message}${err?.cause ? ` (${err.cause})` : ``}`, err);
 });
+
+// shut down cleanly on `docker stop` (SIGTERM) and Ctrl+C (SIGINT), flushing buffered telemetry first
+for (const signal of [`SIGTERM`, `SIGINT`]) {
+    process.once(signal, async () => {
+        logger.log(`INFO`, `Received ${signal}, shutting down`);
+        await client.destroy().catch(() => null);
+        await shutdownTelemetry();
+        process.exit(0);
+    });
+}
 
 // catch warnings and log them to the console
 process.on(`warning`, (warning) => {

@@ -16,9 +16,8 @@ module.exports = {
     async execute(/** @type ChatInputCommandInteraction */ interaction) {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
-        const options = interaction.options._hoistedOptions;
-        const tier = options.find(o => o.name == `tier`).value;
-        const day = Number(options.find(o => o.name == `matchday`).value);
+        const tier = interaction.options.getString(`tier`);
+        const day = interaction.options.getInteger(`matchday`);
 
 
         const season = await ControlPanel.getSeason();

@@ -1,4 +1,4 @@
-const { Collection, EmbedBuilder, ActionRowBuilder, StringSelectMenuInteraction, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { Collection, EmbedBuilder, ActionRowBuilder, StringSelectMenuInteraction, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, userMention } = require(`discord.js`);
 
 const { prisma } = require(`../../../prisma/prismadb`);
 const { Team } = require(`../../../prisma`);
@@ -197,7 +197,7 @@ module.exports = {
             return await interaction.channel.send({
                 content:
                     `It's <${pickingTeam.Franchise.Brand.discordEmote}> \`${pickingTeam.name}\`'s turn to pick a side for \`${firstPick.map}\`!\n` +
-                    `-# ||${pickingTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
+                    `-# ||${pickingTeam.Roster.map(p => `${userMention(p.Accounts.find(a => a.provider == `discord`).providerAccountId)}`).join(`, `)}||`,
                 components: [subrow]
             });
         }
@@ -227,7 +227,7 @@ module.exports = {
         return await interaction.channel.send({
             content:
                 `It's <${nextEmote}> \`${nextTeam.name}\`'s turn to \`${selectionType}\`!\n` +
-                `-# ||${nextTeam.Roster.map(p => `<@${p.Accounts.find(a => a.provider == `discord`).providerAccountId}>`).join(`, `)}||`,
+                `-# ||${nextTeam.Roster.map(p => `${userMention(p.Accounts.find(a => a.provider == `discord`).providerAccountId)}`).join(`, `)}||`,
             components: [mapbansRow]
         });
         // ########################################################################################

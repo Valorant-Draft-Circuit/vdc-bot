@@ -1,13 +1,12 @@
 const { Player, Flags } = require(`../../../../prisma`);
 const fs = require(`fs`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`)
+const { ChatInputCommandInteraction, EmbedBuilder, userMention } = require(`discord.js`)
 
 
 async function debugUser(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _subcommand, _hoistedOptions } = interaction.options;
-    const debugUser = _hoistedOptions[0].user;
+    const debugUser = interaction.options.getUser(`player`);
 
-    const player = await Player.getBy({ discordID: _hoistedOptions[0].user.id });
+    const player = await Player.getBy({ discordID: debugUser.id });
 	if (player == null) return await interaction.editReply(`This player (${debugUser}, \`${debugUser.username}\`, \`${debugUser.id}\`) does not exist in our database!`);
 
     const primaryRiotAccount = player.PrimaryRiotAccount;
@@ -20,7 +19,7 @@ async function debugUser(/** @type ChatInputCommandInteraction */ interaction) {
     const embed = new EmbedBuilder({
         author: { name: `Debug User - ${player.name}`, icon_url: player.image },
         description:
-            `\`  Discord Account \` : <@${discordAccount.providerAccountId}>\n` +
+            `\`  Discord Account \` : ${userMention(discordAccount.providerAccountId)}\n` +
             `\` Primary Riot IGN \` : [\`${primaryRiotAccount.riotIGN}\`](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(primaryRiotAccount.riotIGN)})`
         ,
         color: 0xE92929,

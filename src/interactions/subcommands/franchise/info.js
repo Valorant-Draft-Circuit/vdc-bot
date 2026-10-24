@@ -1,13 +1,11 @@
-const { EmbedBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ButtonStyle, ActionRowBuilder, ButtonBuilder, userMention } = require(`discord.js`);
 const { Franchise } = require(`../../../../prisma`);
-const { ActionRowBuilder, ButtonBuilder } = require(`@discordjs/builders`);
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
 
 async function info(interaction) {
 
-    const { _hoistedOptions } = interaction.options;
-    const franchiseName = _hoistedOptions[0].value;
+    const franchiseName = interaction.options.getString(`franchise`);
 
     const franchise = await Franchise.getBy({ name: franchiseName });
     const franchiseTeams = await Franchise.getTeams({ name: franchiseName });
@@ -31,7 +29,7 @@ async function info(interaction) {
 
     const embed = new EmbedBuilder({
         author: { name: franchiseName, iconURL: `${imagepath}${franchise.Brand.logo}` },
-        description: `**General Manager** : ${gmIDs.map(gm => `<@${gm}>`)}\n**AGMs** : ${agmIDs.map(agm => `<@${agm}>`)}`,
+        description: `**General Manager** : ${gmIDs.map(gm => userMention(gm))}\n**AGMs** : ${agmIDs.map(agm => userMention(agm))}`,
         fields: [
             {
                 name: `\u200B`,

@@ -1,7 +1,7 @@
 const { LeagueStatus, Tier, ContractStatus } = require(`@prisma/client`);
 
 const { ControlPanel, Transaction } = require(`../../../../prisma`);
-const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, userMention } = require(`discord.js`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ROLES } = require(`../../../../utils/enums`);
 const { COLORS } = require(`../../../../utils/enums`);
@@ -16,8 +16,8 @@ const releaseInterval = 5 * 1000; // in ms
 
 async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction */ interaction, /** @type Tier */ tier) {
 
-    const userRoles = interaction.member._roles;
-    if (!userRoles.includes(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
+    const userRoles = interaction.member.roles.cache;
+    if (!userRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
 
     const transactionsChannel = await interaction.guild.channels.fetch(CHANNELS.TRANSACTIONS);
     const season = await ControlPanel.getSeason();
@@ -64,9 +64,9 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
 
         // checks to make sure the bot doesn't crash lmfao
         if (guildMember == undefined) {
-            interaction.channel.send(`There was an error grabbing <@${playerDiscordID}> (\`${player.name}\`, \`${playerIGN}\`). Maybe they're not in the server?`)
+            interaction.channel.send(`There was an error grabbing ${userMention(playerDiscordID)} (\`${player.name}\`, \`${playerIGN}\`). Maybe they're not in the server?`)
         } else if (!guildMember.manageable) {
-            interaction.channel.send(`I can't manage the roles or update the nickname for <@${playerDiscordID}> (\`${player.name}\`, \`${playerIGN}\`). Their roles are higher than mine!`)
+            interaction.channel.send(`I can't manage the roles or update the nickname for ${userMention(playerDiscordID)} (\`${player.name}\`, \`${playerIGN}\`). Their roles are higher than mine!`)
         } else {
             const accolades = guildMember.nickname?.match(emoteregex);
             guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
@@ -93,11 +93,11 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             author: { name: `${tier}  |  ${draftPick.round == 99 ? `Keeper` : `Round ${draftPick.round}  |  Pick: ${draftPick.pick}`}` },
             color: COLORS[tier],
             thumbnail: { url: `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/${draftPick.Franchise.Brand.logo}` },
-            description: `${team.name} ${draftPick.keeper ? `keep` : `draft`} <@${playerDiscordID}> (${player.name})`,
+            description: `${team.name} ${draftPick.keeper ? `keep` : `draft`} ${userMention(playerDiscordID)} (${player.name})`,
             fields: [
                 { name: `IGN`, value: `[${playerIGN}](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(playerIGN)})`, inline: true },
                 { name: `Franchise`, value: draftPick.Franchise.name, inline: true },
-                { name: `GM`, value: `<@${gmDiscordAccount.providerAccountId}>`, inline: true },
+                { name: `GM`, value: userMention(gmDiscordAccount.providerAccountId), inline: true },
             ],
             timestamp: Date.now(),
             footer: { text: `Valorant Draft Circuit Draft` }
@@ -118,7 +118,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
             ].filter(v => v !== undefined);
 
             const dmEmbed = new EmbedBuilder({
-                description: `Congratulations, you've been drafted to ${franchise.name}'s **${team.tier}** team, ${team.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)} & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}. Feel free to reach out to them if you have any more questions!`,
+                description: `Congratulations, you've been drafted to ${franchise.name}'s **${team.tier}** team, ${team.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => userMention(gm))} & AGM(s) are ${agmIDs.map(agm => userMention(agm))}. Feel free to reach out to them if you have any more questions!`,
                 thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
                 color: Number(franchise.Brand.colorPrimary)
             });

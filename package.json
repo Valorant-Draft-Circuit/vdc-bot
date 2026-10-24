@@ -5,12 +5,13 @@
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
-    "deploy": "npm run cache && npm run start",
+    "deploy": "pnpm run cache && pnpm run start",
     "compile": "tsc -p tsconfig.json",
+    "smoke": "node scripts/smoke.js",
     "cache": "node ./cache/cache.js",
     "dev:start": "nodemon --no-warnings --ignore ./cache/ --ignore ./bin/ bot.js",
-    "dev:compile": "npm run cache && tsc -w -p tsconfig.json",
-    "dev:run": "npm install && npm run compile && npm run cache && npm run dev:start",
+    "dev:compile": "pnpm run cache && tsc -w -p tsconfig.json",
+    "dev:run": "pnpm install && pnpm run compile && pnpm run cache && pnpm run dev:start",
     "generate": "prisma generate && (clear || cls)",
     "pull": "prisma db pull --force",
     "studio": "prisma studio"
@@ -31,15 +32,35 @@
     "url": "https://github.com/Valorant-Draft-Circuit/vdc-bot/issues"
   },
   "homepage": "https://github.com/Valorant-Draft-Circuit/vdc-bot#readme",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.52",
+    "@opentelemetry/api": "1.10.0",
+    "@opentelemetry/context-async-hooks": "3.0.0",
+    "@opentelemetry/core": "3.0.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "0.300.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "0.300.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "0.300.0",
+    "@opentelemetry/instrumentation": "0.300.0",
+    "@opentelemetry/instrumentation-ioredis": "0.72.0",
+    "@opentelemetry/instrumentation-runtime-node": "0.37.0",
+    "@opentelemetry/instrumentation-undici": "0.34.0",
+    "@opentelemetry/resources": "3.0.0",
+    "@opentelemetry/sdk-logs": "3.0.0",
+    "@opentelemetry/sdk-metrics": "3.0.0",
+    "@opentelemetry/sdk-trace": "3.0.0",
     "@prisma/client": "^6.15.0",
+    "@prisma/instrumentation": "6.19.3",
     "chalk": "^4.1.2",
-    "discord.js": "^14.16.3",
+    "discord.js": "^14.27.0",
     "dotenv": "^17.0.0",
     "ioredis": "^5.4.1"
   },
   "devDependencies": {
+    "@types/node": "^24.19.1",
     "nodemon": "^2.0.20",
     "prisma": "^6.15.0",
     "typescript": "^5.2.2"

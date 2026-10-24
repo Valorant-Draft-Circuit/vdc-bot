@@ -1,19 +1,18 @@
 const { Player, Team } = require(`../../../../prisma`);
-const { ChatInputCommandInteraction, EmbedBuilder } = require(`discord.js`);
+const { ChatInputCommandInteraction, EmbedBuilder, userMention } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 
 
 async function forceUpdate(/** @type ChatInputCommandInteraction */ interaction) {
-    const { _subcommand, _hoistedOptions } = interaction.options;
-
-    const player = await Player.getBy({ discordID: _hoistedOptions[0].user.id });
-    const debugUser = _hoistedOptions[0].user;
+    const player = await Player.getBy({ discordID: interaction.options.getUser(`player`).id });
+    const debugUser = interaction.options.getUser(`player`);
     if (player == null) return await interaction.editReply(`This player (${debugUser}, \`${debugUser.username}\`, \`${debugUser.id}\`) does not exist in our database!`);
 
-    const leagueStatus = _hoistedOptions.find(o => o.name === `league-status`);
-    const contractStatus = _hoistedOptions.find(o => o.name === `contract-status`);
-    const contractRemaining = _hoistedOptions.find(o => o.name === `contract-remaining`);
-    const team = _hoistedOptions.find(o => o.name === `team`);
+    // get() returns null for omitted options, but the checks below compare against undefined
+    const leagueStatus = interaction.options.get(`league-status`) ?? undefined;
+    const contractStatus = interaction.options.get(`contract-status`) ?? undefined;
+    const contractRemaining = interaction.options.get(`contract-remaining`) ?? undefined;
+    const team = interaction.options.get(`team`) ?? undefined;
 
     const updatedDataObject = { User: { update: { data: { team: null, Status: { update: {} } } } } };
     if (leagueStatus !== undefined) updatedDataObject.User.update.data.Status.update.leagueStatus = leagueStatus.value;
@@ -43,7 +42,7 @@ async function forceUpdate(/** @type ChatInputCommandInteraction */ interaction)
     const embed = new EmbedBuilder({
         author: { name: `Updated User - ${updatedUser.User.name}`, icon_url: updatedUser.User.image },
         description:
-            `\`  Discord Account \` : <@${updatedUser.providerAccountId}>\n` +
+            `\`  Discord Account \` : ${userMention(updatedUser.providerAccountId)}\n` +
             `\` Primary Riot IGN \` : [\`${updatedUser.User.PrimaryRiotAccount.riotIGN}\`](https://tracker.gg/valorant/profile/riot/${encodeURIComponent(updatedUser.User.PrimaryRiotAccount.riotIGN)})`
         ,
         color: 0xE92929,

@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, userMention } = require(`discord.js`);
 const { ChatInputCommandInteraction, ButtonInteraction, StringSelectMenuInteraction, GuildMember } = require(`discord.js`);
 
 
@@ -811,7 +811,7 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 
 
 			const dmEmbed = new EmbedBuilder({
-				description: `Your contract has been transferred to ${franchise.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}` : ``}. Feel free to reach out to them if you have any more questions!`,
+				description: `Your contract has been transferred to ${franchise.name}! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => userMention(gm))}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => userMention(agm))}` : ``}. Feel free to reach out to them if you have any more questions!`,
 				thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
 				color: Number(franchise.Brand.colorPrimary)
 			});

@@ -1,4 +1,4 @@
-const { GuildMember, MessageFlags } = require(`discord.js`);
+const { GuildMember, MessageFlags, userMention, time, TimestampStyles, roleMention } = require(`discord.js`);
 const { ControlPanel } = require("../../prisma");
 const { GUILD, ROLES, CHANNELS } = require("../../utils/enums");
 
@@ -28,7 +28,7 @@ module.exports = {
 
             const modLogChannel = await client.channels.fetch(CHANNELS.MOD_LOG).catch(() => null);
             if (modLogChannel) {
-                await modLogChannel.send({ content: `<@${member.id}> (\`${member.user.username}\`, \`${member.id}\`) rejoined while muted - the Muted role was re-applied.` }).catch(() => undefined);
+                await modLogChannel.send({ content: `${userMention(member.id)} (\`${member.user.username}\`, \`${member.id}\`) rejoined while muted - the Muted role was re-applied.` }).catch(() => undefined);
             }
             logger.log(`INFO`, `Re-applied Muted role to rejoining member ${member.id}`);
         }
@@ -37,20 +37,20 @@ module.exports = {
 
         // send the join info in the memberdrain channel
         const guild = await client.guilds.fetch(member.guild.id);
-        logger.memberdrain(`📥 <t:${Math.round(Date.now() / 1000)}:d> <t:${Math.round(Date.now() / 1000)}:T> **Member joined** - __Server__: \`${member.guild.name}\` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \`${member.user.username}\`,  __ID__: \`${member.id}\``);
+        logger.memberdrain(`📥 ${time(Math.round(Date.now() / 1000), TimestampStyles.ShortDate)} ${time(Math.round(Date.now() / 1000), TimestampStyles.MediumTime)} **Member joined** - __Server__: \`${member.guild.name}\` **|** (\`${guild.memberCount}\`) , __User__: ${member}, __Name__: \`${member.user.username}\`,  __ID__: \`${member.id}\``);
 
         // if not in the main VDC server, then return and do nothing else
         if (member.guild.id !== GUILD) return;
 
         // build the message
-        const welcomeMessage = (await ControlPanel.getWelcomeMessage()).replace(`{welcome}`, `<@&${welcomePingRoleID}>`).replace(`{user}`, `<@${member.id}>`);
+        const welcomeMessage = (await ControlPanel.getWelcomeMessage()).replace(`{welcome}`, roleMention(welcomePingRoleID)).replace(`{user}`, userMention(member.id));
         const messageBody = [
             `- See the sign up guide here: https://discord.com/channels/963274331251671071/963347135342985306`,
             `- Check out our [new player guide](https://blog.vdc.gg/new-player-guide/) or view the condensed version here: https://discord.com/channels/963274331251671071/1354229508441510039`,
             `- Get general info and see FAQs at our wiki: https://discord.com/channels/963274331251671071/1319803211850448896`,
             `- Still have questions? Use https://discord.com/channels/963274331251671071/1047026533467967549 or open a ticket: https://discord.com/channels/963274331251671071/966924427709276160`
         ].join(`\n`);
-        const messageFooter = `\n-# Want to be pinged to welcome new players? Add the <@&${welcomePingRoleID}> role in the \`Channels & Roles\` section at the top of the channel list!`;
+        const messageFooter = `\n-# Want to be pinged to welcome new players? Add the ${roleMention(welcomePingRoleID)} role in the \`Channels & Roles\` section at the top of the channel list!`;
 
         // fetch the channel & send the message
         const channel = await client.channels.fetch(generalChatID);

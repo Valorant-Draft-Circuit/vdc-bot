@@ -6,7 +6,8 @@
 # Ignore all compiled & generated files. #######################
 utils/enums/*.js
 prisma/*.js
-cache/*.json
+cache/*
+!cache/cache.js
 # These will be compiled/generated locally & on deployment #####
 ################################################################
 
@@ -24,7 +25,6 @@ package-lock.json
 *.DS_Store
 utils/commandsStructure/test.js
 src/interactions/commands/test.js
-pnpm-lock.yaml
 docs
 ################################################################
 

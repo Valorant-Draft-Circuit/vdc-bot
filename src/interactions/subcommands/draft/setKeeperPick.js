@@ -1,3 +1,4 @@
+const { userMention } = require(`discord.js`);
 const { Player, ControlPanel } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { refreshDraftBoardChannel } = require("./refreshDraftBoardChannel");
@@ -5,8 +6,8 @@ const { ROLES } = require("../../../../utils/enums");
 
 async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 
-	const userRoles = interaction.member._roles;
-	if (!(userRoles.includes(ROLES.OPERATIONS.ADMIN) || userRoles.includes(ROLES.OPERATIONS.TRANSACTIONS))) return await interaction.editReply({ content: `You don't have the Admin or Transactions role and cannot use this command!` });
+	const userRoles = interaction.member.roles.cache;
+	if (!(userRoles.has(ROLES.OPERATIONS.ADMIN) || userRoles.has(ROLES.OPERATIONS.TRANSACTIONS))) return await interaction.editReply({ content: `You don't have the Admin or Transactions role and cannot use this command!` });
 
 	// get current season from the database
 	const season = await ControlPanel.getSeason();
@@ -42,11 +43,11 @@ async function setKeeperPick(interaction, overallPickNumber, tier, discordID) {
 		include: { Franchise: true, Player: { include: { PrimaryRiotAccount: true } } },
 	});
 
-	logger.log(`VERBOSE`, `<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick`)
+	logger.log(`VERBOSE`, `${userMention(discordID)} (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick`)
 	if (updatedPick.userID !== player.id) return await interaction.editReply(`There was an error. The database was not updated`);
 	else {
 		// await refreshDraftBoardChannel(interaction);
-		return await interaction.editReply(`<@${discordID}> (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round \`${pick.round}\`, pick \`${pick.pick}\` (overall pick: \`${overallPickNumber}\`)`)
+		return await interaction.editReply(`${userMention(discordID)} (\`${player.PrimaryRiotAccount.riotIGN}\`, \`${player.name}\`) has been set as \`${updatedPick.Franchise.name}\`'s keeper pick for round \`${pick.round}\`, pick \`${pick.pick}\` (overall pick: \`${overallPickNumber}\`)`)
 	};
 }
 

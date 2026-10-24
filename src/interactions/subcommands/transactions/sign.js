@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require(`discord.js`);
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, userMention } = require(`discord.js`);
 const { ChatInputCommandInteraction, GuildMember } = require(`discord.js`);
 
 
@@ -185,7 +185,7 @@ async function confirmSign(interaction) {
 
 
 		const dmEmbed = new EmbedBuilder({
-			description: `Congratulations, you've been signed to ${franchise.name} for a ${contractLength} season contract! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => `<@${gm}>`)}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => `<@${agm}>`)}` : ``}. Feel free to reach out to them if you have any more questions!`,
+			description: `Congratulations, you've been signed to ${franchise.name} for a ${contractLength} season contract! Make sure you join the franchise server using the link below- best of luck to you and your new team!\n\n Your new GM is ${gmIDs.map(gm => userMention(gm))}${agmIDs.length !== 0 ? ` & AGM(s) are ${agmIDs.map(agm => userMention(agm))}` : ``}. Feel free to reach out to them if you have any more questions!`,
 			thumbnail: { url: `${imagepath}${franchise.Brand.logo}` },
 			color: Number(franchise.Brand.colorPrimary)
 		});

@@ -1,4 +1,13 @@
+const { time, TimestampStyles, roleMention } = require(`discord.js`);
 const chalk = require(`chalk`);
+const { emitLog, grafanaLink } = require(`./telemetry.js`);
+
+const DISCORD_MESSAGE_LIMIT = 2000;
+
+// Grafana gets every line; the Discord logdrain only gets LOGDRAIN_LEVEL and above (unset = none). ALERT ranks
+// highest because it pings the alerts role for something staff have to fix by hand.
+const DRAIN_LEVELS = [`VERBOSE`, `DEBUG`, `INFO`, `WARNING`, `ERROR`, `ALERT`];
+const drainFrom = DRAIN_LEVELS.indexOf(String(process.env.LOGDRAIN_LEVEL ?? ``).trim().toUpperCase());
 
 // console color
 const ccolor = {
@@ -39,11 +48,24 @@ module.exports = class Logger {
         this.memberlogDrain;
 
         this.logdrainReady = false;
+        this.drainsChecked = false;
         this.outqueue = [];
     }
 
     /** Initializer function for the Logger Class */
     async init() {
+        await this.connectDrains();
+        this.drainsChecked = true;
+
+        // lines queued before the drain came up; if it never will, nothing would ever send them
+        if (!this.logdrainReady) this.outqueue = [];
+
+        if (drainFrom === -1) this.log(`INFO`, `Discord logdrain posts no log lines (LOGDRAIN_LEVEL unset); every line is in Grafana`);
+        else this.log(`INFO`, `Discord logdrain posts ${DRAIN_LEVELS.slice(drainFrom).join(`, `)} lines (LOGDRAIN_LEVEL=${DRAIN_LEVELS[drainFrom]})`);
+    }
+
+    /** Fetch the Discord drain channels: logdrain (log lines), matchdrain and memberlogs */
+    async connectDrains() {
 
         this.log(`VERBOSE`, `Fetching logdrain channels...`);
 
@@ -101,7 +123,7 @@ module.exports = class Logger {
     log(level, message, stack, timestamp = Date.now()) {
 
         // date & time
-        const time = new Date(timestamp).toLocaleString("en-US", { timeZone: `CST`, month: `short`, day: `2-digit`, hour: `numeric`, minute: `numeric` });
+        const localTime = new Date(timestamp).toLocaleString("en-US", { timeZone: `CST`, month: `short`, day: `2-digit`, hour: `numeric`, minute: `numeric` });
         const timestampDate = Math.round(Date.now() / 1000);
 
         const levelOut = level.padStart(8, ` `);
@@ -117,14 +139,25 @@ module.exports = class Logger {
         }
 
         // out to console
-        console.log(`${ccolor[level](time)} | ${ccolor[level](levelOut)} : ${message}`);
+        console.log(`${ccolor[level](localTime)} | ${ccolor[level](levelOut)} : ${message}`);
         if (stack) console.log(tidyStack);
 
-        // discord logdrain
-        let logmsg = `${ldemote[level]} <t:${timestampDate}:d> <t:${timestampDate}:T> \` ${levelOut} \` : ${level == `ALERT` ? `<@&${ALERT_ROLE_ID}> ` : ``}${message}`;
+        // out to Grafana (Loki), linked to the active trace
+        emitLog(level, message, stack, timestamp);
 
-        if (stack) logmsg += `\n\`\`\`js\n${tidyStack}\n\`\`\``;
-        this.outqueue.push(logmsg);
+        // discord logdrain: LOGDRAIN_LEVEL and above, one line each; stacks stay in Grafana, behind a link
+        if (drainFrom === -1 || DRAIN_LEVELS.indexOf(level) < drainFrom) return;
+        if (this.drainsChecked && !this.logdrainReady) return;
+
+        const head = `${ldemote[level]} ${time(timestampDate, TimestampStyles.ShortDate)} ${time(timestampDate, TimestampStyles.MediumTime)} \` ${levelOut} \` : ${level == `ALERT` ? `${roleMention(ALERT_ROLE_ID)} ` : ``}`;
+        const link = stack || DRAIN_LEVELS.indexOf(level) >= DRAIN_LEVELS.indexOf(`ERROR`) ? grafanaLink(timestamp) : null;
+        const tail = link ? ` · [${link.label}](<${link.url}>)` : ``;
+
+        // Discord rejects messages over 2000 characters; trim the message, never the link
+        const room = DISCORD_MESSAGE_LIMIT - head.length - tail.length;
+        const body = String(message).length > room ? `${String(message).slice(0, room - 3)}...` : String(message);
+
+        this.outqueue.push(`${head}${body}${tail}`);
         return this.processLogQueue();
     };
 
