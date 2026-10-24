@@ -1,6 +1,7 @@
 const { Client } = require(`discord.js`);
 const { reconcileExpiredSubs } = require(`./reconcile`);
 const { GUILD } = require(`../../../utils/enums`);
+const { withSpan } = require(`../../core/telemetry`);
 
 const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -13,7 +14,7 @@ async function runReconcile(client, failureLabel) {
 	isReconciling = true;
 	try {
 		const guild = await client.guilds.fetch(GUILD).catch(() => null);
-		if (guild) await reconcileExpiredSubs(guild);
+		if (guild) await withSpan(`subExpiry reconcile`, {}, () => reconcileExpiredSubs(guild));
 	} catch (error) {
 		logger.log(`ERROR`, failureLabel, error.stack);
 	} finally {

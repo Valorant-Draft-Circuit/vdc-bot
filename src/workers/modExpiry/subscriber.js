@@ -3,6 +3,7 @@ const { getRedisClient } = require(`../../core/redis`);
 const { EXPIRY_KEY_PREFIX } = require(`../../helpers/mod/muteState`);
 const { liftMute, liftBan, announceExpiredLift } = require(`../../helpers/mod/enforcement`);
 const { GUILD } = require(`../../../utils/enums`);
+const { withSpan } = require(`../../core/telemetry`);
 
 let subscriberClient;
 
@@ -23,21 +24,23 @@ async function startExpirySubscriber(client) {
 		if (!expiredKey.startsWith(EXPIRY_KEY_PREFIX)) return;
 
 		const [type, discordID] = expiredKey.slice(EXPIRY_KEY_PREFIX.length).split(`:`);
-		const guild = await client.guilds.fetch(GUILD).catch(() => null);
-		if (!guild) return;
+		await withSpan(`modExpiry lift`, { 'vdc.mod.type': type, 'discord.user.id': discordID }, async () => {
+			const guild = await client.guilds.fetch(GUILD).catch(() => null);
+			if (!guild) return;
 
-		try {
-			if (type === `MUTE`) {
-				const { lifted } = await liftMute(guild, discordID);
-				if (lifted) await announceExpiredLift(guild, `UNMUTE`, discordID);
-			} else if (type === `BAN`) {
-				const wasBanned = await liftBan(guild, discordID, `Ban expired`);
-				if (wasBanned) await announceExpiredLift(guild, `UNBAN`, discordID);
+			try {
+				if (type === `MUTE`) {
+					const { lifted } = await liftMute(guild, discordID);
+					if (lifted) await announceExpiredLift(guild, `UNMUTE`, discordID);
+				} else if (type === `BAN`) {
+					const wasBanned = await liftBan(guild, discordID, `Ban expired`);
+					if (wasBanned) await announceExpiredLift(guild, `UNBAN`, discordID);
+				}
+				logger.log(`INFO`, `Expired ${type} lifted for ${discordID}`);
+			} catch (error) {
+				logger.log(`ERROR`, `Failed lifting expired ${type} for ${discordID}`, error.stack);
 			}
-			logger.log(`INFO`, `Expired ${type} lifted for ${discordID}`);
-		} catch (error) {
-			logger.log(`ERROR`, `Failed lifting expired ${type} for ${discordID}`, error.stack);
-		}
+		});
 	});
 
 	logger.log(`INFO`, `Mod expiry subscriber listening on __keyevent@${db}__:expired`);

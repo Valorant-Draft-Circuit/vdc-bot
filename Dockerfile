@@ -12,4 +12,6 @@ COPY . .
 RUN pnpm exec prisma generate
 RUN pnpm run compile
 RUN pnpm run smoke
-CMD [ "pnpm", "run", "deploy" ]
+# same steps as `pnpm run deploy`, without package-manager processes idling beside the bot (~50 MB on a
+# 1 GB droplet); exec makes node PID 1 so `docker stop` reaches bot.js's SIGTERM handler
+CMD [ "sh", "-c", "node ./cache/cache.js && exec node bot.js" ]

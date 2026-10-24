@@ -1,4 +1,5 @@
 const { Client, BaseInteraction, ChatInputCommandInteraction, ButtonInteraction, UserSelectMenuInteraction, AutocompleteInteraction, MessageFlags } = require(`discord.js`);
+const { withSpan, SpanKind } = require(`../core/telemetry`);
 
 module.exports = {
 
@@ -29,17 +30,89 @@ module.exports = {
             }
         }
 
-        try {
-            if (interaction.isCommand()) return await executeCommand(client, interaction);
-            if (interaction.isButton()) return await executeButton(client, interaction);
-            if (interaction.isAnySelectMenu()) return await executeSelectMenu(client, interaction);
-            if (interaction.isModalSubmit()) return await executeModal(client, interaction);
-            if (interaction.isAutocomplete()) return await executeAutocomplete(client, interaction);
-        } catch (err) {
-            logger.log(`ERROR`, `${err.name} - ${this.name}`, err.stack);
-        }
+        const { name, attributes } = describeInteraction(interaction);
+        const run = async () => {
+            try {
+                if (interaction.isCommand()) return await executeCommand(client, interaction);
+                if (interaction.isButton()) return await executeButton(client, interaction);
+                if (interaction.isAnySelectMenu()) return await executeSelectMenu(client, interaction);
+                if (interaction.isModalSubmit()) return await executeModal(client, interaction);
+                if (interaction.isAutocomplete()) return await executeAutocomplete(client, interaction);
+            } catch (err) {
+                logger.log(`ERROR`, `\`${interaction.user.tag}\` hit an error in \`${name}\`: ${err.name}: ${err.message}`, err);
+            }
+        };
+
+        // autocompletes fire on every keystroke, so they don't get a trace of their own
+        if (interaction.isAutocomplete()) return await run();
+        return await withSpan(name, attributes, run, { kind: SpanKind.SERVER });
     }
 };
+
+/**
+ * Span name and attributes for an interaction. The name identifies what ran (`/queue join`,
+ * `button queueManager_submit`) and the attributes hold who, where and with which options.
+ * @param {BaseInteraction} interaction
+ */
+function describeInteraction(interaction) {
+    const attributes = {
+        'discord.interaction.id': interaction.id,
+        'discord.user.id': interaction.user.id,
+        'discord.user.name': interaction.user.username,
+        'discord.guild.id': interaction.guildId ?? ``,
+        'discord.channel.id': interaction.channelId ?? ``,
+    };
+
+    if (interaction.isCommand() || interaction.isAutocomplete()) {
+        const command = commandPath(interaction);
+        attributes[`discord.interaction.type`] = `command`;
+        attributes[`discord.command`] = command;
+        for (const [option, value] of flattenOptions(interaction.options.data)) attributes[`discord.option.${option}`] = value;
+        return { name: command, attributes };
+    }
+
+    // custom IDs look like `prefix_action-id-id`; everything after the first `-` is per-message
+    const customId = interaction.customId ?? ``;
+    const baseId = customId.split(`-`)[0];
+    attributes[`discord.custom_id`] = customId;
+
+    if (interaction.isButton()) {
+        attributes[`discord.interaction.type`] = `button`;
+        return { name: `button ${baseId}`, attributes };
+    }
+    if (interaction.isAnySelectMenu()) {
+        attributes[`discord.interaction.type`] = `select`;
+        attributes[`discord.select.values`] = interaction.values.join(`,`);
+        return { name: `select ${baseId}`, attributes };
+    }
+    if (interaction.isModalSubmit()) {
+        attributes[`discord.interaction.type`] = `modal`;
+        return { name: `modal ${baseId}`, attributes };
+    }
+    return { name: `interaction ${interaction.type}`, attributes };
+}
+
+/** `/queue join`, `/queueadmin player reset`; context menu commands keep their plain name */
+function commandPath(interaction) {
+    if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return interaction.commandName;
+    const group = interaction.options.getSubcommandGroup(false);
+    const subcommand = interaction.options.getSubcommand(false);
+    return [`/${interaction.commandName}`, group, subcommand].filter(Boolean).join(` `);
+}
+
+/** [name, value] for every option the user filled in, unwrapping subcommands and groups */
+function* flattenOptions(options = []) {
+    for (const option of options) {
+        if (option.options) yield* flattenOptions(option.options);
+        else if (option.value !== undefined) yield [option.name, String(option.value)];
+    }
+}
+
+/** The command as the user typed it, e.g. `/queue join tier:RECRUIT` */
+function commandLine(interaction) {
+    const options = [...flattenOptions(interaction.options.data)].map(([option, value]) => `${option}:${value}`);
+    return [commandPath(interaction), ...options].join(` `);
+}
 
 /**
  * Function to execute slash commands
@@ -50,7 +123,7 @@ async function executeCommand(client, interaction) {
     const command = client.slashCommands.get(interaction.commandName);
 
     if (command) {
-        logger.log(`INFO`, `\`${interaction.user.tag}\` ran the \`${interaction.commandName}\` command`);
+        logger.log(`INFO`, `\`${interaction.user.tag}\` ran \`${commandLine(interaction)}\``);
         await command.execute(interaction);
 
     } else throw new ReferenceError(`Cannot find the application command file!`, { cause: `File is either missing or does not exist.` });
@@ -98,7 +171,7 @@ async function executeButton(client, interaction) {
     }
 
     if (button) {
-        logger.log(`INFO`, `\`${interaction.user.tag}\` clicked on the \`${buttonID}\` button`);
+        logger.log(`INFO`, `\`${interaction.user.tag}\` clicked on the \`${interaction.customId}\` button`);
         await button.execute(...args);
 
     } else throw new ReferenceError(`Cannot find the interaction button file!`, { cause: `File is either missing or does not exist.` });
