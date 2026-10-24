@@ -4,10 +4,12 @@
 // otherwise every helper here is a no-op.
 
 // MODULE REQUIREMENTS ----------------------------------------------------------------------------
-const { trace, metrics, diag, DiagLogLevel, SpanKind, SpanStatusCode, TraceFlags, isSpanContextValid } = require(`@opentelemetry/api`);
-const { logs, SeverityNumber } = require(`@opentelemetry/api-logs`);
-const { NodeTracerProvider, BatchSpanProcessor, SamplingDecision } = require(`@opentelemetry/sdk-trace-node`);
-const { defaultResource, resourceFromAttributes, detectResources, envDetector, hostDetector, processDetector } = require(`@opentelemetry/resources`);
+const os = require(`node:os`);
+const { trace, context, propagation, metrics, logs, diag, DiagLogLevel, SeverityNumber, SpanKind, SpanStatusCode, TraceFlags, isSpanContextValid } = require(`@opentelemetry/api`);
+const { TracerProvider, BatchSpanProcessor, SamplingDecision } = require(`@opentelemetry/sdk-trace`);
+const { CompositePropagator, W3CTraceContextPropagator, W3CBaggagePropagator } = require(`@opentelemetry/core`);
+const { AsyncLocalStorageContextManager } = require(`@opentelemetry/context-async-hooks`);
+const { defaultResource, resourceFromAttributes, detectResources, envDetector, processDetector } = require(`@opentelemetry/resources`);
 const { LoggerProvider, BatchLogRecordProcessor } = require(`@opentelemetry/sdk-logs`);
 const { MeterProvider, PeriodicExportingMetricReader } = require(`@opentelemetry/sdk-metrics`);
 const { OTLPTraceExporter } = require(`@opentelemetry/exporter-trace-otlp-proto`);
@@ -58,20 +60,26 @@ function start() {
     }, DiagLogLevel.WARN);
 
     const resource = defaultResource()
-        .merge(detectResources({ detectors: [hostDetector, processDetector, envDetector] }))
+        .merge(detectResources({ detectors: [processDetector, envDetector] }))
         .merge(resourceFromAttributes({
             'service.name': serviceName,
             'deployment.environment.name': environment,
+            // the container ID, so restarts are visible; set directly because the host detector also looks for a
+            // machine ID, which Alpine images lack, and warns on every start
+            'host.name': os.hostname(),
             ...(serviceVersion && { 'service.version': serviceVersion }),
         }));
 
-    tracerProvider = new NodeTracerProvider({
+    tracerProvider = new TracerProvider({
         resource,
         sampler: entryPointSampler,
-        // the span processor takes the exporter positionally, the log processor an options object
-        spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+        spanProcessors: [new BatchSpanProcessor({ exporter: new OTLPTraceExporter() })],
     });
-    tracerProvider.register();
+    trace.setGlobalTracerProvider(tracerProvider);
+    // AsyncLocalStorage carries the active span through awaits, which is what ties a log line to its command;
+    // the propagators put traceparent on outgoing requests, so numbers and web can join the trace
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+    propagation.setGlobalPropagator(new CompositePropagator({ propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()] }));
 
     loggerProvider = new LoggerProvider({ resource, processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })] });
     logs.setGlobalLoggerProvider(loggerProvider);
