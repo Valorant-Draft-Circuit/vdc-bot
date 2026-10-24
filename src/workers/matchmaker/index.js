@@ -16,10 +16,15 @@ const { deriveTiersFromCache, parseLuaJson, runSafely } = require(`./util`);
 const { ensureChannelCapacityForPops } = require(`./capacity`);
 const { dispatchMatch } = require(`./dispatch`);
 
+// after a lobby setup fails (players requeued), give the tier a break so a persistent failure
+// doesn't rebuild and tear down the same match every tick
+const DISPATCH_FAILURE_BACKOFF_MS = 30000;
+
 let intervalHandle;
 let currentIntervalMs = null;
 const inFlightTiers = new Set();
 const lastTierError = new Map();
+const tierBackoffUntil = new Map();
 let startedAt = null;
 let stoppedAt = null;
 let stopReason = null;
@@ -152,6 +157,7 @@ async function processAllTiers(client, options = {}) {
 
 	for (const tier of tierSet) {
 		if (!tier || tier === `pulled`) continue;
+		if ((tierBackoffUntil.get(tier) ?? 0) > Date.now()) continue;
 
 		if (warmup.active) {
 			if (popsThisTick >= warmup.maxPopsPerTick) break;
@@ -209,7 +215,12 @@ async function attemptMatchForTier(client, tier, config) {
 		}
 
 		lastTierError.delete(tier);
-		await dispatchMatch(client, payload, config);
+		const dispatched = await dispatchMatch(client, payload, config);
+		if (!dispatched) {
+			tierBackoffUntil.set(tier, Date.now() + DISPATCH_FAILURE_BACKOFF_MS);
+			return false;
+		}
+		tierBackoffUntil.delete(tier);
 		return true;
 	} catch (error) {
 		logger.log(`ERROR`, `Error building match for ${tier}`, error);

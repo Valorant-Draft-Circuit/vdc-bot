@@ -31,7 +31,8 @@ async function status(interaction) {
             let cursor = `0`;
             const matchKeys = [];
             do {
-                const [nextCursor, results] = await redis.scan(cursor, `MATCH`, matchKeyPattern(), `COUNT`, 250);
+                // TYPE hash skips the cancel-vote keys that share the vdc:match: prefix
+                const [nextCursor, results] = await redis.scan(cursor, `MATCH`, matchKeyPattern(), `TYPE`, `hash`, `COUNT`, 250);
                 cursor = nextCursor;
                 if (Array.isArray(results) && results.length) matchKeys.push(...results);
             } while (cursor !== `0`);

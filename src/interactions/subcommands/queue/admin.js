@@ -1,21 +1,33 @@
 const { MessageFlags, EmbedBuilder, time, TimestampStyles, roleMention } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
+const { Player } = require(`../../../../prisma`);
+const { prisma } = require(`../../../../prisma/prismadb`);
 const { ROLES } = require(`../../../../utils/enums/roles`);
 const { CHANNELS } = require(`../../../../utils/enums/channels`);
-const { getRedisClient } = require(`../../../core/redis`);
+const { getRedisClient, runLua } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
+const { getQueueMatchContext, finalizeQueueCombineSubmission, releaseQueueMatch, deleteQueueMatchChannels } = require(`../../../core/queue/matchLifecycle`);
 const {
+	LEAGUE_STATE_KEY,
+	EVENTS_STREAM_KEY,
 	TIERS_SET_KEY,
 	tierOpenKey,
 	tierQueueKey,
 	tierQueueKeys,
 	playerKey,
 	playerRecentKey,
+	playerSuspendedKey,
 	matchKey,
 	matchKeyPattern,
 	queueIdFromMatchKey,
 } = require(`../../../helpers/queue/queueKeys`);
+const { getCurrentChannelCount } = require(`../../../workers/matchmaker/capacity`);
+const { deriveTierFromMmr } = require(`../../../helpers/queue/queueState`);
+const { buildMMRCache } = require(`../debug/updateMMR`);
+
+const TRACKER_MATCH_URL = `https://tracker.gg/valorant/match/`;
+const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
 
 async function handleAdminCommand(interaction, queueConfig, subcommand) {
 	const actorLabel = `${interaction.user.tag} (${interaction.user.id})`;
@@ -197,6 +209,47 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			return;
 		}
 
+		case `complete-match`: {
+			const queueId = interaction.options.getString(`queue_id`, true);
+			const url = interaction.options.getString(`url`);
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const result = await completeMatch(interaction, queueId, url, actorLabel);
+			try {
+				return await interaction.editReply({ content: result.message });
+			} finally {
+				if (result.queueContext) await deleteQueueMatchChannels(interaction.guild, result.queueContext);
+			}
+		}
+
+		case `suspend`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const target = interaction.options.getUser(`player`, true);
+			const hours = interaction.options.getInteger(`hours`);
+			const reason = interaction.options.getString(`reason`);
+			const result = await suspendPlayer(target, { hours, reason }, interaction.user.id, actorLabel);
+			return interaction.editReply({ content: result });
+		}
+
+		case `unsuspend`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const target = interaction.options.getUser(`player`, true);
+			const removed = await getRedisClient().del(playerSuspendedKey(target.id));
+			if (!removed) {
+				return interaction.editReply({ content: `<@${target.id}> is not suspended from the queue.` });
+			}
+
+			logger.log(`ALERT`, `Queue admin unsuspend executed by ${actorLabel} for ${target.tag} (${target.id})`);
+			return interaction.editReply({ content: `Lifted the queue suspension for <@${target.id}>.` });
+		}
+
+		case `update-mmr`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const target = interaction.options.getUser(`player`, true);
+			const newMmr = interaction.options.getNumber(`mmr`, true);
+			const result = await updatePlayerMmr(target, newMmr, queueConfig, actorLabel);
+			return interaction.editReply({ content: result });
+		}
+
 		case `reset`: {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 			const result = await resetQueues(interaction.client, actorLabel);
@@ -310,6 +363,11 @@ async function buildQueueStatusEmbed(queueConfig, matchmakerStatus = null) {
 				value: `${queueConfig.displayMmr}`,
 				inline: true,
 			},
+			{
+				name: `Channel Count`,
+				value: `${await getCurrentChannelCount(client)}/${queueConfig.channelStopThreshold}`,
+				inline: true,
+			},
 			{ name: `Currently Open Queues`, value: openQueuesValue, inline: false },
 			{
 				name: `Queue Cancel Threshold`,
@@ -415,29 +473,146 @@ async function killMatch(client, queueId, actorLabel) {
 	}
 
 	const parsed = parseMatchRecord(matchData);
-	const players = new Set([...(parsed.teamA ?? []), ...(parsed.teamB ?? [])]);
-	const pipeline = redis.pipeline();
-
-	for (const playerId of players) {
-		const key = playerKey(playerId);
-		pipeline.hset(key, `status`, `idle`);
-		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(playerRecentKey(playerId));
-		pipeline.pexpire(key, 43200000);
+	// only players still bound to this match are reset, so killing an old match can't pull
+	// anyone out of the queue or a newer match
+	const result = await releaseQueueMatch(queueId, `cancel`);
+	if (!result.ok) {
+		return { message: `Match \`${queueId}\` was not found.` };
 	}
-
-	pipeline.del(queueMatchKey, `${queueMatchKey}:cancel_votes_yes`, `${queueMatchKey}:cancel_votes_no`);
-	await pipeline.exec();
 
 	logger.log(
 		`ALERT`,
-		`Queue admin kill executed by ${actorLabel} for match ${queueId} — affected players: ${players.size}`,
+		`Queue admin kill executed by ${actorLabel} for match ${queueId} — players reset: ${result.released.length}, already moved on: ${result.skipped.length}`,
+	);
+
+	const movedOn = result.skipped.length ? ` ${result.skipped.length} player(s) had already moved on and were left alone.` : ``;
+	return {
+		message: `Match \`${queueId}\` was killed and ${result.released.length} player(s) were reset.${movedOn}`,
+		matchRecord: parsed,
+	};
+}
+
+/** Runs the queue cleanup /submit normally does, for matches whose submit didn't trigger it. */
+async function completeMatch(interaction, queueId, url, actorLabel) {
+	if (url && !validMatchRegex.test(url)) {
+		return { message: `That doesn't look like a valid tracker.gg match URL. Nothing was changed.` };
+	}
+
+	const queueContext = await getQueueMatchContext(queueId);
+	if (!queueContext) {
+		return { message: `Match \`${queueId}\` was not found.` };
+	}
+	// finalize increments every player's gameCount, so running it twice would double count
+	if (queueContext.matchData.status === `completed`) {
+		return { message: `Match \`${queueId}\` is already completed. Nothing was changed.` };
+	}
+
+	const completed = await finalizeQueueCombineSubmission({
+		userId: interaction.user.id,
+		queueContext,
+		gameID: url ? url.replace(TRACKER_MATCH_URL, ``) : ``,
+		url,
+	});
+	if (!completed) {
+		return { message: `Failed to complete match \`${queueId}\`. Check the logs for details.` };
+	}
+
+	logger.log(
+		`WARNING`,
+		`Queue admin complete-match executed by ${actorLabel} for match ${queueId} — players unlocked: ${queueContext.players.length}`,
 	);
 
 	return {
-		message: `Match \`${queueId}\` was killed and players were reset.`,
-		matchRecord: parsed,
+		message: `Match \`${queueId}\` was marked completed. ${queueContext.players.length} player(s) were unlocked and credited with a game, and the match channels were removed.`,
+		queueContext,
 	};
+}
+
+async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {
+	const redis = getRedisClient();
+	const now = Date.now();
+	const suspensionKey = playerSuspendedKey(target.id);
+	const payload = JSON.stringify({ reason: reason ?? null, suspendedBy: actorId, suspendedAt: now });
+
+	// Set the suspension before dequeueing so a join racing this command is rejected by join.lua.
+	if (hours) await redis.set(suspensionKey, payload, `EX`, hours * 3600);
+	else await redis.set(suspensionKey, payload);
+
+	// leave.lua atomically pulls a queued player out of every list, and refuses without changes
+	// when they are in a match, which lets that match play out.
+	const leave = parseJSONSafe(await runLua(`leave`, {
+		keys: [playerKey(target.id), EVENTS_STREAM_KEY, LEAGUE_STATE_KEY, TIERS_SET_KEY],
+		args: [target.id, String(now)],
+	})) ?? {};
+
+	const duration = hours
+		? `for ${hours} hour(s), ending <t:${Math.floor((now + hours * 3600000) / 1000)}:R>`
+		: `until they are unsuspended`;
+	const lines = [`Suspended <@${target.id}> from the queue ${duration}.`];
+	if (reason) lines.push(`• Reason: ${reason}`);
+	if (leave.ok) lines.push(`• Removed them from the ${leave.tier} queue.`);
+	if (leave.error === `IN_MATCH`) {
+		lines.push(`• They're in match \`${leave.details?.queueId ?? `unknown`}\`, which will continue. They can't queue again after it ends.`);
+	}
+
+	logger.log(
+		`ALERT`,
+		`Queue admin suspend executed by ${actorLabel} for ${target.tag} (${target.id}) ${hours ? `for ${hours}h` : `indefinitely`}${reason ? ` — reason: ${reason}` : ``}`,
+	);
+
+	return lines.join(`\n`);
+}
+
+/**
+ * Change a player's MMR mid-combines: the DB column queue joins read (via the bot's MMR cache), plus
+ * their spot if they're queued. A match they're in keeps its tier; numbers never checks MMR on submit.
+ */
+async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
+	const newTier = deriveTierFromMmr(newMmr);
+	if (!newTier) {
+		return `An MMR of \`${newMmr}\` doesn't fall in any tier's range, so nothing was changed. Check the number and try again.`;
+	}
+
+	const player = await Player.getBy({ discordID: target.id });
+	const mmrEntry = player?.PrimaryRiotAccount?.MMR;
+	if (!mmrEntry) {
+		return `<@${target.id}> has no MMR record (no player profile or primary Riot account), so nothing was changed.`;
+	}
+
+	const oldMmr = mmrEntry.mmrEffective;
+	await prisma.mMR.update({ where: { id: mmrEntry.id }, data: { mmrEffective: newMmr } });
+
+	// joins read MMR from this cache; the file reload takes a few seconds, so patch the loaded copy too
+	await buildMMRCache();
+	const cached = global.mmrCache?.find((entry) => entry.discordID === target.id);
+	if (cached) cached.mmr = newMmr;
+
+	const outcome = parseJSONSafe(await runLua(`update_queue_mmr`, {
+		keys: [playerKey(target.id), tierOpenKey(newTier), TIERS_SET_KEY],
+		args: [target.id, newTier, String(newMmr), String(Date.now()), queueConfig?.perTierFlags?.[newTier] === false ? `closed` : ``],
+	})) ?? {};
+
+	const oldTier = oldMmr == null ? null : deriveTierFromMmr(Number(oldMmr));
+	const lines = [`Updated <@${target.id}>'s MMR: \`${oldMmr ?? `none`}\` → \`${newMmr}\` (${oldTier ?? `?`} → ${newTier}).`];
+	switch (outcome.state) {
+		case `in_match`:
+			lines.push(`• They're in match \`${outcome.queueId}\`. It keeps its tier and can be submitted normally. The new MMR applies from their next \`/queue join\`.`);
+			break;
+		case `same_tier`:
+			lines.push(`• They're queued in ${newTier} and kept their spot.`);
+			break;
+		case `moved`:
+			lines.push(`• Moved from the ${outcome.from} queue to the back of the ${outcome.to} queue.`);
+			break;
+		case `removed_tier_closed`:
+			lines.push(`• Removed from the ${outcome.from} queue because the ${outcome.to} queue is closed.`);
+			break;
+		default:
+			lines.push(`• They're not queued. The new MMR applies from their next \`/queue join\`.`);
+	}
+
+	logger.log(`INFO`, `Queue admin update-mmr executed by ${actorLabel} for ${target.tag} (${target.id}): ${oldMmr} -> ${newMmr} (${outcome.state ?? `unknown`})`);
+	return lines.join(`\n`);
 }
 
 async function resetQueues(client, actorLabel) {
@@ -461,7 +636,8 @@ async function resetQueues(client, actorLabel) {
 		}
 	}
 
-	const matchKeys = await scanKeys(redis, matchKeyPattern());
+	// the cancel-vote keys share the vdc:match: prefix; HGETALL on them threw WRONGTYPE mid-reset
+	const matchKeys = await scanKeys(redis, matchKeyPattern(), `hash`);
 	let matchesCleared = 0;
 
 	for (const key of matchKeys) {
@@ -558,12 +734,13 @@ function parseJSONSafe(payload) {
 	}
 }
 
-async function scanKeys(redis, pattern) {
+async function scanKeys(redis, pattern, type = null) {
 	let cursor = `0`;
 	const keys = [];
+	const typeFilter = type ? [`TYPE`, type] : [];
 
 	do {
-		const [nextCursor, results] = await redis.scan(cursor, `MATCH`, pattern, `COUNT`, 250);
+		const [nextCursor, results] = await redis.scan(cursor, `MATCH`, pattern, ...typeFilter, `COUNT`, 250);
 		cursor = nextCursor;
 		keys.push(...results);
 	} while (cursor !== `0`);
@@ -572,34 +749,43 @@ async function scanKeys(redis, pattern) {
 }
 
 async function clearTierQueues(redis, tiers) {
-	const pipeline = redis.pipeline();
 	const affectedUsers = new Set();
+	const listKeys = tiers.flatMap((tier) => tierQueueKeys(tier, { includeCompleted: true }));
 
-	for (const tier of tiers) {
-		const listKeys = tierQueueKeys(tier, { includeCompleted: true });
-
-		for (const key of listKeys) {
-			const members = await redis.lrange(key, 0, -1);
-			members.forEach((id) => id && affectedUsers.add(id));
-			pipeline.del(key);
-		}
+	for (const key of listKeys) {
+		const members = await redis.lrange(key, 0, -1);
+		members.forEach((id) => id && affectedUsers.add(id));
 	}
 
 	if (affectedUsers.size === 0) {
 		return;
 	}
 
+	// The matchmaker keeps popping closed tiers until their lists are empty, so someone read above
+	// may be in a match by now. leave.lua only dequeues players who are still queued; blindly
+	// setting everyone idle used to unbind those players from the match they were just put in.
+	const now = String(Date.now());
+	const closing = new Set(tiers.map(String));
+	let dequeued = 0;
 	for (const userId of affectedUsers) {
-		const key = playerKey(userId);
-		pipeline.hset(key, `status`, `idle`);
-		pipeline.hdel(key, `queuePriority`, `queueJoinedAt`, `currentQueueId`);
-		pipeline.del(playerRecentKey(userId));
+		// a leftover entry for someone queued in another tier must not dequeue them there
+		const queuedTier = await redis.hget(playerKey(userId), `tier`);
+		if (queuedTier && !closing.has(queuedTier)) continue;
+		const leave = await runLua(`leave`, {
+			keys: [playerKey(userId), EVENTS_STREAM_KEY, LEAGUE_STATE_KEY, TIERS_SET_KEY],
+			args: [userId, now],
+		}).catch((error) => logger.log(`WARNING`, `Failed to dequeue ${userId} while closing tiers`, error));
+		if (parseJSONSafe(leave)?.ok) dequeued += 1;
 	}
 
+	// join refuses closed tiers, so anything still listed is a leftover entry
+	const pipeline = redis.pipeline();
+	pipeline.del(...listKeys);
+	for (const userId of affectedUsers) pipeline.del(playerRecentKey(userId));
 	await pipeline.exec();
 	logger.log(
 		`INFO`,
-		`Queue admin close removed ${affectedUsers.size} queued player(s) after closing tiers [${tiers.join(`, `)}]`,
+		`Queue admin close removed ${dequeued} queued player(s) after closing tiers [${tiers.join(`, `)}]`,
 	);
 }
 

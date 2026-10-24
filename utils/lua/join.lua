@@ -146,9 +146,21 @@ end
 local playerKey = KEYS[7]
 local playerData = parseHash(redis.call("HGETALL", playerKey))
 
+local function listedInTier(tierName)
+	for _, bucketName in ipairs({ "DE", "FA", "RFA", "SIGNED" }) do
+		local base = "vdc:tier:" .. tierName .. ":queue:" .. bucketName
+		if redis.call("LPOS", base, userId) or redis.call("LPOS", base .. ":completed", userId) then
+			return true
+		end
+	end
+	return false
+end
+
 local previousStatusRaw = playerData.status
 local status = toLower(previousStatusRaw)
-if status == "queued" then
+-- a queued status with no list entry behind it is stale (e.g. its list was cleared underneath it),
+-- so let the join re-queue them instead of refusing
+if status == "queued" and playerData.tier ~= nil and listedInTier(playerData.tier) then
 	return failure("ALREADY_QUEUED", { tier = playerData.tier, priority = playerData.queuePriority })
 elseif status == "in_match" then
 	return failure("IN_MATCH", { queueId = playerData.currentQueueId })
@@ -156,28 +168,27 @@ elseif status == "locked" then
 	return failure("PLAYER_LOCKED")
 end
 
+-- Queue suspension lives in its own key (set by /queueadmin suspend); PTTL is -1 when indefinite.
+local suspendedTtl = tonumber(redis.call("PTTL", playerKey .. ":suspended"))
+if suspendedTtl ~= nil and suspendedTtl ~= -2 then
+	local suspendedUntil = nil
+	if suspendedTtl > 0 then
+		suspendedUntil = now + suspendedTtl
+	end
+	return failure("PLAYER_SUSPENDED", { suspendedUntil = suspendedUntil })
+end
+
 local existingCooldown = tonumber(playerData.cooldownUntil)
 if existingCooldown ~= nil and existingCooldown > now then
 	return failure("ON_COOLDOWN", { cooldownUntil = existingCooldown })
 end
 
-local queueKeys = { KEYS[3], KEYS[4], KEYS[5], KEYS[6] }
--- include completed sibling lists in duplicate checks if provided
-if KEYS[9] ~= nil and KEYS[9] ~= "" then
-	table.insert(queueKeys, KEYS[9])
-	-- also include other completed siblings to avoid duplicates across siblings
-	table.insert(queueKeys, KEYS[3] .. ":completed")
-	table.insert(queueKeys, KEYS[4] .. ":completed")
-	table.insert(queueKeys, KEYS[5] .. ":completed")
-	table.insert(queueKeys, KEYS[6] .. ":completed")
-end
-for _, key in ipairs(queueKeys) do
-	if key ~= nil and key ~= "" then
-		local existingIndex = redis.call("LPOS", key, userId)
-		if existingIndex ~= false and existingIndex ~= nil then
-			return failure("DUPLICATE_IN_QUEUE", { list = key })
-		end
-	end
+-- Past the status checks the player isn't queued, so any list entry is a leftover from an update
+-- that didn't finish. Refusing the join on it left players unable to join (listed) or leave (not
+-- queued), so drop it and continue.
+for _, key in ipairs({ KEYS[3], KEYS[4], KEYS[5], KEYS[6] }) do
+	redis.call("LREM", key, 0, userId)
+	redis.call("LREM", key .. ":completed", 0, userId)
 end
 local queueDepth = redis.call("LPUSH", queueKey, userId)
 

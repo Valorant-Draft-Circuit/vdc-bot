@@ -1,6 +1,6 @@
 const { MessageFlags } = require(`discord.js`);
 const { runLua } = require(`../../../core/redis`);
-const { LEAGUE_STATE_KEY, EVENTS_STREAM_KEY, playerKey } = require(`../../../helpers/queue/queueKeys`);
+const { LEAGUE_STATE_KEY, EVENTS_STREAM_KEY, TIERS_SET_KEY, playerKey } = require(`../../../helpers/queue/queueKeys`);
 
 async function leaveQueue(interaction) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -34,6 +34,7 @@ function buildLeaveKeys(userId) {
 		playerKey(userId),
 		EVENTS_STREAM_KEY,
 		LEAGUE_STATE_KEY,
+		TIERS_SET_KEY,
 	];
 }
 

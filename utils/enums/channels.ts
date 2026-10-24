@@ -12,6 +12,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
         DRAFT_BOARD: `1300688313988022272`,
         DRAFT_CHANNEL: {
             MYTHIC: `1059244366671118487`,
+            LEGEND: `1059244366671118487`,
             EXPERT: `1059244366671118487`,
             APPRENTICE: `1059244366671118487`,
             PROSPECT: `1059244366671118487`,
@@ -30,6 +31,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                 /** WAITING ROOMS */
                 WAITING_ROOM: {
                     MYTHIC: `1360365299672682496`,
+                    LEGEND: `1556849780490248224`,
                     EXPERT: `1360365247843532841`,
                     APPRENTICE: `1360365176347557898`,
                     PROSPECT: `1360365121154842774`,
@@ -38,6 +40,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
                     MYTHIC: `1360365496276353105`,
+                    LEGEND: `1556849732708605982`,
                     EXPERT: `1360365547581079582`,
                     APPRENTICE: `1360365624743821352`,
                     PROSPECT: `1491252912402337934`,
@@ -63,6 +66,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
         DRAFT_BOARD: `1311521719932157993`,
         DRAFT_CHANNEL: {
             MYTHIC: `1173394756680822854`,
+            LEGEND: `1555054363477549137`,
             EXPERT: `1173394810170790019`,
             APPRENTICE: `1173394850905853952`,
             PROSPECT: `1173394893297696788`,
@@ -81,6 +85,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                 /** WAITING ROOMS */
                 WAITING_ROOM: {
                     MYTHIC: `1052005788765401169`,
+                    LEGEND: `1555053217711259778`,
                     EXPERT: `1052005068746006598`,
                     APPRENTICE: `1165389054938980394`,
                     PROSPECT: `1052002652688486554`,
@@ -89,6 +94,7 @@ export const CHANNELS = !Boolean(Number(process.env.PROD)) ?
                 /** COMBINE CATEGORIES */
                 COMBINE_CATEGORY: {
                     MYTHIC: `1052001654569975888`,
+                    LEGEND: `1555052909962465320`,
                     EXPERT: `1052001614157856798`,
                     APPRENTICE: `1052001489964515459`,
                     PROSPECT: `1052001442979905586`,

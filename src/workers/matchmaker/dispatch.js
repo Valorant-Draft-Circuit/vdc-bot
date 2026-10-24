@@ -1,6 +1,7 @@
 const { userMention, channelMention } = require(`discord.js`);
 const { getRedisClient } = require(`../../core/redis`);
 const { createMatchChannels, deleteMatchChannels } = require(`../../core/queue/matchChannels`);
+const { requeueQueueMatch } = require(`../../core/queue/matchLifecycle`);
 const { scoutFollowersKey, matchKey } = require(`../../helpers/queue/queueKeys`);
 const { CHANNELS } = require(`../../../utils/enums/channels`);
 const { getRandomMapInfo } = require(`./maps`);
@@ -8,6 +9,10 @@ const { buildMatchEmbed, buildPriorityEmbed } = require(`./embeds`);
 const { buildMatchComponents } = require(`./components`);
 const { notifyPlayersDirectly, mapWithConcurrency } = require(`./notifications`);
 
+/**
+ * Set up the lobby for a match the matchmaker just built.
+ * @returns {Promise<boolean>} false if the lobby couldn't be set up and the players were put back in queue
+ */
 async function dispatchMatch(client, payload, config) {
 	let guild = null;
 
@@ -21,7 +26,7 @@ async function dispatchMatch(client, payload, config) {
 
 	if (!guild) {
 		logger.log(`WARNING`, `Match ${payload.queueId} could not resolve a guild context`);
-		return;
+		return await abandonDispatch(payload, `no guild context`);
 	}
 
 	const playerIds = (Array.isArray(payload.players) ? payload.players : []).map((p) => p.id).filter(Boolean);
@@ -50,26 +55,28 @@ async function dispatchMatch(client, payload, config) {
 
 	if (!channelDescriptor.textChannelId) {
 		logger.log(`WARNING`, `Match ${payload.queueId} has no text channel target`);
-		return;
+		return await abandonDispatch(payload, `no match channels`);
 	}
 
 	const textChannel = await guild.channels.fetch(channelDescriptor.textChannelId).catch(() => null);
 	if (!textChannel) {
 		logger.log(`ERROR`, `No text channel available to post match ${payload.queueId}`);
 		await cleanupCreatedChannels(guild, channelDescriptor, payload.queueId);
-		return;
+		return await abandonDispatch(payload, `text channel missing`);
 	}
 
-	const mapInfo = await getRandomMapInfo(config);
-	const embed = buildMatchEmbed(payload, mapInfo, Boolean(config?.displayMmr));
-	const priorityEmbed = buildPriorityEmbed(payload);
-	const embedData = embed.toJSON();
-	const components = buildMatchComponents(payload.queueId);
-	const mentionLine = playerIds.map((id) => userMention(id)).join(` `);
-
-	let sentMessage;
+	let embed;
+	let embedData;
+	let priorityEmbed;
 	try {
-		sentMessage = await textChannel.send({
+		const mapInfo = await getRandomMapInfo(config);
+		embed = buildMatchEmbed(payload, mapInfo, Boolean(config?.displayMmr));
+		priorityEmbed = buildPriorityEmbed(payload);
+		embedData = embed.toJSON();
+		const components = buildMatchComponents(payload.queueId);
+		const mentionLine = playerIds.map((id) => userMention(id)).join(` `);
+
+		const sentMessage = await textChannel.send({
 			content: mentionLine,
 			embeds: [embed],
 			components,
@@ -78,7 +85,7 @@ async function dispatchMatch(client, payload, config) {
 	} catch (error) {
 		logger.log(`ERROR`, `Failed to send initial match post for ${payload.queueId}`, error);
 		await cleanupCreatedChannels(guild, channelDescriptor, payload.queueId);
-		return;
+		return await abandonDispatch(payload, `initial post failed`);
 	}
 
 	await updateMatchChannelsInRedis(payload.queueId, channelDescriptor);
@@ -108,6 +115,23 @@ async function dispatchMatch(client, payload, config) {
 				.catch((error) => logger.log(`WARNING`, `Failed to send scout channel post`, error));
 		}
 	}
+
+	return true;
+}
+
+/** Put a match's players back at the front of the queue so a failed setup can't leave them in a match with no lobby. */
+async function abandonDispatch(payload, reason) {
+	try {
+		const result = await requeueQueueMatch(payload.queueId, reason);
+		if (result.ok) {
+			logger.log(`ALERT`, `Match ${payload.queueId} (${payload.tier}) couldn't be set up (${reason}); put ${result.released.length} player(s) back in queue`);
+		} else {
+			logger.log(`ERROR`, `Match ${payload.queueId} (${payload.tier}) couldn't be set up (${reason}) and its players couldn't be requeued: ${result.error}`);
+		}
+	} catch (error) {
+		logger.log(`ERROR`, `Match ${payload.queueId} (${payload.tier}) couldn't be set up (${reason}) and requeueing its players failed`, error);
+	}
+	return false;
 }
 
 async function collectScoutFollowers(redis, players) {

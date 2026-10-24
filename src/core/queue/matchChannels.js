@@ -2,46 +2,40 @@ const { ChannelType, PermissionFlagsBits } = require(`discord.js`);
 const { CHANNELS } = require(`../../../utils/enums/channels`);
 const { ROLES } = require(`../../../utils/enums/roles`);
 
+// keyed like the match embed's rosters: teamA is listed as Defenders and teamB as Attackers
 const MATCH_CHANNEL_NAMES = Object.freeze({
 	text: `match-chat`,
-	teamA: `Attackers`,
-	teamB: `Defenders`,
+	teamA: `Defenders`,
+	teamB: `Attackers`,
 });
+
+// Discord caps a category at 50 channels
+const MAX_CHANNELS_PER_CATEGORY = 50;
+
+function categoryHasRoom(guild, categoryId, channelsNeeded) {
+	const category = categoryId ? guild.channels.cache.get(categoryId) : null;
+	if (!category) return false;
+	return (category.children?.cache?.size || 0) + channelsNeeded <= MAX_CHANNELS_PER_CATEGORY;
+}
 
 /**
  * Resolve the category ID for a match based on tier.
  * Returns the tier-specific category, or falls back to overflow.
- * Returns null if neither is available.
+ * Returns null if neither has room for the match's channels.
  *
  * @param {string} tier - The queue tier (MYTHIC, EXPERT, etc.)
  * @param {Guild} guild - Discord guild instance
+ * @param {number} channelsNeeded - How many channels the match will add to the category
  * @returns {Promise<string|null>} The category snowflake ID, or null if unavailable
  */
-async function resolveCategoryIdForTier(tier, guild) {
-	if (!tier || !CHANNELS.VC.COMBINES.COMBINE_CATEGORY[tier]) {
-		// Fall back to overflow for unknown tiers
-		return CHANNELS.VC.COMBINES.COMBINE_OVERFLOW || null;
-	}
+async function resolveCategoryIdForTier(tier, guild, channelsNeeded = 3) {
+	const tierCategoryId = tier ? CHANNELS.VC.COMBINES.COMBINE_CATEGORY[tier] : null;
+	if (categoryHasRoom(guild, tierCategoryId, channelsNeeded)) return tierCategoryId;
 
-	const tierCategoryId = CHANNELS.VC.COMBINES.COMBINE_CATEGORY[tier];
+	const overflowId = CHANNELS.VC.COMBINES.COMBINE_OVERFLOW;
+	if (categoryHasRoom(guild, overflowId, channelsNeeded)) return overflowId;
 
-	// Check if tier category exists and has room for more channels
-	const tierCategory = guild.channels.cache.get(tierCategoryId);
-	if (!tierCategory) {
-		// Tier category not found; fall back to overflow
-		return CHANNELS.VC.COMBINES.COMBINE_OVERFLOW || null;
-	}
-
-	// Discord allows up to 50 channels per category
-	// If tier category is full or near capacity, fall back to overflow
-	const MAX_CHANNELS_PER_CATEGORY = 50;
-	const catChildCount = tierCategory.children?.cache?.size || 0;
-	if (catChildCount >= MAX_CHANNELS_PER_CATEGORY - 1) {
-		// Category is full; use overflow
-		return CHANNELS.VC.COMBINES.COMBINE_OVERFLOW || null;
-	}
-
-	return tierCategoryId;
+	return null;
 }
 
 async function createMatchChannels(guild, options) {
@@ -81,9 +75,9 @@ async function createMatchChannels(guild, options) {
 	}
 
 	// Resolve the category ID (tier-based or overflow)
-	const categoryId = await resolveCategoryIdForTier(tier, guild);
+	const categoryId = await resolveCategoryIdForTier(tier, guild, enableVoice ? 3 : 1);
 	if (!categoryId) {
-		throw new Error(`Cannot resolve category for tier ${tier}; no tier category or overflow available`);
+		throw new Error(`No room for match channels for tier ${tier}; the tier category and overflow are full or missing`);
 	}
 
 	// Fetch the existing category (don't create a new one)
@@ -92,44 +86,58 @@ async function createMatchChannels(guild, options) {
 		throw new Error(`Category ${categoryId} not found or is not a category`);
 	}
 
-	const textChannel = await guild.channels.create({
-		name: `${MATCH_CHANNEL_NAMES.text}${queueId ? `-${queueId}` : ``}`,
-		type: ChannelType.GuildText,
-		parent: category.id,
-		reason,
-		permissionOverwrites: permissions,
-	});
+	const created = [];
+	try {
+		const textChannel = await guild.channels.create({
+			name: `${MATCH_CHANNEL_NAMES.text}${queueId ? `-${queueId}` : ``}`,
+			type: ChannelType.GuildText,
+			parent: category.id,
+			reason,
+			permissionOverwrites: permissions,
+		});
+		created.push(textChannel);
 
-	let teamAChannel;
-	let teamBChannel;
+		let teamAChannel;
+		let teamBChannel;
 
-	if (enableVoice) {
-		[teamAChannel, teamBChannel] = await Promise.all([
-			guild.channels.create({
-				name: `${MATCH_CHANNEL_NAMES.teamA}${queueId ? ` - ${queueId}` : ``}`,
-				type: ChannelType.GuildVoice,
-				parent: category.id,
-				reason,
-				permissionOverwrites: permissions,
-			}),
-			guild.channels.create({
-				name: `${MATCH_CHANNEL_NAMES.teamB}${queueId ? ` - ${queueId}` : ``}`,
-				type: ChannelType.GuildVoice,
-				parent: category.id,
-				reason,
-				permissionOverwrites: permissions,
-			}),
-		]);
+		if (enableVoice) {
+			const voiceResults = await Promise.allSettled([
+				guild.channels.create({
+					name: `${MATCH_CHANNEL_NAMES.teamA}${queueId ? ` - ${queueId}` : ``}`,
+					type: ChannelType.GuildVoice,
+					parent: category.id,
+					reason,
+					permissionOverwrites: permissions,
+				}),
+				guild.channels.create({
+					name: `${MATCH_CHANNEL_NAMES.teamB}${queueId ? ` - ${queueId}` : ``}`,
+					type: ChannelType.GuildVoice,
+					parent: category.id,
+					reason,
+					permissionOverwrites: permissions,
+				}),
+			]);
+			for (const result of voiceResults) {
+				if (result.status === `fulfilled`) created.push(result.value);
+			}
+			const failed = voiceResults.find((result) => result.status === `rejected`);
+			if (failed) throw failed.reason;
+			[teamAChannel, teamBChannel] = voiceResults.map((result) => result.value);
+		}
+
+		return {
+			categoryId: category.id,
+			textChannelId: textChannel.id,
+			voiceChannelIds: {
+				teamA: teamAChannel ? teamAChannel.id : null,
+				teamB: teamBChannel ? teamBChannel.id : null,
+			},
+		};
+	} catch (error) {
+		// half a lobby is useless, and leaked channels count against the category for every later match
+		await Promise.all(created.map((channel) => channel.delete(`Cleanup failed setup for match ${queueId}`).catch(() => null)));
+		throw error;
 	}
-
-	return {
-		categoryId: category.id,
-		textChannelId: textChannel.id,
-		voiceChannelIds: {
-			teamA: teamAChannel ? teamAChannel.id : null,
-			teamB: teamBChannel ? teamBChannel.id : null,
-		},
-	};
 }
 
 async function deleteMatchChannels(guild, descriptor) {

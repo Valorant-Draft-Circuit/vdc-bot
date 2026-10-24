@@ -4,7 +4,7 @@ const { getRedisClient } = require(`../../core/redis`);
 const { releaseMatchSubmitLock } = require(`../../helpers/submitLock`);
 const { submitGame } = require(`../../helpers/numbers`);
 const { detectStateKey, iconURL, formatMatchContext } = require(`../../helpers/submitDetect`);
-const { getQueueMatchContext, finalizeQueueCombineSubmission } = require(`../../core/queue/matchLifecycle`);
+const { getQueueMatchContext, finalizeQueueCombineSubmission, deleteQueueMatchChannels } = require(`../../core/queue/matchLifecycle`);
 
 module.exports = {
 	id: `submitdetectManager`,
@@ -47,6 +47,7 @@ module.exports = {
 			return interaction.update({ embeds: [cancelled], components: [] });
 		}
 
+		let finalizedContext = null;
 		try {
 			const processing = new EmbedBuilder({
 				author: { name: `VDC Match Submission` },
@@ -82,13 +83,13 @@ module.exports = {
 					const queueContext = await getQueueMatchContext(state.queueId);
 					if (queueContext) {
 						const gameID = submitted[0].game_id;
-						await finalizeQueueCombineSubmission({
-							guild: interaction.guild,
+						const finalized = await finalizeQueueCombineSubmission({
 							userId: interaction.user.id,
 							queueContext,
 							gameID,
 							url: `https://tracker.gg/valorant/match/${gameID}`,
 						});
+						if (finalized) finalizedContext = queueContext;
 					}
 				} catch (error) {
 					logger.log(`ERROR`, `Combine finalize failed for queue ${state.queueId}`, error.stack);
@@ -117,9 +118,10 @@ module.exports = {
 				footer: { text: `Valorant Draft Circuit — Match Result Submissions` },
 			});
 
-			return interaction.editReply({ embeds: [done], components: [] });
+			return await interaction.editReply({ embeds: [done], components: [] });
 		} finally {
 			if (state.lockValue) await releaseMatchSubmitLock(state.lockMatchID ?? state.matchID, state.lockValue);
+			if (finalizedContext) await deleteQueueMatchChannels(interaction.guild, finalizedContext);
 		}
 	},
 };
