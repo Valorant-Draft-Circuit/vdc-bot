@@ -99,11 +99,13 @@ function buildPriorityEmbed(payload) {
 		return i === -1 ? 999 : i;
 	};
 
+	// players who completed their requirements lock after every bucket, matching how the matchmaker picks;
+	// offsetting by 3 instead of the bucket count put completed DE players level with SIGNED
+	const groupIndex = (player) => bucketIndex(player.bucket) + (player.completed ? order.length : 0);
+
 	players.sort((a, b) => {
-		const aCompleted = !!a.completed;
-		const bCompleted = !!b.completed;
-		const aw = bucketIndex(a.bucket) + (aCompleted ? 3 : 0);
-		const bw = bucketIndex(b.bucket) + (bCompleted ? 3 : 0);
+		const aw = groupIndex(a);
+		const bw = groupIndex(b);
 		if (aw !== bw) return aw - bw;
 
 		const aj = typeof a.joinedAt === `number` ? a.joinedAt : 0;
@@ -113,20 +115,30 @@ function buildPriorityEmbed(payload) {
 		return String(a.id).localeCompare(String(b.id));
 	});
 
-	const lines = players.map((p) => {
-		const mention = `<@${p.id}>`;
-		const bucket = String(p.bucket || `?`);
-		const isCompleted = p.completed ? `, Requirements Fulfilled` : ``;
-		const groupIdx = bucketIndex(p.bucket) + (p.completed ? 3 : 0);
-		const displayNumber = groupIdx === 999 ? `?` : String(groupIdx + 1);
-		const dot = `.\u200B `;
-		return `${displayNumber}${dot}${mention} - ${bucket}${isCompleted}`;
-	});
+	// one bold header per priority, numbered without gaps, with that priority's players listed under it
+	const lines = [];
+	let currentGroup = null;
+	let priority = 0;
+	for (const p of players) {
+		const group = groupIndex(p);
+		if (group !== currentGroup) {
+			currentGroup = group;
+			priority += 1;
+			const fulfilled = p.completed ? ` · Requirements Fulfilled` : ``;
+			lines.push(`**${ordinal(priority)} Priority · ${String(p.bucket || `?`)}${fulfilled}**`);
+		}
+		lines.push(`<@${p.id}>`);
+	}
 
 	return new EmbedBuilder()
 		.setTitle(`Agent Lock Order`)
 		.setDescription(lines.join(`\n`))
-		.setFooter({ text: `The order listed is the order that should be followed when locking in. If you see anyone ignoring the order, please open a ticket.` });
+		.setFooter({ text: `Lock in by priority: 1st priority first, then 2nd, and so on. Players with the same priority can lock in any order. If you see anyone ignoring the order, please open a ticket.` });
+}
+
+function ordinal(n) {
+	if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
+	return `${n}${{ 1: `st`, 2: `nd`, 3: `rd` }[n % 10] ?? `th`}`;
 }
 
 module.exports = {
