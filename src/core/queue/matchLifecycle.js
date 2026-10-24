@@ -1,6 +1,7 @@
 const { getRedisClient, runLua } = require(`../redis`);
 const { getQueueConfig } = require(`./queueconfig`);
 const { deleteMatchChannels } = require(`./matchChannels`);
+const { queueEvent } = require(`./events`);
 const {
 	EVENTS_STREAM_KEY,
 	matchKey,
@@ -83,13 +84,20 @@ async function resolveQueueContextFromPlayers(userIds) {
 	return overlap * 2 > context.players.length ? context : null;
 }
 
+const RELEASE_EVENTS = { complete: `match_completed`, cancel: `match_canceled`, requeue: `match_requeued` };
+
 /**
  * Release a queue match's players via release_match.lua, which only touches players still bound to it.
+ * Every way a match ends goes through here, so this is where its queue event is recorded.
  * @param {string} queueId
  * @param {`complete` | `cancel` | `requeue`} mode
+ * @param {Object} [options]
+ * @param {string} [options.by] who ended it: a player ID, an admin label, or `system`
+ * @param {string} [options.reason] why; `kill` (a cancel by an admin) is recorded as match_killed
+ * @param {string} [options.gameId] the game that completed it
  * @returns {Promise<{ ok: boolean, error?: string, released: string[], skipped: string[] }>}
  */
-async function releaseQueueMatch(queueId, mode, { url = ``, recentTtlSeconds = 0 } = {}) {
+async function releaseQueueMatch(queueId, mode, { url = ``, recentTtlSeconds = 0, by, reason, gameId } = {}) {
 	const response = await runLua(`release_match`, {
 		keys: [matchKey(queueId)],
 		args: [String(queueId), mode, String(Date.now()), url ?? ``, String(recentTtlSeconds)],
@@ -101,6 +109,19 @@ async function releaseQueueMatch(queueId, mode, { url = ``, recentTtlSeconds = 0
 	const skipped = Array.isArray(payload.skipped) ? payload.skipped : [];
 	if (skipped.length) {
 		logger.log(`WARNING`, `Queue match ${queueId} ${mode}: left ${skipped.length} player(s) alone who had already moved on: ${skipped.join(`, `)}`);
+	}
+
+	if (payload.ok) {
+		queueEvent(reason === `kill` ? `match_killed` : RELEASE_EVENTS[mode] ?? `match_released`, {
+			tier: payload.tier,
+			queueId,
+			by,
+			reason,
+			gameId,
+			players: Array.isArray(payload.players) ? payload.players : [],
+			released,
+			skipped,
+		});
 	}
 
 	return { ...payload, released, skipped };
@@ -119,6 +140,8 @@ async function finalizeQueueCombineSubmission({ userId, queueContext, gameID, ur
 		const result = await releaseQueueMatch(queueId, `complete`, {
 			url,
 			recentTtlSeconds: Number(cfg?.recentSetTtlSeconds ?? 180) || 0,
+			by: userId,
+			gameId: gameID,
 		});
 		// ALREADY_COMPLETED means another submit got there first; it handled the cleanup below
 		if (!result.ok) {
@@ -155,7 +178,7 @@ async function cancelQueueMatch({ queueContext, initiatedBy, yesCount = 0, noCou
 	const { queueId, matchData, players } = queueContext;
 
 	// MATCH_NOT_FOUND means a concurrent cancel or kill already released it and cleaned up
-	const result = await releaseQueueMatch(queueId, `cancel`);
+	const result = await releaseQueueMatch(queueId, `cancel`, { by: initiatedBy, reason: `vote` });
 	if (!result.ok) return false;
 
 	try {
@@ -201,7 +224,7 @@ async function deleteQueueMatchChannels(guild, queueContext) {
  * @param {string} reason
  */
 async function requeueQueueMatch(queueId, reason) {
-	const result = await releaseQueueMatch(queueId, `requeue`);
+	const result = await releaseQueueMatch(queueId, `requeue`, { by: `system`, reason });
 	if (!result.ok) return result;
 
 	try {

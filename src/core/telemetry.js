@@ -45,6 +45,7 @@ const serviceName = process.env.OTEL_SERVICE_NAME || resourceOverrides[`service.
 const environment = resourceOverrides[`deployment.environment.name`] || (Boolean(Number(process.env.PROD)) ? `prod` : `dev`);
 
 let tracerProvider, loggerProvider, meterProvider;
+let stopped = false; // after shutdownTelemetry, log calls are dropped instead of warning on every line
 
 function start() {
     // export failures go to the container log; logger.log would loop them back into the exporter
@@ -180,7 +181,7 @@ function markError(span = trace.getActiveSpan(), error, message) {
  * @param {Error|String} [detail] the logger's stack argument: an Error, a stack string, or any extra detail
  */
 function emitLog(level, message, detail, timestamp) {
-    if (!enabled) return;
+    if (!enabled || stopped) return;
     const [severityNumber, severityText] = SEVERITY[level] ?? [SeverityNumber.INFO, `INFO`];
     const attributes = { 'vdc.level': level, ...detailAttributes(detail) };
 
@@ -190,6 +191,15 @@ function emitLog(level, message, detail, timestamp) {
         const error = detail instanceof Error ? detail : { name: `Error`, message: String(message), stack: attributes[`exception.stacktrace`] };
         markError(trace.getActiveSpan(), error, String(message));
     }
+}
+
+/**
+ * Record a domain event (a queue join, a match pop) as a log line tagged vdc.event=<name>. Unlike logger.log
+ * it skips the console and Discord: events are for querying in Grafana, by player, match or tier.
+ */
+function emitEvent(name, body, attributes = {}) {
+    if (!enabled || stopped) return;
+    logs.getLogger(SCOPE).emit({ severityNumber: SeverityNumber.INFO, severityText: `INFO`, body, attributes: { 'vdc.event': name, ...attributes } });
 }
 
 function detailAttributes(detail) {
@@ -225,9 +235,10 @@ function grafanaLink(timestamp = Date.now()) {
 
 /** Flush whatever is still buffered; call before exiting. Gives up after timeoutMs so shutdown can't hang. */
 async function shutdownTelemetry(timeoutMs = 5000) {
-    if (!enabled) return;
+    if (!enabled || stopped) return;
+    stopped = true;
     const flushed = Promise.allSettled([tracerProvider.shutdown(), loggerProvider.shutdown(), meterProvider.shutdown()]);
     await Promise.race([flushed, new Promise((resolve) => setTimeout(resolve, timeoutMs).unref())]);
 }
 
-module.exports = { enabled, withSpan, markError, emitLog, grafanaLink, shutdownTelemetry, redactUrl, SpanKind };
+module.exports = { enabled, withSpan, markError, emitLog, emitEvent, grafanaLink, shutdownTelemetry, redactUrl, SpanKind };

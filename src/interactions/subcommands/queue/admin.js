@@ -8,6 +8,7 @@ const { getRedisClient, runLua } = require(`../../../core/redis`);
 const { getQueueConfig, invalidateQueueConfigCache } = require(`../../../core/queue/queueconfig`);
 const { deleteMatchChannels } = require(`../../../core/queue/matchChannels`);
 const { getQueueMatchContext, finalizeQueueCombineSubmission, releaseQueueMatch, deleteQueueMatchChannels } = require(`../../../core/queue/matchLifecycle`);
+const { queueEvent } = require(`../../../core/queue/events`);
 const {
 	LEAGUE_STATE_KEY,
 	EVENTS_STREAM_KEY,
@@ -48,6 +49,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			}
 
 			await setTierState(tiers, true, interaction.client);
+			queueEvent(`tiers_opened`, { tiers, by: actorLabel });
 			logger.log(`INFO`, `Queue admin open executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, true) });
 		}
@@ -61,6 +63,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			}
 
 			await setTierState(tiers, false, interaction.client);
+			queueEvent(`tiers_closed`, { tiers, by: actorLabel });
 			logger.log(`INFO`, `Queue admin close executed by ${actorLabel} for tiers [${tiers.join(`, `)}]`);
 			return interaction.editReply({ content: buildTierStateMessage(tiers, false) });
 		}
@@ -238,6 +241,7 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 				return interaction.editReply({ content: `${userMention(target.id)} is not suspended from the queue.` });
 			}
 
+			queueEvent(`player_unsuspended`, { userId: target.id, by: actorLabel });
 			logger.log(`ALERT`, `Queue admin unsuspend executed by ${actorLabel} for ${target.tag} (${target.id})`);
 			return interaction.editReply({ content: `Lifted the queue suspension for ${userMention(target.id)}.` });
 		}
@@ -475,7 +479,7 @@ async function killMatch(client, queueId, actorLabel) {
 	const parsed = parseMatchRecord(matchData);
 	// only players still bound to this match are reset, so killing an old match can't pull
 	// anyone out of the queue or a newer match
-	const result = await releaseQueueMatch(queueId, `cancel`);
+	const result = await releaseQueueMatch(queueId, `cancel`, { by: actorLabel, reason: `kill` });
 	if (!result.ok) {
 		return { message: `Match \`${queueId}\` was not found.` };
 	}
@@ -548,6 +552,7 @@ async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {
 	const duration = hours
 		? `for ${hours} hour(s), ending ${time(Math.floor((now + hours * 3600000) / 1000), TimestampStyles.RelativeTime)}`
 		: `until they are unsuspended`;
+	queueEvent(`player_suspended`, { userId: target.id, by: actorLabel, hours, reason, removedFrom: leave.ok ? leave.tier : null, inMatch: leave.details?.queueId });
 	const lines = [`Suspended ${userMention(target.id)} from the queue ${duration}.`];
 	if (reason) lines.push(`• Reason: ${reason}`);
 	if (leave.ok) lines.push(`• Removed them from the ${leave.tier} queue.`);
@@ -611,6 +616,7 @@ async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
 			lines.push(`• They're not queued. The new MMR applies from their next \`/queue join\`.`);
 	}
 
+	queueEvent(`player_mmr_updated`, { userId: target.id, by: actorLabel, oldMmr, newMmr, tier: newTier, outcome: outcome.state ?? `unknown`, movedFrom: outcome.from });
 	logger.log(`INFO`, `Queue admin update-mmr executed by ${actorLabel} for ${target.tag} (${target.id}): ${oldMmr} -> ${newMmr} (${outcome.state ?? `unknown`})`);
 	return lines.join(`\n`);
 }
@@ -673,6 +679,7 @@ async function resetQueues(client, actorLabel) {
 		await pipeline.exec();
 	}
 
+	queueEvent(`queues_reset`, { by: actorLabel, tiers, queuesCleared, matchesCleared, players: [...affectedUsers] });
 	logger.log(
 		`ALERT`,
 		`Queue admin reset executed by ${actorLabel} — queues cleared: ${queuesCleared}, matches cleared: ${matchesCleared}, players reset: ${affectedUsers.size}`,

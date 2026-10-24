@@ -3,6 +3,7 @@ const { startQueueRuntime } = require(`../core/queue/runtime`);
 const { startModExpiry } = require(`../workers/modExpiry`);
 const { startSubExpiry } = require(`../workers/subExpiry`);
 const { startWebVetoAnnouncer } = require(`../workers/webVetoAnnouncer`);
+const { startMetrics } = require(`../workers/metrics`);
 
 module.exports = {
 
@@ -41,6 +42,9 @@ module.exports = {
 		} else {
 			logger.log(`WARNING`, `Queue system disabled via QUEUE_SYSTEM_ENABLED=false. Skipping queue boot startup.`);
 		}
+
+		// queue, matchmaker and Valkey gauges; a no-op unless telemetry is on
+		startMetrics();
 
 		// initialize logger logdrain needs
 		return await logger.init();
