@@ -1,4 +1,4 @@
-const { MessageFlags } = require(`discord.js`);
+const { MessageFlags, time, TimestampStyles } = require(`discord.js`);
 const { resolvePlayerQueueContext, resolvePriorityBucket } = require(`../../../helpers/queue/queueState`);
 const { getRedisClient, runLua } = require(`../../../core/redis`);
 const {
@@ -175,7 +175,7 @@ function mapJoinErrorToMessage(payload, tier) {
 		case `PLAYER_SUSPENDED`: {
 			const until = Number(payload.details?.suspendedUntil);
 			return until
-				? `You're suspended from the queue. Your suspension ends <t:${Math.floor(until / 1000)}:R>.`
+				? `You're suspended from the queue. Your suspension ends ${time(Math.floor(until / 1000), TimestampStyles.RelativeTime)}.`
 				: `You're suspended from the queue. Please create a ticket if you believe this is an error.`;
 		}
 		case `ON_COOLDOWN`:

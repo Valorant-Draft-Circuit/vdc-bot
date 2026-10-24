@@ -1,4 +1,4 @@
-const { MessageFlags, EmbedBuilder, time, TimestampStyles, roleMention } = require(`discord.js`);
+const { MessageFlags, EmbedBuilder, time, TimestampStyles, roleMention, userMention } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
 const { Player } = require(`../../../../prisma`);
 const { prisma } = require(`../../../../prisma/prismadb`);
@@ -235,11 +235,11 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 			const target = interaction.options.getUser(`player`, true);
 			const removed = await getRedisClient().del(playerSuspendedKey(target.id));
 			if (!removed) {
-				return interaction.editReply({ content: `<@${target.id}> is not suspended from the queue.` });
+				return interaction.editReply({ content: `${userMention(target.id)} is not suspended from the queue.` });
 			}
 
 			logger.log(`ALERT`, `Queue admin unsuspend executed by ${actorLabel} for ${target.tag} (${target.id})`);
-			return interaction.editReply({ content: `Lifted the queue suspension for <@${target.id}>.` });
+			return interaction.editReply({ content: `Lifted the queue suspension for ${userMention(target.id)}.` });
 		}
 
 		case `update-mmr`: {
@@ -546,9 +546,9 @@ async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {
 	})) ?? {};
 
 	const duration = hours
-		? `for ${hours} hour(s), ending <t:${Math.floor((now + hours * 3600000) / 1000)}:R>`
+		? `for ${hours} hour(s), ending ${time(Math.floor((now + hours * 3600000) / 1000), TimestampStyles.RelativeTime)}`
 		: `until they are unsuspended`;
-	const lines = [`Suspended <@${target.id}> from the queue ${duration}.`];
+	const lines = [`Suspended ${userMention(target.id)} from the queue ${duration}.`];
 	if (reason) lines.push(`• Reason: ${reason}`);
 	if (leave.ok) lines.push(`• Removed them from the ${leave.tier} queue.`);
 	if (leave.error === `IN_MATCH`) {
@@ -576,7 +576,7 @@ async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
 	const player = await Player.getBy({ discordID: target.id });
 	const mmrEntry = player?.PrimaryRiotAccount?.MMR;
 	if (!mmrEntry) {
-		return `<@${target.id}> has no MMR record (no player profile or primary Riot account), so nothing was changed.`;
+		return `${userMention(target.id)} has no MMR record (no player profile or primary Riot account), so nothing was changed.`;
 	}
 
 	const oldMmr = mmrEntry.mmrEffective;
@@ -593,7 +593,7 @@ async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
 	})) ?? {};
 
 	const oldTier = oldMmr == null ? null : deriveTierFromMmr(Number(oldMmr));
-	const lines = [`Updated <@${target.id}>'s MMR: \`${oldMmr ?? `none`}\` → \`${newMmr}\` (${oldTier ?? `?`} → ${newTier}).`];
+	const lines = [`Updated ${userMention(target.id)}'s MMR: \`${oldMmr ?? `none`}\` → \`${newMmr}\` (${oldTier ?? `?`} → ${newTier}).`];
 	switch (outcome.state) {
 		case `in_match`:
 			lines.push(`• They're in match \`${outcome.queueId}\`. It keeps its tier and can be submitted normally. The new MMR applies from their next \`/queue join\`.`);

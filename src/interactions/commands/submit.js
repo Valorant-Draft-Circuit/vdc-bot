@@ -76,7 +76,7 @@ async function submitFromLink(interaction, { url, submittedTier, type }) {
    if (claimed !== `OK`) {
       const claimant = await redis.get(claimKey).catch(() => null);
       return await interaction.editReply({
-         content: `${claimant ? `<@${claimant}>` : `Someone`} already submitted this match, so you're all set.`,
+         content: `${claimant ? userMention(claimant) : `Someone`} already submitted this match, so you're all set.`,
          allowedMentions: { parse: [] },
       });
    }
@@ -99,7 +99,7 @@ async function submitFromLink(interaction, { url, submittedTier, type }) {
    const numbers = await sendToNumbers({ id: gameID, tier: tier, type: type }, {
       // the lobby is closed by then; tell the submitter so a lost game gets a ticket instead of a resubmit
       onLateRejection: (error) => {
-         const content = `<@${interaction.user.id}> the match processor rejected [\`${gameID}\`](${url})${error.reason ? ` (\`${error.reason}\`)` : ``}, so it was **not** recorded. Please open a tech ticket instead of resubmitting it.`;
+         const content = `${userMention(interaction.user.id)} the match processor rejected [\`${gameID}\`](${url})${error.reason ? ` (\`${error.reason}\`)` : ``}, so it was **not** recorded. Please open a tech ticket instead of resubmitting it.`;
          // a submit run in the lobby's chat has no channel left to follow up in
          return interaction.followUp({ content, allowedMentions: { users: [interaction.user.id] } })
             .catch(() => interaction.user.send({ content }))
