@@ -2,7 +2,7 @@ require(`dotenv`).config({ quiet: true });
 
 // TELEMETRY --------------------------------------------------------------------------------------
 // before every other require, so its instrumentations hook discord.js, ioredis & prisma as they load
-const { shutdownTelemetry } = require(`./src/core/telemetry.js`);
+const { shutdownTelemetry, serviceVersion } = require(`./src/core/telemetry.js`);
 // ################################################################################################
 
 
@@ -17,7 +17,7 @@ const BotClient = require(`./src/core/botClient.js`);
 global.logger = new Logger();
 
 console.clear();
-logger.log(`VERBOSE`, `Starting...`);
+logger.log(`VERBOSE`, `Starting${serviceVersion ? ` version ${serviceVersion}` : ``}...`);
 // ################################################################################################
 
 

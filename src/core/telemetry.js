@@ -43,6 +43,8 @@ const resourceOverrides = Object.fromEntries((process.env.OTEL_RESOURCE_ATTRIBUT
 }));
 const serviceName = process.env.OTEL_SERVICE_NAME || resourceOverrides[`service.name`] || `vdc-bot`;
 const environment = resourceOverrides[`deployment.environment.name`] || (Boolean(Number(process.env.PROD)) ? `prod` : `dev`);
+// the build's commit, short like the image's sha- tag and `git log`; unset outside CI-built images
+const serviceVersion = process.env.GIT_SHA ? process.env.GIT_SHA.slice(0, 7) : null;
 
 let tracerProvider, loggerProvider, meterProvider;
 let stopped = false; // after shutdownTelemetry, log calls are dropped instead of warning on every line
@@ -57,7 +59,11 @@ function start() {
 
     const resource = defaultResource()
         .merge(detectResources({ detectors: [hostDetector, processDetector, envDetector] }))
-        .merge(resourceFromAttributes({ 'service.name': serviceName, 'deployment.environment.name': environment }));
+        .merge(resourceFromAttributes({
+            'service.name': serviceName,
+            'deployment.environment.name': environment,
+            ...(serviceVersion && { 'service.version': serviceVersion }),
+        }));
 
     tracerProvider = new NodeTracerProvider({
         resource,
@@ -241,4 +247,4 @@ async function shutdownTelemetry(timeoutMs = 5000) {
     await Promise.race([flushed, new Promise((resolve) => setTimeout(resolve, timeoutMs).unref())]);
 }
 
-module.exports = { enabled, withSpan, markError, emitLog, emitEvent, grafanaLink, shutdownTelemetry, redactUrl, SpanKind };
+module.exports = { enabled, serviceVersion, withSpan, markError, emitLog, emitEvent, grafanaLink, shutdownTelemetry, redactUrl, SpanKind };

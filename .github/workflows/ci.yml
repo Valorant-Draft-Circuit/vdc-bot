@@ -47,6 +47,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # stamped into the image so every log and trace says which build it came from
+          build-args: GIT_SHA=${{ github.sha }}
           # keep pushing a plain single-platform image, which is what the host pulls today
           provenance: false
 
