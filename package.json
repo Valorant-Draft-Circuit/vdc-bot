@@ -62,7 +62,7 @@
   "devDependencies": {
     "@types/node": "^24.19.1",
     "nodemon": "^2.0.20",
-    "prisma": "^6.15.0",
+    "prisma": "^7.10.1",
     "typescript": "^5.2.2"
   },
   "allowScripts": {
