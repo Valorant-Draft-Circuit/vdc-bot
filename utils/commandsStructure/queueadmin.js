@@ -131,6 +131,25 @@ module.exports = {
             ],
         },
         {
+            name: `update-mmr`,
+            description: `Change a player's MMR mid-combines. Moves them to the right queue if they're queued.`,
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [
+                {
+                    name: `player`,
+                    description: `The player whose MMR to change.`,
+                    type: ApplicationCommandOptionType.User,
+                    required: true,
+                },
+                {
+                    name: `mmr`,
+                    description: `The new MMR.`,
+                    type: ApplicationCommandOptionType.Number,
+                    required: true,
+                },
+            ],
+        },
+        {
             name: `reload-config`,
             description: `Reload queue configuration from Control Panel.`,
             type: ApplicationCommandOptionType.Subcommand,

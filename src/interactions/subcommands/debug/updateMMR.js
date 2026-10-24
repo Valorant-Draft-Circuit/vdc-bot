@@ -61,7 +61,7 @@ async function updateMMR(/** @type ChatInputCommandInteraction */ interaction) {
     // return await interaction.followUp({ content: flavorResponses[i], flags: [MessageFlags.Ephemeral] })
 }
 
-module.exports = { updateMMR };
+module.exports = { updateMMR, buildMMRCache };
 
 
 /** Query the database to get MMRs */

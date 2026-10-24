@@ -2,10 +2,11 @@ const { ChannelType, PermissionFlagsBits } = require(`discord.js`);
 const { CHANNELS } = require(`../../../utils/enums/channels`);
 const { ROLES } = require(`../../../utils/enums/roles`);
 
+// keyed like the match embed's rosters: teamA is listed as Defenders and teamB as Attackers
 const MATCH_CHANNEL_NAMES = Object.freeze({
 	text: `match-chat`,
-	teamA: `Attackers`,
-	teamB: `Defenders`,
+	teamA: `Defenders`,
+	teamB: `Attackers`,
 });
 
 // Discord caps a category at 50 channels

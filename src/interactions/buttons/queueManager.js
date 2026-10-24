@@ -144,9 +144,9 @@ function selectChannelId(command, descriptor) {
 
 	switch (command) {
 		case `joinAttackers`:
-			return voice.teamA;
-		case `joinDefenders`:
 			return voice.teamB;
+		case `joinDefenders`:
+			return voice.teamA;
 		default:
 			return null;
 	}

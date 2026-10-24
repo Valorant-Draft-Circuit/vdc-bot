@@ -1,5 +1,7 @@
 const { MessageFlags, EmbedBuilder } = require(`discord.js`);
 const { Tier } = require(`@prisma/client`);
+const { Player } = require(`../../../../prisma`);
+const { prisma } = require(`../../../../prisma/prismadb`);
 const { ROLES } = require(`../../../../utils/enums/roles`);
 const { CHANNELS } = require(`../../../../utils/enums/channels`);
 const { getRedisClient, runLua } = require(`../../../core/redis`);
@@ -21,6 +23,8 @@ const {
 	queueIdFromMatchKey,
 } = require(`../../../helpers/queue/queueKeys`);
 const { getCurrentChannelCount } = require(`../../../workers/matchmaker/capacity`);
+const { deriveTierFromMmr } = require(`../../../helpers/queue/queueState`);
+const { buildMMRCache } = require(`../debug/updateMMR`);
 
 const TRACKER_MATCH_URL = `https://tracker.gg/valorant/match/`;
 const validMatchRegex = /^https:\/\/tracker.gg\/valorant\/match\/([a-z0-9]{8})-([a-z0-9]{4}-){3}([a-z0-9]{12})$/;
@@ -236,6 +240,14 @@ async function handleAdminCommand(interaction, queueConfig, subcommand) {
 
 			logger.log(`ALERT`, `Queue admin unsuspend executed by ${actorLabel} for ${target.tag} (${target.id})`);
 			return interaction.editReply({ content: `Lifted the queue suspension for <@${target.id}>.` });
+		}
+
+		case `update-mmr`: {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			const target = interaction.options.getUser(`player`, true);
+			const newMmr = interaction.options.getNumber(`mmr`, true);
+			const result = await updatePlayerMmr(target, newMmr, queueConfig, actorLabel);
+			return interaction.editReply({ content: result });
 		}
 
 		case `reset`: {
@@ -548,6 +560,58 @@ async function suspendPlayer(target, { hours, reason }, actorId, actorLabel) {
 		`Queue admin suspend executed by ${actorLabel} for ${target.tag} (${target.id}) ${hours ? `for ${hours}h` : `indefinitely`}${reason ? ` — reason: ${reason}` : ``}`,
 	);
 
+	return lines.join(`\n`);
+}
+
+/**
+ * Change a player's MMR mid-combines: the DB column queue joins read (via the bot's MMR cache), plus
+ * their spot if they're queued. A match they're in keeps its tier; numbers never checks MMR on submit.
+ */
+async function updatePlayerMmr(target, newMmr, queueConfig, actorLabel) {
+	const newTier = deriveTierFromMmr(newMmr);
+	if (!newTier) {
+		return `An MMR of \`${newMmr}\` doesn't fall in any tier's range, so nothing was changed. Check the number and try again.`;
+	}
+
+	const player = await Player.getBy({ discordID: target.id });
+	const mmrEntry = player?.PrimaryRiotAccount?.MMR;
+	if (!mmrEntry) {
+		return `<@${target.id}> has no MMR record (no player profile or primary Riot account), so nothing was changed.`;
+	}
+
+	const oldMmr = mmrEntry.mmrEffective;
+	await prisma.mMR.update({ where: { id: mmrEntry.id }, data: { mmrEffective: newMmr } });
+
+	// joins read MMR from this cache; the file reload takes a few seconds, so patch the loaded copy too
+	await buildMMRCache();
+	const cached = global.mmrCache?.find((entry) => entry.discordID === target.id);
+	if (cached) cached.mmr = newMmr;
+
+	const outcome = parseJSONSafe(await runLua(`update_queue_mmr`, {
+		keys: [playerKey(target.id), tierOpenKey(newTier), TIERS_SET_KEY],
+		args: [target.id, newTier, String(newMmr), String(Date.now()), queueConfig?.perTierFlags?.[newTier] === false ? `closed` : ``],
+	})) ?? {};
+
+	const oldTier = oldMmr == null ? null : deriveTierFromMmr(Number(oldMmr));
+	const lines = [`Updated <@${target.id}>'s MMR: \`${oldMmr ?? `none`}\` → \`${newMmr}\` (${oldTier ?? `?`} → ${newTier}).`];
+	switch (outcome.state) {
+		case `in_match`:
+			lines.push(`• They're in match \`${outcome.queueId}\`. It keeps its tier and can be submitted normally. The new MMR applies from their next \`/queue join\`.`);
+			break;
+		case `same_tier`:
+			lines.push(`• They're queued in ${newTier} and kept their spot.`);
+			break;
+		case `moved`:
+			lines.push(`• Moved from the ${outcome.from} queue to the back of the ${outcome.to} queue.`);
+			break;
+		case `removed_tier_closed`:
+			lines.push(`• Removed from the ${outcome.from} queue because the ${outcome.to} queue is closed.`);
+			break;
+		default:
+			lines.push(`• They're not queued. The new MMR applies from their next \`/queue join\`.`);
+	}
+
+	logger.log(`INFO`, `Queue admin update-mmr executed by ${actorLabel} for ${target.tag} (${target.id}): ${oldMmr} -> ${newMmr} (${outcome.state ?? `unknown`})`);
 	return lines.join(`\n`);
 }
 
