@@ -63,7 +63,7 @@
     "@types/node": "^24.19.1",
     "nodemon": "^2.0.20",
     "prisma": "^6.15.0",
-    "typescript": "^5.2.2"
+    "typescript": "^7.0.2"
   },
   "allowScripts": {
     "@prisma/client@6.19.3": true,
