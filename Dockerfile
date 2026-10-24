@@ -7,7 +7,9 @@ ENV FORCE_COLOR=1
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # install the exact pnpm pinned in package.json's packageManager field
 RUN npm install -g --allow-scripts=pnpm "$(node -p "require('./package.json').packageManager")"
-RUN pnpm install --frozen-lockfile
+# the schema isn't copied yet (keeps this layer cached), so skip Prisma's install-time generate, which would only
+# warn; `prisma generate` runs below. pnpm is pinned on purpose, so skip its update notice too.
+RUN PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --frozen-lockfile --config.update-notifier=false
 COPY . .
 RUN pnpm exec prisma generate
 RUN pnpm run compile
