@@ -3,6 +3,7 @@ const { StringSelectMenuInteraction } = require(`discord.js`)
 
 const { Player } = require(`../../../prisma`);
 const { ROLES, ButtonOptions } = require(`../../../utils/enums`);
+const { fetchAllMembers } = require(`../../helpers/guildMembers`);
 
 module.exports = {
 
@@ -12,7 +13,7 @@ module.exports = {
         await interaction.deferReply();
         await interaction.message.edit({components: interaction.message.components});
         
-        const allGuildMembers = await interaction.guild.members.fetch();
+        const allGuildMembers = await fetchAllMembers(interaction.guild);
 
         // get all active players from the Player table and store their ID
         const allActivePlayers = await Player.getAllActive();

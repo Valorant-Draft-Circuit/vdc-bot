@@ -2,6 +2,7 @@ const { GuildMember, ChatInputCommandInteraction, Message } = require(`discord.j
 const { Player } = require(`../../../../prisma`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { rebuildMemberProfile, loadRebuildContext } = require(`../../../helpers/profileRebuild`);
+const { fetchAllMembers } = require(`../../../helpers/guildMembers`);
 
 
 const getAccountByPuuid = `https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid`;
@@ -13,7 +14,7 @@ async function profileUpdateServer(/** @type ChatInputCommandInteraction */ inte
     // shared lookups loaded once for the whole run instead of per member
     const context = await loadRebuildContext();
 
-    const serverMembers = (await interaction.guild.members.fetch()).map(sm => sm);
+    const serverMembers = (await fetchAllMembers(interaction.guild)).map(sm => sm);
     const memberCt = serverMembers.length;
 
     logger.log(`VERBOSE`, `${interaction.user} (\`${interaction.user.username}\`, \`${interaction.user.id}\`) is updating \`${memberCt}\` members`);

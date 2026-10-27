@@ -3,6 +3,7 @@ const { ButtonStyle } = require(`discord.js`)
 
 const { Player } = require("../../../prisma");
 const { ROLES, ButtonOptions } = require("../../../utils/enums");
+const { fetchAllMembers } = require(`../../helpers/guildMembers`);
 
 const MS_PER_API_CALL = 50; // PREDEFINED API REQUESTS RATE (MAX RATE IS 1 CALL EVERY 20 MS)
 
@@ -24,7 +25,7 @@ module.exports = {
 };
 
 async function activityCheck(interaction) {
-    await interaction.guild.members.fetch();
+    await fetchAllMembers(interaction.guild);
 
     // get all active players from the Player table and store their ID
     const allActivePlayers = await Player.getAllActive();
