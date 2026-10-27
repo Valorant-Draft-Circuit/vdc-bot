@@ -1,16 +1,31 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# Weekly version updates, minor and patch only, batched into one PR per ecosystem. Major versions are planned
+# migrations, not something to click merge on: Prisma's schema is shared with vdc-web (the prisma submodule),
+# discord.js 15 needs code changes, and @types/node has to match the Node the image runs (24). Security alerts
+# still show under the repo's Security tab whatever is ignored here.
+# Options: https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
       interval: "weekly"
+    # a release has to be a week old before it's proposed, so a bad or hijacked publish is usually pulled first
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-minor-and-patch:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions" # keeps the pinned action SHAs current
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
