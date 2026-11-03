@@ -32,7 +32,7 @@ const round1Exit = [`Blue Lotus`, `Crew`, `Consiglieri`, `Eldritch Knights`, `Ca
 const newFranchises = [];
 
 
-async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
+async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier, showFM) {
 
     const userRoles = interaction.member.roles.cache;
     if (!userRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
@@ -411,27 +411,28 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
 
     // POST THE RESULTS
-    await interaction.editReply({ content: `Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...` });
-    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...`);
+    if (showFM) {
+        await interaction.editReply({ content: `Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...` });
+        logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...`);
 
-    const delay /** in MS */ = 15 * 1000;
+        const delay /** in MS */ = 15 * 1000;
 
-    const gmAccouncements = await interaction.guild.channels.fetch(CHANNELS.ANNOUNCEMENTS.FM);
-    await gmAccouncements.send({ content: `### Hey ${roleMention(ROLES.OPERATIONS.GM)}/${roleMention(ROLES.OPERATIONS.AGM)} - The \`${tier}\` Draft Lottery is beginning!` });
-    for (let i = 0; i < teamOrder.length; i++) {
-        const team = draftTeams.find(t => t.name == teamOrder[i].value);
+        const gmAccouncements = await interaction.guild.channels.fetch(CHANNELS.ANNOUNCEMENTS.FM);
+        await gmAccouncements.send({ content: `### Hey ${roleMention(ROLES.OPERATIONS.GM)}/${roleMention(ROLES.OPERATIONS.AGM)} - The \`${tier}\` Draft Lottery is beginning!` });
+        for (let i = 0; i < teamOrder.length; i++) {
+            const team = draftTeams.find(t => t.name == teamOrder[i].value);
 
-        const msg = await gmAccouncements.send({
-            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (${time((Math.round(Date.now() / 1000)) + (delay / 1000), TimestampStyles.RelativeTime)})`
-        });
+            const msg = await gmAccouncements.send({
+                content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (${time((Math.round(Date.now() / 1000)) + (delay / 1000), TimestampStyles.RelativeTime)})`
+            });
 
-        await new Promise(resolve => setTimeout(resolve, delay));
-        await msg.edit({
-            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to: <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - ${team.name}!`
-        })
+            await new Promise(resolve => setTimeout(resolve, delay));
+            await msg.edit({
+                content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to: <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - ${team.name}!`
+            })
+        }
+        await gmAccouncements.send({ content: `-# The \`${tier}\` Draft Lottery has been generated! There are \`${amountOfPlayers}\` draftable players, resulting in \`${Math.ceil(rounds)}\` rounds` });
     }
-    await gmAccouncements.send({ content: `-# The \`${tier}\` Draft Lottery has been generated! There are \`${amountOfPlayers}\` draftable players, resulting in \`${Math.ceil(rounds)}\` rounds` });
-
 
     // output
     const embed = new EmbedBuilder({

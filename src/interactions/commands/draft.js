@@ -15,8 +15,9 @@ module.exports = {
 		switch (subcommand) {
 			case `generate-lottery`: {
 				const tier = interaction.options.getString(`tier`);
+				const showFM = interaction.options.getBoolean(`show-fm`);
 
-				return await generateLottery(interaction, tier);
+				return await generateLottery(interaction, tier, showFM);
 			}
 			case `award-comp-picks`: {
 				const round = interaction.options.getNumber(`round`);

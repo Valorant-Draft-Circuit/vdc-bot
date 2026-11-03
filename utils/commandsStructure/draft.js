@@ -26,6 +26,12 @@ module.exports = {
 						{ name: `Mythic`, value: Tier.MYTHIC },
 					],
 				},
+				{
+					name: `show-fm`,
+					description: `Shows/Hides the lottery generation from the announcements channel`,
+					type: ApplicationCommandOptionType.Boolean,
+					required: true,
+				},
 			],
 		},
 		{
