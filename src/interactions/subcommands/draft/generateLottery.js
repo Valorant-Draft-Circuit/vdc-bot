@@ -6,24 +6,33 @@ const { EmbedBuilder, ChatInputCommandInteraction, channelMention, roleMention, 
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ROLES } = require(`../../../../utils/enums`)
 
-// 3.5 pts - First Place
-const first = [`Crescent`, `Snake Eyes`, `Yahtzee`, `Echoes`, `Anarchy`];
 
-// 3 pts - Second Place
-const second = [`Witness`, `Decaf`, `Aventis`, `Purple Iris`, `Latte`];
+//TODO: delete all of this.
+
+// 4.5 pts - First Place
+const first = [`Midnight`, `Carnivora`, `Uplink`, `Decaf`, `Anarchy`];
+
+// recruit has one less round - 3.5 points, rest of the recruit results r in the lists
+const firstRecruit = [`Havoc`]
+
+// 4 pts - Second Place
+const second = [`Divus`, `Espresso`, `Cold Brew`, `Milites`];
+
+// Round 3 Exit - 3 points
+const round3Exit = [`Maelstrom`, `Anarchy`, `Legati`, `Flotilla`, `Mauler`, `Wraiths`, `Arbiter`, `Mayhem`, `Witness`];
 
 // 2 pts - Round 2 Exit
-const round2Exit = [`Ravagers`, `High Rollers`, `Ember`, `Packfire`, `Wraiths`, `Artillery`, `Espresso`, `Blackjacks`, `Misfire`, `Royal Flush`];
+const round2Exit = [`Miscreants`, `Dire`, `Sovereign`, `Banshees`, `Tiger Tacticians`, `Entropy`, `Electra`, `Eggheads`, `Justicar`, `Centurions`, `Squadron`, `Bobcat Brigade`, `Packfire`, `Pipsqueaks`, `Pink Azalea`, `Puma Platoon`, `Tiros`, `Green Clover`];
 
 // 1 pt - Round 1 Exit
-const round1Exit = [`Havoc`, `Green Clover`, `Projectile`, `Pink Azalea`, `Mafiosos`, `Gibbous`, `Blaze`, `Justicar`, `Capos`, `Red Rose`, `Lunch Takers`, `Execution`, `Consiglieri`, `Entropy`, `Dons`, `Solstice`];
+const round1Exit = [`Blue Lotus`, `Crew`, `Consiglieri`, `Eldritch Knights`, `Capos`, `Arcane Archers`, `Pinnacle`, `Convoy`, `Ravagers`, `Coffee Beans`, `Platoon`, `High Rollers`];
  
 
 // new franchises get better odds than new teams
-const newFranchises = [`Catpocalypse`, `808 Angels`, `Natural 20`, `Grizzlies`];
+const newFranchises = [];
 
 
-async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier) {
+async function generateLottery(/** @type ChatInputCommandInteraction */ interaction, tier, showFM) {
 
     const userRoles = interaction.member.roles.cache;
     if (!userRoles.has(ROLES.OPERATIONS.ADMIN)) return await interaction.editReply({ content: `You don't have the Admin role and cannot use this command!` });
@@ -69,10 +78,18 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
     for (let i = 0; i < first.length; i++) {
         const team = allTeams.find(t => t.name == first[i]);
+        postPoints.push({ id: team.id, name: team.name, postPoints: 4.5 });
+    }
+    for (let y = 0; y < firstRecruit.length; y++) {
+        const team = allTeams.find(t => t.name == firstRecruit[y]);
         postPoints.push({ id: team.id, name: team.name, postPoints: 3.5 });
     }
     for (let j = 0; j < second.length; j++) {
         const team = allTeams.find(t => t.name == second[j]);
+        postPoints.push({ id: team.id, name: team.name, postPoints: 4 });
+    }
+    for (let z = 0; z < round3Exit.length; z++ ) {
+        const team = allTeams.find(t => t.name == round3Exit[z]);
         postPoints.push({ id: team.id, name: team.name, postPoints: 3 });
     }
     for (let k = 0; k < round2Exit.length; k++) {
@@ -263,6 +280,8 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
     teamdraftScore.forEach((team) => {
         const teamWeight = team.weight * 10000;
+        // console.log(`${team.name} - ${team.weight}`)
+        // console.log('---')
 
         for (let i = 0; i < teamWeight; i++) {
             teamLottery.push(team);
@@ -392,27 +411,28 @@ async function generateLottery(/** @type ChatInputCommandInteraction */ interact
 
 
     // POST THE RESULTS
-    await interaction.editReply({ content: `Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...` });
-    logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...`);
+    if (showFM) {
+        await interaction.editReply({ content: `Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...` });
+        logger.log(`VERBOSE`, `VDC Draft — \`${tier}\` : Posting results in ${channelMention(CHANNELS.ANNOUNCEMENTS.FM)}...`);
 
-    const delay /** in MS */ = 15 * 1000;
+        const delay /** in MS */ = 15 * 1000;
 
-    const gmAccouncements = await interaction.guild.channels.fetch(CHANNELS.ANNOUNCEMENTS.FM);
-    await gmAccouncements.send({ content: `### Hey ${roleMention(ROLES.OPERATIONS.GM)}/${roleMention(ROLES.OPERATIONS.AGM)} - The \`${tier}\` Draft Lottery is beginning!` });
-    for (let i = 0; i < teamOrder.length; i++) {
-        const team = draftTeams.find(t => t.name == teamOrder[i].value);
+        const gmAccouncements = await interaction.guild.channels.fetch(CHANNELS.ANNOUNCEMENTS.FM);
+        await gmAccouncements.send({ content: `### Hey ${roleMention(ROLES.OPERATIONS.GM)}/${roleMention(ROLES.OPERATIONS.AGM)} - The \`${tier}\` Draft Lottery is beginning!` });
+        for (let i = 0; i < teamOrder.length; i++) {
+            const team = draftTeams.find(t => t.name == teamOrder[i].value);
 
-        const msg = await gmAccouncements.send({
-            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (${time((Math.round(Date.now() / 1000)) + (delay / 1000), TimestampStyles.RelativeTime)})`
-        });
+            const msg = await gmAccouncements.send({
+                content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to... 🥁 (${time((Math.round(Date.now() / 1000)) + (delay / 1000), TimestampStyles.RelativeTime)})`
+            });
 
-        await new Promise(resolve => setTimeout(resolve, delay));
-        await msg.edit({
-            content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to: <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - ${team.name}!`
-        })
+            await new Promise(resolve => setTimeout(resolve, delay));
+            await msg.edit({
+                content: `Pick \`${String(i + 1).padStart(2, ` `)}\` goes to: <${team.Franchise.Brand.discordEmote}> **${team.Franchise.slug}** - ${team.name}!`
+            })
+        }
+        await gmAccouncements.send({ content: `-# The \`${tier}\` Draft Lottery has been generated! There are \`${amountOfPlayers}\` draftable players, resulting in \`${Math.ceil(rounds)}\` rounds` });
     }
-    await gmAccouncements.send({ content: `-# The \`${tier}\` Draft Lottery has been generated! There are \`${amountOfPlayers}\` draftable players, resulting in \`${Math.ceil(rounds)}\` rounds` });
-
 
     // output
     const embed = new EmbedBuilder({
