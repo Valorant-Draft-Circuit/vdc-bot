@@ -61,7 +61,16 @@ module.exports = {
 
             // get the number of teams in each tier and divide into chunks
             const teamsInTier = teams.filter(t => t.tier === tier).length;
-            const roundsDivided = chunkArray(sortedDraftable, teamsInTier);
+
+            // Post-process the initial rounds by moving tied MMR players to their highest placement.
+            // Ex: If one player with X MMR appears in Round 1 but 3 other players also with X MMR 
+            // appear in Round 2, move those 3 players up to Round 1. 
+            // It is expected that after this post-processing some rounds may have less players
+            // than teams/picks in said round. This is intentional.
+            const roundsDivided = moveMMRTiesToHighestPlacementRound(
+                chunkArray(sortedDraftable, teamsInTier),
+                player => player.PrimaryRiotAccount.MMR.mmrEffective
+            );
 
             // iterate through every round
             for (let r = 0; r < roundsDivided.length; r++) {
@@ -100,4 +109,29 @@ function chunkArray(arr, n) {
         result.push(arr.slice(i, i + n));
     }
     return result;
+}
+
+function moveMMRTiesToHighestPlacementRound(rounds, getMMR) {
+    const highestPlacementRoundByMMR = new Map();
+
+    rounds.forEach((round, roundIndex) => {
+        for (const player of round) {
+            const playerMMR = getMMR(player);
+            if (!highestPlacementRoundByMMR.has(playerMMR)) {
+                highestPlacementRoundByMMR.set(playerMMR, roundIndex);
+            }
+        }
+    });
+
+    const adjustedRounds = rounds.map(() => []);
+
+    rounds.forEach(round => {
+        for (const player of round) {
+            const destinationRound = highestPlacementRoundByMMR.get(getMMR(player));
+            adjustedRounds[destinationRound].push(player);
+        }
+    });
+
+    // Keep the report's descending MMR order after moving tied players.
+    return adjustedRounds.map(round => round.sort((a, b) => getMMR(b) - getMMR(a)));
 }
