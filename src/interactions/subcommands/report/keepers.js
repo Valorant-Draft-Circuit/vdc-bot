@@ -64,8 +64,8 @@ module.exports = {
 
             // Post-process the initial rounds by moving tied MMR players to their highest placement.
             // Ex: If one player with X MMR appears in Round 1 but 3 other players also with X MMR 
-            // appear in Round 2, simply move them up to Round 1. 
-            // It is expected that after this post-processing that some round may have less players
+            // appear in Round 2, move those 3 players up to Round 1. 
+            // It is expected that after this post-processing some rounds may have less players
             // than teams/picks in said round. This is intentional.
             const roundsDivided = moveMMRTiesToHighestPlacementRound(
                 chunkArray(sortedDraftable, teamsInTier),
