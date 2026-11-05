@@ -10,7 +10,7 @@ module.exports = {
     readable: `Keeper Picks`, // this shows in the selection option
 
     helpResponse: [
-        `Use the \`Keeper Picks\` report to generate a report of all the keeper picks for the draft for a given tier. The report outputs the __lowest round__ keeper picks can be in. Players tied on MMR at a round boundary stay together, so a round can contain more players than there are teams in the tier.\n\nLet's look at the following example:\n- \`PROSPECT\` tier lines are [\`0\`, \`90\`)\n- There are \`10\` teams in prospect\n- Since there are \`10\` teams and \`90\` players, there will be \`9\` rounds\n- Player \`Travestey#7227\` has an MMR of \`75\`\n\nThe **minimum** tier \`Travestey#7227\` can be a keeper in is round \`2\`, but __can__ be a keeper in round \`1\` as well if circumstances call for/require. A franchise CANNOT set a keeper for a round LOWER than their MMR allows.`,
+        `Use the \`Keeper Picks\` report to generate a report of all the keeper picks for the draft for a given tier. The report outputs the __lowest round__ keeper picks can be in.\n\nLet's look at the following example:\n- \`PROSPECT\` tier lines are [\`0\`, \`90\`)\n- There are \`10\` teams in prospect\n- Since there are \`10\` teams and \`90\` players, there will be \`9\` rounds\n- Player \`Travestey#7227\` has an MMR of \`75\`\n\nThe **minimum** tier \`Travestey#7227\` can be a keeper in is round \`2\`, but __can__ be a keeper in round \`1\` as well if circumstances call for/require. A franchise CANNOT set a keeper for a round LOWER than their MMR allows.`,
         [
             `**REQUIRED** : Use \`--tier-<TIER>\` to select a single tier to display. (e.g. \`--tier-PROSPECT\`)`
         ].map(data => `> ${data}`).join(`\n`),
@@ -61,9 +61,14 @@ module.exports = {
 
             // get the number of teams in each tier and divide into chunks
             const teamsInTier = teams.filter(t => t.tier === tier).length;
-            const roundsDivided = chunkArrayWithTies(
-                sortedDraftable,
-                teamsInTier,
+
+            // Post-process the initial rounds by moving tied MMR players to their highest placement.
+            // Ex: If one player with X MMR appears in Round 1 but 3 other players also with X MMR 
+            // appear in Round 2, simply move them up to Round 1. 
+            // It is expected that after this post-processing that some round may have less players
+            // than teams/picks in said round. This is intentional.
+            const roundsDivided = moveMMRTiesToHighestPlacementRound(
+                chunkArray(sortedDraftable, teamsInTier),
                 player => player.PrimaryRiotAccount.MMR.mmrEffective
             );
 
@@ -97,27 +102,36 @@ module.exports = {
     }
 }
 
-function chunkArrayWithTies(arr, n, getValue) {
+function chunkArray(arr, n) {
     if (n <= 0) throw new Error(`Chunk size must be greater than 0`);
     const result = [];
+    for (let i = 0; i < arr.length; i += n) {
+        result.push(arr.slice(i, i + n));
+    }
+    return result;
+}
 
-    for (let start = 0; start < arr.length;) {
-        let end = Math.min(start + n, arr.length);
+function moveMMRTiesToHighestPlacementRound(rounds, getMMR) {
+    const highestPlacementRoundByMMR = new Map();
 
-        // Keep players tied with the last player in this round at the same boundary.
-        // If there are 14 teams in a tier and the 14th player in Round 1 has an MMR of X, then
-        // any subsequent players that also have an MMR of X should be moved up to Round 1, and the
-        // positioning of all other players should be moved up.
-        if (end < arr.length) {
-            const boundaryValue = getValue(arr[end - 1]);
-            while (end < arr.length && getValue(arr[end]) === boundaryValue) {
-                end++;
+    rounds.forEach((round, roundIndex) => {
+        for (const player of round) {
+            const playerMMR = getMMR(player);
+            if (!highestPlacementRoundByMMR.has(playerMMR)) {
+                highestPlacementRoundByMMR.set(playerMMR, roundIndex);
             }
         }
+    });
 
-        result.push(arr.slice(start, end));
-        start = end;
-    }
+    const adjustedRounds = rounds.map(() => []);
 
-    return result;
+    rounds.forEach(round => {
+        for (const player of round) {
+            const destinationRound = highestPlacementRoundByMMR.get(getMMR(player));
+            adjustedRounds[destinationRound].push(player);
+        }
+    });
+
+    // Keep the report's descending MMR order after moving tied players.
+    return adjustedRounds.map(round => round.sort((a, b) => getMMR(b) - getMMR(a)));
 }
