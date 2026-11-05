@@ -13,6 +13,7 @@ const COLORS = {
     PROSPECT: `#FEC335`,
     APPRENTICE: `#72C357`,
     EXPERT: `#04AEE4`,
+    LEGEND: `#FCB4EE`,
     MYTHIC: `#A657A6`,
 
     RED: `#DE3845`,
@@ -74,7 +75,7 @@ async function refreshDraftBoardChannel(/** @type ChatInputCommandInteraction */
     GlobalFonts.registerFromPath(`./utils/assets/Lato-Regular.ttf`, `Lato`);
 
     const season = await ControlPanel.getSeason();
-    const tiers = [Tier.RECRUIT, Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.MYTHIC];
+    const tiers = [Tier.RECRUIT, Tier.PROSPECT, Tier.APPRENTICE, Tier.EXPERT, Tier.LEGEND, Tier.MYTHIC];
     // const tiers = [Tier.MYTHIC];
 
     for (let i = 0; i < tiers.length; i++) {
