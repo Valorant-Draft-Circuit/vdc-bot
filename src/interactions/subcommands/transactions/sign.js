@@ -12,10 +12,10 @@ const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { tierLabel } = require("../../../helpers/transactions/formatTeam");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 const { restorePairedSubbedOutPlayer } = require("../../../helpers/transactions/subbedOutPairing");
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Send confirmation to sign a player
  * @param {ChatInputCommandInteraction} interaction 
@@ -87,9 +87,7 @@ async function confirmSign(interaction) {
 	// update nickname
 	const playerTag = playerIGN.split(`#`)[0];
 	const guildMember = await interaction.guild.members.fetch(playerID);
-	const accolades = guildMember.nickname?.match(emoteregex);
-
-	guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+	guildMember.setNickname(buildLeagueNickname(playerTag, franchise.slug, guildMember.nickname));
 
 	// remove all league roles and then add League & franchise role
 	const franchiseRoleIDs = (await prisma.franchise.findMany({ where: { active: true } })).map(f => f.roleID);

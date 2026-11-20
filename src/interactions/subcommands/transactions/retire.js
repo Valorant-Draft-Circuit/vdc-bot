@@ -9,8 +9,7 @@ const { LeagueStatus, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 const { freezeMapBans } = require(`../../../helpers/mod/mapBans`);
-
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 
 /** Send confirmation to Retire a player
  * @param {ChatInputCommandInteraction} interaction
@@ -74,8 +73,7 @@ async function confirmRetire(interaction) {
 
 	// get player info (IGN, Accolades) & update their nickname
 	const playerTag = playerIGN.split(`#`)[0];
-	const accolades = guildMember.nickname?.match(emoteregex);
-	guildMember.setNickname(`${playerTag} ${accolades ? accolades.join(``) : ``}`);
+	guildMember.setNickname(buildLeagueNickname(playerTag, null, guildMember.nickname));
 
 	// remove all league roles and then add League & franchise role
 	await guildMember.roles.remove([

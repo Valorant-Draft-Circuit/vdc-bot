@@ -8,9 +8,9 @@ const { CHANNELS, ROLES, TransactionsNavigationOptions } = require(`../../../../
 const { Tier, LeagueStatus, TransactionType } = require("@prisma/client");
 const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 let notAllowedOperation = false;
 
@@ -753,13 +753,13 @@ async function executePlayerTrade(interaction, players, recievingFranchise) {
 		// update nickname
 		const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
 		const guildMember = await interaction.guild.members.fetch(player.Accounts.find(a => a.provider == `discord`).providerAccountId);
-		const accolades = guildMember.nickname?.match(emoteregex);
+		const nickname = buildLeagueNickname(playerTag, franchise.slug, guildMember.nickname);
 
 		// check to make sure the bot can update the user's nickname
 		if (guildMember.manageable) {
-			await guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+			await guildMember.setNickname(nickname);
 		} else {
-			logger.log(`ALERT`, `Bot has insufficent permissions to update ${guildMember.user.username}'s nickname. Please update their name to \`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}\` manually!`);
+			logger.log(`ALERT`, `Bot has insufficent permissions to update ${guildMember.user.username}'s nickname. Please update their name to \`${nickname}\` manually!`);
 		}
 
 

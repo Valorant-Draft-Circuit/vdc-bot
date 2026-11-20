@@ -4,11 +4,11 @@ const { prisma } = require("../../../prisma/prismadb");
 const { CHANNELS, ROLES } = require(`../../../utils/enums`);
 const { ChatInputCommandInteraction, EmbedBuilder, userMention } = require(`discord.js`);
 const fs = require(`fs`);
+const { buildLeagueNickname } = require(`../../helpers/league/accolades`);
 
 const validStatusesToDE = [
     LeagueStatus.APPROVED, LeagueStatus.DRAFT_ELIGIBLE, LeagueStatus.FREE_AGENT, LeagueStatus.RESTRICTED_FREE_AGENT
 ];
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 const rateLimitinMS = 5000;
 
@@ -244,8 +244,7 @@ async function singleWelcome(/** @type ChatInputCommandInteraction */ interactio
 
     // update the name to match convention
     const ign = playerData.PrimaryRiotAccount.riotIGN.split(`#`)[0];
-    const accolades = guildMember.nickname?.match(emoteregex);
-    guildMember.setNickname(`${welcomeSlug} | ${ign} ${accolades ? accolades.join(``) : ``}`);
+    guildMember.setNickname(buildLeagueNickname(ign, welcomeSlug, guildMember.nickname));
 
 
     // log player and where they get updated

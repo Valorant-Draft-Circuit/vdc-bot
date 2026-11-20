@@ -1,5 +1,25 @@
 const { prisma } = require(`../../../prisma/prismadb`);
 
+const badgeEmotes = {
+  WIN: `🏆`,
+  WIN_FM: `👑`,
+  WIN_SUB: `🥈`,
+  AST: `⭐`,
+  MVP: `🏅`,
+};
+const nicknameBadges = new Set(Object.values(badgeEmotes));
+
+/** Build a league nickname, preserving recognized accolade badges in their existing order.
+ * @param {string} gameName
+ * @param {string | null} slug
+ * @param {string | null} currentNickname
+ * @returns {string}
+ */
+function buildLeagueNickname(gameName, slug, currentNickname) {
+  const badges = [...(currentNickname ?? ``)].filter(symbol => nicknameBadges.has(symbol)).join(``);
+  return [slug ? `${slug} |` : null, gameName, badges].filter(Boolean).join(` `);
+}
+
 /** Shared accolade definition map (emote + readable + title + description).
  * The `readable` string is the season/tier-independent value stored in the
  * Accolades.accolade column and used as the idempotency key. */
@@ -7,31 +27,31 @@ function decodeAccoladeData(shorthand, tier, season) {
   const defs = {
     WIN: {
       readable: `Winner`,
-      emote: `🏆`,
+      emote: badgeEmotes.WIN,
       title: `Grand Finals Winner`,
       description: `Player for the Winning Season ${season} ${tier} Team`,
     },
     WIN_FM: {
       readable: `Franchise Management`,
-      emote: `👑`,
+      emote: badgeEmotes.WIN_FM,
       title: `Franchise Management for a Winning Grand Finals Team`,
       description: `Franchise Manager for the Winning Season ${season} ${tier} Team`,
     },
     WIN_SUB: {
       readable: `Substitute`,
-      emote: `🥈`,
+      emote: badgeEmotes.WIN_SUB,
       title: `Substitute for a Player in a Grand Finals Match`,
       description: `Substitute for the Winning Season ${season} ${tier} Team during Grand Finals`,
     },
     AST: {
       readable: `All Star`,
-      emote: `⭐`,
+      emote: badgeEmotes.AST,
       title: `All Star`,
       description: `All Star for Season ${season} ${tier} Tier`,
     },
     MVP: {
       readable: `MVP`,
-      emote: `🏅`,
+      emote: badgeEmotes.MVP,
       title: `Most Valuable Player`,
       description: `MVP of ${tier} Season ${season}`,
     },
@@ -101,4 +121,4 @@ async function awardAccoladeIfAbsent({ userID, season, tier, shorthand }) {
   return { created: true };
 }
 
-module.exports = { decodeAccoladeData, awardAccoladeIfAbsent };
+module.exports = { buildLeagueNickname, decodeAccoladeData, awardAccoladeIfAbsent };
