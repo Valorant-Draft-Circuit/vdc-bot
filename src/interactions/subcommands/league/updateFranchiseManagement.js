@@ -4,8 +4,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES, CHANNELS } = require("../../../../utils/enums");
 const { refreshFranchisesChannel } = require("./refreshFranchisesChannel");
 const { LeagueStatus } = require("@prisma/client");
-
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 
 const devTransactionsChannel = `1300688313988022272`;
 
@@ -115,8 +114,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
-            const accolades = guildMember.nickname?.match(emoteregex);
-            guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+            guildMember.setNickname(buildLeagueNickname(playerTag, franchise.slug, guildMember.nickname));
 
             // create the base embed
             const announcement = new EmbedBuilder({
@@ -156,8 +154,7 @@ async function updateFranchiseManagement(/** @type ChatInputCommandInteraction *
 
             // update nickname
             const playerTag = player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
-            const accolades = guildMember.nickname?.match(emoteregex);
-            guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+            guildMember.setNickname(buildLeagueNickname(playerTag, franchise.slug, guildMember.nickname));
 
             // // create the base embed
             const announcement = new EmbedBuilder({

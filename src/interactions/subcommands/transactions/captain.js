@@ -9,8 +9,6 @@ const { logTransaction } = require(`../../../helpers/transactions/logTransaction
 const { TransactionType } = require(`@prisma/client`);
 const { ContractStatus } = require("@prisma/client");
 
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
-
 /** Send confirmation to IR a player
  * @param {ChatInputCommandInteraction} interaction
  * @param {GuildMember} player

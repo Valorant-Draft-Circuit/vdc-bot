@@ -5,12 +5,12 @@ const { EmbedBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuild
 const { prisma } = require(`../../../../prisma/prismadb`);
 const { CHANNELS, ROLES } = require(`../../../../utils/enums`);
 const { COLORS } = require(`../../../../utils/enums`);
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 
 const Logger = require(`../../../core/logger`);
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 const releaseInterval = 5 * 1000; // in ms
 
 
@@ -68,8 +68,7 @@ async function releaseOfflineDraftResults(/** @type ChatInputCommandInteraction 
         } else if (!guildMember.manageable) {
             interaction.channel.send(`I can't manage the roles or update the nickname for ${userMention(playerDiscordID)} (\`${player.name}\`, \`${playerIGN}\`). Their roles are higher than mine!`)
         } else {
-            const accolades = guildMember.nickname?.match(emoteregex);
-            guildMember.setNickname(`${franchise.slug} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+            guildMember.setNickname(buildLeagueNickname(playerTag, franchise.slug, guildMember.nickname));
 
             await guildMember.roles.remove([
                 ...Object.values(ROLES.LEAGUE),

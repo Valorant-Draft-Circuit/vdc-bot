@@ -12,10 +12,10 @@ const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const { tierLabel } = require("../../../helpers/transactions/formatTeam");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
 const { restorePairedSubbedOutPlayer } = require("../../../helpers/transactions/subbedOutPairing");
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Request confirmation to cut a player
  * @param {ChatInputCommandInteraction} interaction
@@ -117,8 +117,7 @@ async function confirmCut(/** @type ButtonInteraction */ interaction) {
 
 	// get player info (IGN, Accolades) & update their nickname
 	const playerTag = playerIGN.split(`#`)[0];
-	const accolades = guildMember.nickname?.match(emoteregex);
-	guildMember.setNickname(`FA | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+	guildMember.setNickname(buildLeagueNickname(playerTag, `FA`, guildMember.nickname));
 
 	// cut the player & ensure that the player's team property is now null
 	const player = await Transaction.cut(playerID);

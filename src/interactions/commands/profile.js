@@ -5,13 +5,12 @@ const { LeagueStatus, ContractStatus } = require("@prisma/client");
 const { StatusEmotes, ROLES } = require("../../../utils/enums");
 const { updateMeilisearchPlayer } = require("../../../utils/web/vdcWeb");
 const { dedupeNickname } = require(`../../helpers/nickname`);
+const { buildLeagueNickname } = require(`../../helpers/league/accolades`);
 const { memberAvatarURL, memberBannerURL } = require(`../../helpers/discordMedia`);
 
 /** Riot's API endpoint to fetch a user's account by their puuid 
  * @TODO Update to the internal VDC endpoint once it's ready */
 const getAccountByPuuid = `https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid`;
-
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 module.exports = {
 	name: `profile`,
@@ -488,9 +487,6 @@ async function update(/** @type ChatInputCommandInteraction */ interaction, { sk
 	let isCaptain = false;
 	let state = null;
 
-	// currently accolades are set via whatever is currently in the nickname, but when the Accolades table is updated, this will also become a black initialization
-	const accolades = guildMember.nickname?.match(emoteregex);
-
 	progress[progress.length - 1] = `✅ Roles cleared & rebuild ready!`;
 	await interaction.editReply(progress.join(`\n`));
 	// --------------------------------------------------------------------------------------------
@@ -717,12 +713,7 @@ async function update(/** @type ChatInputCommandInteraction */ interaction, { sk
 	progress.push(`🔃 Updating your server nickname...`);
 	await interaction.editReply(progress.join(`\n`));
 
-	const nicknameComponents = [
-		slug ? `${slug} |` : null,
-		gameName,
-		accolades ? accolades.join(``) : null
-	];
-	const nickname = nicknameComponents.filter(nc => nc !== null).join(` `);
+	const nickname = buildLeagueNickname(gameName, slug, guildMember.nickname);
 
 	await guildMember.setNickname(nickname);
 

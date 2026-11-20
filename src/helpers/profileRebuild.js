@@ -4,8 +4,7 @@ const { LeagueStatus, ContractStatus } = require(`@prisma/client`);
 const { prisma } = require(`../../prisma/prismadb`);
 const { ROLES } = require(`../../utils/enums`);
 const { tierLabel } = require(`./transactions/formatTeam`);
-
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+const { buildLeagueNickname } = require(`./league/accolades`);
 
 async function loadRebuildContext() {
 	const leagueState = await ControlPanel.getLeagueState();
@@ -91,9 +90,6 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 	let isGM = false;
 	let isCaptain = false;
 	let state = null;
-
-	// currently accolades are set via whatever is currently in the nickname, but when the Accolades table is updated, this will also become a black initialization
-	const accolades = guildMember.nickname?.match(emoteregex);
 
 	await progress(`✅ Roles cleared & rebuild ready!`, true);
 	// --------------------------------------------------------------------------------------------
@@ -308,12 +304,8 @@ async function rebuildMemberProfile(guildMember, options = {}) {
 	// --------------------------------------------------------------------------------------------
 	await progress(`🔃 Updating \`${guildMember.user.username}\`'s server nickname...`);
 
-	const nicknameComponents = [
-		slug ? `${slug} |` : null,
-		gameNameOverride ?? player.PrimaryRiotAccount.riotIGN.split(`#`)[0],
-		accolades ? accolades.join(``) : null
-	];
-	const nickname = nicknameComponents.filter(nc => nc !== null).join(` `);
+	const gameName = gameNameOverride ?? player.PrimaryRiotAccount.riotIGN.split(`#`)[0];
+	const nickname = buildLeagueNickname(gameName, slug, guildMember.nickname);
 
 	await guildMember.setNickname(nickname);
 

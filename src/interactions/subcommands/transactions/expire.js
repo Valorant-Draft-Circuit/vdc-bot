@@ -8,6 +8,7 @@ const { prisma } = require("../../../../prisma/prismadb");
 const { Tier, TransactionType } = require("@prisma/client");
 const { tierLabel } = require("../../../helpers/transactions/formatTeam");
 const { logTransaction } = require("../../../helpers/transactions/logTransaction");
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 
 
 const Logger = require("../../../core/logger");
@@ -15,8 +16,6 @@ const { updateMeilisearchPlayer } = require("../../../../utils/web/vdcWeb");
 const logger = new Logger();
 
 const imagepath = `https://uni-objects.nyc3.cdn.digitaloceanspaces.com/vdc/team-logos/`;
-
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
 
 /** Send confirmation to Renew a player
  * @param {ChatInputCommandInteraction} interaction
@@ -117,8 +116,7 @@ async function confirmExpire(interaction) {
 	}
 
 	// get player info (IGN, Accolades) & update their nickname
-	const accolades = guildMember.nickname?.match(emoteregex);
-	guildMember.setNickname(`${agentType} | ${playerTag} ${accolades ? accolades.join(``) : ``}`);
+	guildMember.setNickname(buildLeagueNickname(playerTag, agentType, guildMember.nickname));
 
 	// cut the player & ensure that the player's team property is now null
 	const status = await Transaction.cut(playerID);

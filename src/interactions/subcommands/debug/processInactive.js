@@ -3,8 +3,7 @@ const { Player, Flags } = require(`../../../../prisma`);
 const { ChatInputCommandInteraction, userMention } = require(`discord.js`);
 const { prisma } = require("../../../../prisma/prismadb");
 const { ROLES } = require("../../../../utils/enums");
-
-const emoteregex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+const { buildLeagueNickname } = require(`../../../helpers/league/accolades`);
 
 
 async function processInactive(/** @type ChatInputCommandInteraction */ interaction) {
@@ -28,8 +27,7 @@ async function processInactive(/** @type ChatInputCommandInteraction */ interact
 
     // get player info (IGN, Accolades) & update their nickname
     const playerTag = playerIGN.split(`#`)[0];
-    const accolades = guildMember.nickname?.match(emoteregex);
-    guildMember.setNickname(`${playerTag} ${accolades ? accolades.join(``) : ``}`);
+    guildMember.setNickname(buildLeagueNickname(playerTag, null, guildMember.nickname));
 
 
     await prisma.user.update({
